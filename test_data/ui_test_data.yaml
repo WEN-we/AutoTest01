@@ -1,0 +1,16 @@
+# 登录UI用例
+login_ui:
+  - case_name: 正确用户名密码登录
+    username: 'admin'
+    password: '123456'
+    expected_result: '登录成功'
+
+  - case_name: 空用户名登录
+    username: ""
+    password: '123456'
+    expected_result: '用户名不能少于5个字符'
+
+  - case_name: 空密码登录
+    username: 'admin'
+    password: ""
+    expected_result: '密码不能少于5个字符'
