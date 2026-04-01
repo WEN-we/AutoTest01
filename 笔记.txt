@@ -1,0 +1,147 @@
+ecommerce_auto_test/
+├── .github/
+│   └── workflows/          # GitHub Actions CI/CD配置（通用可直接复用）
+│       └── test_workflow.yml
+├── .gitignore              # Git忽略规则（企业级通用）
+├── requirements.txt        # 依赖清单（锁定版本，避免环境不一致）
+├── pytest.ini              # Pytest核心配置（企业级用例执行规范）
+├── README.md               # 项目说明文档（企业协作必备）
+├── config/                 # 配置目录（环境隔离+通用配置）
+│   ├── env_config.yaml     # 多环境配置（开发/测试/生产，通用模板）
+│   └── ui_config.yaml      # UI自动化通用配置（浏览器/超时等）
+├── test_data/              # 测试数据目录（数据与用例分离）
+│   ├── api_test_data.yaml  # 接口测试数据（通用模板，可扩展）
+│   └── ui_test_data.yaml   # UI测试数据（通用模板，可扩展）
+├── utils/                  # 工具类目录（高内聚，可复用，无业务依赖）
+│   ├── __init__.py
+│   ├── config_reader.py    # 配置读取工具（通用，无需修改）
+│   ├── logger.py           # 日志封装（企业级格式，可直接复用）
+│   ├── api_client.py       # 接口请求封装（通用，适配所有HTTP接口）
+│   ├── ui_driver.py        # UI驱动封装（Playwright，通用无业务依赖）
+│   └── common_utils.py     # 通用工具（时间/加密/数据处理，可扩展）
+├── page_objects/           # UI自动化PO模式（页面对象，通用模板）
+│   ├── __init__.py
+│   ├── base_page.py        # 基础页面（通用操作，所有页面继承）
+│   ├── login_page.py       # 登录页（通用模板，适配所有登录场景）
+│   ├── home_page.py        # 首页（通用模板）
+│   ├── order_page.py       # 订单页（通用模板）
+│   └── user_page.py        # 个人中心页（通用模板）
+├── tests/                  # 测试用例目录（企业级按模块拆分，通用模板）
+│   ├── __init__.py
+│   ├── conftest.py         # Pytest全局夹具（通用，无需修改）
+│   ├── test_api/           # 接口测试用例（按业务模块拆分）
+│   │   ├── __init__.py
+│   │   ├── test_user_api.py  # 用户模块接口用例（模板）
+│   │   ├── test_order_api.py # 订单模块接口用例（模板）
+│   │   ├── test_goods_api.py # 商品模块接口用例（模板）
+│   │   └── test_pay_api.py   # 支付模块接口用例（模板）
+│   └── test_ui/            # UI自动化用例（按业务模块拆分）
+│       ├── __init__.py
+│       ├── test_user_ui.py  # 用户模块UI用例（模板）
+│       ├── test_order_ui.py # 订单模块UI用例（模板）
+│       └── test_goods_ui.py # 商品模块UI用例（模板）
+├── logs/                   # 日志目录（自动生成，无需手动创建）
+├── allure-results/         # Allure报告原始数据（执行后自动生成）
+└── allure-report/          # Allure可视化报告（生成后可直接打开）
+# 克隆项目（本地创建后，可初始化Git）
+git init
+# 创建虚拟环境（可选）
+python -m venv venv
+# 激活虚拟环境（Windows）
+venv\Scripts\activate
+# 安装依赖
+pip install -r requirements.txt
+# 安装Playwright驱动
+playwright install
+# 执行所有用例
+pytest #pytest装在系统
+python -m pytest装在虚拟环境
+# 只执行接口用例
+pytest tests/test_api/ -v
+# 只执行UI用例
+pytest tests/test_ui/ -v
+# 生成Allure报告
+pytest -v --alluredir=allure-results#生成
+allure generate allure-results -o allure-report --clean#整合json文件
+allure open allure-report  # 打开报告
+# allure的替代方案
+pytest --html=report/report.html
+切换环境：
+修改config/env_config.yaml中的active_env为dev/test/prod，重新执行用例即可。
+总结
+这个项目结构是企业级自动化测试框架的标准范式，
+核心是「数据与代码分离、工具与业务分离、分层设计、环境隔离」，
+学会这套结构，你的项目经验直接对标企业需求。
+关键文件作用：
+config/：存储多环境配置和通用配置，用 YAML 实现一键切换环境；
+utils/：封装通用工具（配置读取、日志、接口 / UI 驱动），所有用例复用；
+page_objects/：PO 模式封装 UI 页面，降低维护成本；
+tests/：按模块拆分用例，用 Pytest 夹具复用资源，数据驱动执行；
+面试时重点讲：项目的设计思想、多环境切换、数据驱动、PO 模式、CI/CD 自动执行，
+这些都是企业面试官最看重的点。
+你在企业里真实的软件测试工作流（你这套技术栈对应的）
+1. 需求阶段
+看需求文档、原型图
+用测试用例设计方法（等价类、边界值、场景法）梳理测试点
+参与需求评审，提出风险点
+2. 用例设计阶段
+编写功能测试用例
+编写接口测试用例
+编写冒烟测试用例（核心流程）
+用 YAML 管理测试数据，做数据驱动
+3. 提测后 → 先做冒烟测试
+开发提交版本后
+你先跑冒烟测试（核心流程快速验证）
+冒烟不通过 → 打回开发
+冒烟通过 → 进入全面测试
+4. 正式测试阶段（你主要干的）
+功能测试
+按用例执行、提交 Bug
+接口测试
+使用你封装的 APIClient
+跑接口自动化、检查接口正确性
+UI 自动化回归
+使用 PO 模式脚本
+跑核心流程自动化，确保老功能没坏
+Bug 验证
+开发修复后，你复测、关闭 Bug
+5. 自动化 & 持续集成（你的加分项）
+维护自动化脚本（Pytest + Playwright/Requests）
+执行自动化回归测试
+查看 Allure 报告
+CI/CD 自动跑测（GitHub Actions）
+输出测试报告、覆盖率、风险说明
+6. 测试结束 → 上线前
+做回归测试
+做最终冒烟测试
+输出测试总结报告
+评估是否可上线
+精简版一句话工作流（面试背这个）
+我参与需求评审，设计功能、接口、冒烟用例；提测后先做冒烟测试，通过后开展功能、接口测试，并使用自动化框架做回归；提交并验证 Bug，最后输出测试报告，评估上线风险，同时负责自动化脚本维护与 CI/CD 执行。
+你和普通手工测试的区别（你更强在哪）
+普通测试：只会点点点、提 Bug
+你：
+会写自动化
+会接口测试
+会搭建测试框架
+会数据驱动、多环境切换
+会用 AI 辅助测试
+会 CI/CD 自动跑测
+企业抢着要
+维度---	Selenium	    ---            Playwright
+环境配置---	手动装驱动、匹配版本，易踩坑	---内置浏览器，开箱即用，零驱动烦恼
+等待机制---	手动写 WebDriverWait/sleep，不稳定---	智能自动等待，自动等元素就绪
+脚本稳定性---	易因异步 / 加载失败，flaky 多---	稳定性提升 90%+，极少随机失败
+调试	---日志 / 截图，定位难---	内置 Trace Viewer，录屏 + 网络 + DOM 全记录
+代码量---	冗余多，需大量封装---	API 简洁，代码量减少 30%–50%
+定位	Selenium	Playwright
+ID	By.ID, “username”	“#username”
+Class	By.CLASS_NAME, “btn”	“.btn”
+Name	By.NAME, “pwd”	“[name='pwd']”
+XPath	By.XPATH, “//div”	“//div”
+🚫 带 # 的网址，绝对、根本、不能用来做接口测试！
+🚫 代码永远无法直接请求带 # 的地址拿到接口数据！
+用pytest运行测试用例不用默认的unittest
+pytest tests/test_api/test_user_api.py -v
+pip install -r requirements.txt
+接口自动化测试,测试网址多个端口公用问题：
