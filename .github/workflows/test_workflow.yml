@@ -3,9 +3,9 @@ name: 电商自动化测试CI
 # 触发条件：push或pr到main分支
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
