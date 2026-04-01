@@ -16,7 +16,7 @@
 
 ## 环境准备
 ### 1. 克隆项目
-git clone <你的仓库地址>
+git clone https://github.com/WEN-we/AutoTest01.git
 cd ecommerce_auto_test
 
 ### 2. 创建并激活虚拟环境
