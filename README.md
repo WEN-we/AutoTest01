@@ -55,10 +55,10 @@ pytest tests/test_api/test_order_api.py
 allure serve allure-results
 
 ## CI/CD配置
-1. 将项目推送到GitHub仓库
+1. 将项目推送到GitHub仓库 注意：（GitHub-->test_workflow.yml）(Jenkins-->Run_CI.bat)
 2. 开启GitHub Pages（设置 → Pages → 源选择gh-pages分支）
-3. 每次push到main分支或提PR时，GitHub Actions会自动执行测试并生成报告
-4. 报告地址：https://<你的用户名>.github.io/<你的仓库名>/
+3. 每次push到master分支或提PR时，GitHub Actions会自动执行测试并生成报告
+4. 报告地址： https://github.com/WEN-we/AutoTest01/actions/runs/23890788190/artifacts/6237423778
 
 ## 业务适配说明
 1. 配置适配：修改config/env_config.yaml中的环境地址、账号密码

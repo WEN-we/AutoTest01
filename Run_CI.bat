@@ -1,7 +1,7 @@
 @echo off
 echo on
 cd /d %~dp0
-
+:: 用Jenkins运行CD/CI自动化流程
 :: 【企业标准】删除旧报告
 if exist allure-results rd /s /q allure-results
 if exist allure-report rd /s /q allure-report
