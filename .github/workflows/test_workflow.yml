@@ -3,8 +3,6 @@ name: 电商自动化测试CI
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
 
 jobs:
   test:
@@ -13,10 +11,10 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      - name: 设置Python 3.9
+      - name: 设置Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: 安装依赖
         run: |
@@ -24,14 +22,14 @@ jobs:
           pip install pytest allure-pytest playwright
           playwright install chromium
 
-      - name: 运行接口测试
-        run: pytest tests/test_api/ --alluredir=results || true
+      # 【关键】运行测试，失败就会标红
+      - name: 运行所有测试（接口+UI）
+        run: pytest tests/ --alluredir=allure-results
 
-      - name: 运行UI测试
-        run: pytest tests/test_ui/ --alluredir=results || true
-
+      # 【关键】无论成功失败，都上传结果（最重要！）
       - name: 上传测试结果
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: allure-results
-          path: results
+          path: allure-results
