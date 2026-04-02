@@ -1,0 +1,20 @@
+user_login_api:
+  - case_name: 正确用户名密码登录
+    method: POST
+    # 【修复】正确接口地址！！！
+    url: /api/admin/login
+    json:
+      userName: "admin"
+      password: "123456"
+    expected_code: 200
+    # 【修复】返回字段是 message
+    expected_msg: "用户未登录"
+
+  - case_name: 错误密码登录
+    method: POST
+    url: /api/admin/login
+    json:
+      userName: "admin"
+      password: ""
+    expected_code: 200
+    expected_msg: "用户未登录"

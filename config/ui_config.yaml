@@ -1,0 +1,11 @@
+# 浏览器配置
+browser: chromium  # 可选：chromium/firefox/webkit
+headless: false    # 是否无头模式（CI/CD时设为true）
+timeout: 10        # 元素定位超时时间（秒）
+window_size: "1920x1080"  # 浏览器窗口大小
+
+# 登录配置（通用）
+#login_url: "{base_ui_url}/login"  # 占位符，读取时替换为对应环境的base_ui_url
+login_url: "{base_ui_url}/#/login"
+
+
