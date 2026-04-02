@@ -2,7 +2,7 @@
 login_ui:
   - case_name: 正确用户名密码登录
     username: 'admin'
-    password: '12345'
+    password: '1234'
     expected_result: '登录成功'
 
   - case_name: 空用户名登录
