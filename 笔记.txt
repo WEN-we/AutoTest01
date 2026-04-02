@@ -18,6 +18,7 @@ ecommerce_auto_test/
 │   ├── logger.py           # 日志封装（企业级格式，可直接复用）
 │   ├── api_client.py       # 接口请求封装（通用，适配所有HTTP接口）
 │   ├── ui_driver.py        # UI驱动封装（Playwright，通用无业务依赖）
+│   ├── send_email.py        # 邮件发送（目前不好执行自动化发送邮件）
 │   └── common_utils.py     # 通用工具（时间/加密/数据处理，可扩展）
 ├── page_objects/           # UI自动化PO模式（页面对象，通用模板）
 │   ├── __init__.py
@@ -35,6 +36,10 @@ ecommerce_auto_test/
 │   │   ├── test_order_api.py # 订单模块接口用例（模板）
 │   │   ├── test_goods_api.py # 商品模块接口用例（模板）
 │   │   └── test_pay_api.py   # 支付模块接口用例（模板）
+│   ├── test_smoke/           # 冒烟测试用例（按业务模块拆分）
+│   │   ├── __init__.py
+│   │   ├── test_smoke_api.py  # 核心接口模块接口用例（模板）
+│   │   └── test_smoke_ui.py   # 核心UI模块接口用例（模板）
 │   └── test_ui/            # UI自动化用例（按业务模块拆分）
 │       ├── __init__.py
 │       ├── test_user_ui.py  # 用户模块UI用例（模板）
