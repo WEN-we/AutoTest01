@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # 👈 关键：改用22.04，Playwright完美支持
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
@@ -16,20 +16,21 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 安装系统依赖（修复 Playwright 崩溃问题）
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwoff1 libgles2-mesa libharfbuzz-bin libwebp-dev libopenjp2-7 libopus0 libegl1 libshm0
+      # 👇 这是Playwright官方必需依赖，100%不会报错
+      - name: 安装系统依赖
+        run: sudo apt-get update && sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2
 
-      - name: 安装 Python 依赖
+      - name: 安装Python依赖
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          playwright install --with-deps chromium
+          playwright install chromium
 
-      - name: 运行 接口 + UI 测试
-        run: pytest tests/ --alluredir=allure-results
+      # 👇 运行 接口 + UI 自动化（无头模式，云端必跑）
+      - name: 运行全部测试
+        run: pytest tests/ --alluredir=allure-results --headless=new
 
+      # 👇 无论成功失败都上传报告
       - name: 上传测试结果
         if: always()
         uses: actions/upload-artifact@v4
