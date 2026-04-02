@@ -25,13 +25,16 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
 
-      # 👇 正确运行：UI自动无头模式，不需要加--headless
-      - name: 运行全部测试（接口+UI）
+      - name: 运行接口+UI测试
         run: pytest tests/ --alluredir=allure-results
 
-      - name: 上传测试结果
+      - name: 生成Allure网页报告
+        uses: allure-framework/setup-allure@v1
+      - run: allure generate allure-results -o allure-report --clean
+
+      - name: 上传网页报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-results
-          path: allure-results
+          name: 测试报告
+          path: allure-report/
