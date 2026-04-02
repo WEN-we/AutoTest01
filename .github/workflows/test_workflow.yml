@@ -17,7 +17,7 @@ jobs:
           python-version: '3.11'
 
       - name: 安装系统依赖
-        run: sudo apt-get update && sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2
+        run: sudo apt-get update && sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 wget unzip
 
       - name: 安装Python依赖
         run: |
@@ -28,9 +28,15 @@ jobs:
       - name: 运行接口+UI测试
         run: pytest tests/ --alluredir=allure-results
 
+      # 👇 手动安装Allure，彻底告别插件
+      - name: 安装Allure命令行
+        run: |
+          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.zip
+          unzip -q allure-2.24.1.zip -d /opt/allure
+          echo "/opt/allure/allure-2.24.1/bin" >> $GITHUB_PATH
+
       - name: 生成Allure网页报告
-        uses: allure-framework/setup-allure@v1
-      - run: allure generate allure-results -o allure-report --clean
+        run: allure generate allure-results -o allure-report --clean
 
       - name: 上传网页报告
         if: always()
