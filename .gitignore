@@ -29,5 +29,5 @@ allure-report/
 *.tmp
 *.log
 #配置数据
-config/
-test_data/
+#config/
+#test_data/
