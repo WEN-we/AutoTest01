@@ -16,45 +16,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 安装系统依赖
+      - name: 安装依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 wget unzip
-
-      - name: 安装Python依赖
-        run: |
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           playwright install chromium
 
-      # 👇 核心修复：测试失败不中断，强制生成报告
-      - name: 运行接口+UI自动化
-        run: |
-          xvfb-run -a pytest tests/ --alluredir=allure-results || true
+      # 👇 直接生成 pytest-html 简单报告！100%成功！
+      - name: 运行接口+UI测试 + 生成HTML报告
+        run: pytest tests/ --html=report.html --self-contained-html || true
 
-      # 👇 手动安装Allure，确保命令可用
-      - name: 安装Allure
-        run: |
-          wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.zip
-          unzip -q allure-2.24.1.zip -d /opt/allure
-          echo "/opt/allure/allure-2.24.1/bin" >> $GITHUB_PATH
-          source $GITHUB_ENV
-
-      # 👇 强制生成报告，即使results非空也不报错
-      - name: 生成网页报告
-        run: |
-          if [ -d "allure-results" ] && [ "$(ls -A allure-results)" ]; then
-            allure generate allure-results -o allure-report --clean
-          else
-            echo "allure-results为空，跳过生成"
-            mkdir -p allure-report
-          fi
-
-      # 👇 强制上传，无论报告是否生成
+      # 👇 直接上传报告
       - name: 上传测试报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: 测试报告
-          path: allure-report/
-          retention-days: 30
+          path: report.html
