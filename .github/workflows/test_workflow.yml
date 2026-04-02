@@ -16,8 +16,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      # 👇 企业级必装：虚拟显示器 + 浏览器依赖
       - name: 安装系统依赖
-        run: sudo apt-get update && sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 wget unzip
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 libasound2 wget unzip
 
       - name: 安装Python依赖
         run: |
@@ -25,23 +28,22 @@ jobs:
           pip install -r requirements.txt
           playwright install chromium
 
-      # 👇 关键：测试失败不中断流程！
-      - name: 运行接口+UI测试
-        run: pytest tests/ --alluredir=allure-results || true
+      # 👇 ✅ ✅ ✅ 企业真实运行命令（虚拟显示器启动UI）
+      - name: 运行 接口 + UI 自动化
+        run: |
+          xvfb-run -a pytest tests/ --alluredir=allure-results
 
-      # 👇 手动安装 Allure
+      # 安装 Allure 生成报告
       - name: 安装Allure
         run: |
           wget https://github.com/allure-framework/allure2/releases/download/2.24.1/allure-2.24.1.zip
-          unzip -q allure-2.24.1.zip -d /opt/allure
-          echo "/opt/allure/allure-2.24.1/bin" >> $GITHUB_PATH
+          unzip -q allure-2.24.1.zip
+          echo "allure-2.24.1/bin" >> $GITHUB_PATH
 
-      # 👇 一定生成报告
       - name: 生成网页报告
         run: allure generate allure-results -o allure-report --clean
 
-      # 👇 一定上传
-      - name: 上传测试报告
+      - name: 上传报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
