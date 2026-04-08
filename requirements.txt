@@ -36,12 +36,13 @@ filelock==3.20.1
 packaging==25.0
 
 # ==============================
-# APP 自动化（Appium）
+# APP 自动化（Appium + iOS）
 # ==============================
 Appium-Python-Client==4.0.1
 typing-extensions==4.8.0
 protobuf==3.20.3
 attrs==24.3.0
+tidevice==0.12.11
 
 # ==============================
 # APP 旧机型（Airtest 红米4专用）
@@ -53,14 +54,14 @@ numpy==1.26.4
 Pillow==11.3.0
 six==1.16.0
 mss==6.1.0
-tidevice==0.12.11
 
 # ==============================
-# Linux SSH
+# Linux SSH & 桌面自动化
 # ==============================
 paramiko==3.3.1
 cryptography==41.0.7
 pycparser==2.22
+python-xlib==0.33
 
 # ==============================
 # Windows 桌面自动化
@@ -82,3 +83,5 @@ simplejson==3.20.2
 decorator>=5.1.1
 wrapt==1.17.3
 deprecated==1.2.18
+python-dateutil==2.9.0
+requests-toolbelt==1.0.0

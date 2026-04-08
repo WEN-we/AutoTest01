@@ -6,7 +6,7 @@
 ---
 
 ## 核心特性
-✅ 全平台覆盖：Web UI + 接口 + Android APP + iOS APP + Windows 桌面 + Linux 桌面 + Linux 服务端  
+✅ 全平台覆盖：Web UI + 接口 + Android APP + iOS APP + Windows 桌面 + Linux 桌面 + Linux 服务端  +HarmonyOS（鸿蒙）
 ✅ 多环境隔离：支持开发、测试、生产环境一键切换，避免环境干扰  
 ✅ 数据驱动测试：测试数据与用例分离，支持 YAML 格式，便于维护与扩展  
 ✅ 统一驱动管理：全平台驱动自动初始化、自动销毁，降低维护成本  
@@ -18,21 +18,22 @@
 ---
 
 ## 技术栈
-| 测试类型            | 核心技术                                |
-|:----------------|:------------------------------------|
-| 测试框架            | pytest/unittest                     |
-| 接口自动化           | requests + pytest                   |
-| Web UI 自动化(传统)  | unittest + selenium                 |
-| Web UI 自动化(现代)  | Playwright（支持Chrome/Firefox/WebKit） |
-| Android APP 自动化 | Appium + ADB（支持真机/模拟器）              |
-| iOS APP 自动化     | Appium + XCUITest                   |
-| Windows 桌面自动化   | PyAutoGUI                           |
-| Linux 桌面自动化     | PyAutoGUI                           |
-| Linux 服务端自动化    | Paramiko（SSH远程操作）                   |
-| 报告工具            | Allure Report                       |
-| 配置管理            | PyYAML + python-dotenv              |
-| 日志工具            | loguru                              |
-| CI/CD           | GitHub Actions/Jenkins              |
+| 测试类型              | 核心技术                                       |
+|:------------------|:-------------------------------------------|
+| 测试框架              | pytest/unittest                            |
+| 接口自动化             | requests + pytest                          |
+| Web UI 自动化(传统)    | unittest + selenium                        |
+| Web UI 自动化(现代)    | Playwright（支持Chrome/Firefox/WebKit）        |
+| Android APP 自动化   | Appium + ADB（支持真机/模拟器）                     |
+| iOS APP 自动化       | Appium + XCUITest                          |
+| Windows 桌面自动化     | PyAutoGUI                                  |
+| Linux 桌面自动化       | PyAutoGUI                                  |
+| Linux 服务端自动化      | Paramiko（SSH远程操作）                          |
+| HarmonyOS 鸿蒙自动化   | Appium + UiAutomator2 + HDC（鸿蒙调试工具）        |
+| 报告工具              | Allure Report                              |
+| 配置管理              | PyYAML + python-dotenv                     |
+| 日志工具              | loguru                                     |
+| CI/CD             | GitHub Actions/Jenkins                     |
 
 ---
 
@@ -77,9 +78,13 @@ PythonProject3/
 │   │   ├── __init__.py
 │   │   ├── base_linux_gui.py
 │   │   └── terminal_page.py
-│   └── base/
-│       ├── __init__.py
-│       └── base_page.py
+│   ├── base/
+│   │   ├── __init__.py
+│   │   └── base_page.py
+│   └── harmony/                      # 新增这个文件夹
+│   │    ├── __init__.py
+│   │    ├── base_harmony.py         # 鸿蒙基类
+│   │    └── login_page.py           # 鸿蒙登录页
 ├── service_objects/
 │   ├── __init__.py
 │   ├── base_service.py
@@ -112,7 +117,9 @@ PythonProject3/
 │   ├── test_service/
 │   │   └── test_linux_service.py
 │   └── test_harmony/
-│       └── test_user_api_harmony.py
+│       ├── __init__.py
+│       ├── test_login_harmony.py   # 新增
+│       └── test_user_harmony.py    # 新增
 ├── utils/
 │   ├── api_client.py
 │   ├── android_driver.py
@@ -125,6 +132,7 @@ PythonProject3/
 │   ├── common_utils.py
 │   ├── config_reader.py
 │   ├── logger.py
+│   ├── harmony_driver.py # 新增鸿蒙驱动
 │   └── send_email.py
 ├── tools/
 │   └── get_mouse_pos.py

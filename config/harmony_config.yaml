@@ -1,0 +1,4 @@
+device_name: Harmony Phone
+udid: 127.0.0.1:5555
+app_package: com.example.app
+app_activity: com.example.app.MainActivity
