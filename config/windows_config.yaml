@@ -1,0 +1,5 @@
+# Windows 桌面 GUI 自动化配置
+windows_gui:
+  failsafe: false
+  default_wait: 0.3
+  window_timeout: 5

@@ -1,5 +1,5 @@
-# 登录UI用例
-login_ui:
+# Web 端登录用例
+login_web:
   - case_name: 正确用户名密码登录
     username: 'admin'
     password: '123456'
@@ -14,3 +14,74 @@ login_ui:
     username: 'admin'
     password: ""
     expected_result: '密码不能少于5个字符'
+
+
+# Windows 桌面登录用例
+login_windows:
+  - case_name: 正确用户名密码登录
+    username: 'win_admin'
+    password: 'win123456'
+    expected_result: '登录成功'
+
+  - case_name: 空用户名登录
+    username: ""
+    password: 'win123456'
+    expected_result: '用户名不能为空'
+
+  - case_name: 空密码登录
+    username: 'win_admin'
+    password: ""
+    expected_result: '密码不能为空'
+
+
+# Android APP 登录用例
+login_android:
+  - case_name: 正确用户名密码登录
+    username: 'android_user'
+    password: 'app123456'
+    expected_result: '登录成功'
+
+  - case_name: 空用户名登录
+    username: ""
+    password: 'app123456'
+    expected_result: '请输入用户名'
+
+  - case_name: 空密码登录
+    username: 'android_user'
+    password: ""
+    expected_result: '请输入密码'
+
+
+# Linux GUI 桌面登录用例
+login_linux_gui:
+  - case_name: 正确用户名密码登录
+    username: 'linux_user'
+    password: 'gui123456'
+    expected_result: '认证成功'
+
+  - case_name: 空用户名登录
+    username: ""
+    password: 'gui123456'
+    expected_result: '用户名不能为空'
+
+  - case_name: 空密码登录
+    username: 'linux_user'
+    password: ""
+    expected_result: '密码不能为空'
+
+# 鸿蒙 APP 登录用例
+login_harmony:
+  - case_name: 正确用户名密码登录
+    username: "harmony_user"
+    password: "harmony123456"
+    expected_result: "登录成功"
+
+  - case_name: 空用户名登录
+    username: ""
+    password: "harmony123456"
+    expected_result: "请输入用户名"
+
+  - case_name: 空密码登录
+    username: "harmony_user"
+    password: ""
+    expected_result: "请输入密码"

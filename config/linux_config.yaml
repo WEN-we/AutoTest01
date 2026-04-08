@@ -1,0 +1,11 @@
+linux_server:
+  host: "192.168.138.129"
+  port: 22
+  username: "root1"
+  password: "root"
+
+linux_service_check:
+  check_commands:
+    java: "java -version"
+    docker: "docker --version"
+    nginx: "systemctl status nginx"

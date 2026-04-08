@@ -8,6 +8,9 @@ ecommerce_auto_test/
 ├── README.md               # 项目说明文档（企业协作必备）
 ├── config/                 # 配置目录（环境隔离+通用配置）
 │   ├── env_config.yaml     # 多环境配置（开发/测试/生产，通用模板）
+│   ├── app_config.yaml     # 新增：APP 通用配置
+│   ├── linux_config.yaml     # 新增：linux 通用配置
+│   ├── windows_config.yaml     # 新增：windows 通用配置
 │   └── ui_config.yaml      # UI自动化通用配置（浏览器/超时等）
 ├── test_data/              # 测试数据目录（数据与用例分离）
 │   ├── api_test_data.yaml  # 接口测试数据（通用模板，可扩展）
@@ -18,6 +21,11 @@ ecommerce_auto_test/
 │   ├── logger.py           # 日志封装（企业级格式，可直接复用）
 │   ├── api_client.py       # 接口请求封装（通用，适配所有HTTP接口）
 │   ├── ui_driver.py        # UI驱动封装（Playwright，通用无业务依赖）
+│   ├── android_driver.py    # 新增：安卓真机驱动(ADB调试物理机)
+│   ├── ios_driver.py        # 新增：iOS 驱动
+│   ├── linux_client.py     # 新增：Linux SSH远程执行工具(非桌面GUI)
+│   ├── linux_driver.py     # Linux桌面GUI驱动
+│   ├── windows_driver.py    # 新增：Windows 驱动
 │   ├── send_email.py        # 邮件发送（目前不好执行自动化发送邮件）
 │   └── common_utils.py     # 通用工具（时间/加密/数据处理，可扩展）
 ├── page_objects/           # UI自动化PO模式（页面对象，通用模板）
@@ -45,6 +53,22 @@ ecommerce_auto_test/
 │       ├── test_user_ui.py  # 用户模块UI用例（模板）
 │       ├── test_order_ui.py # 订单模块UI用例（模板）
 │       └── test_goods_ui.py # 商品模块UI用例（模板）
+│   ├── test_android/            # 新增：安卓 APP 用例
+│   │   ├── __init__.py
+│   │   ├── test_login_android.py
+│   │   └── test_order_android.py
+│   ├── test_ios/                # 新增：iOS APP 用例
+│   │   └── __init__.py
+│   ├── test_linux/         # Linux桌面GUI用例
+│   │   └── __init__.py
+│   ├── test_selenium/         # selenium传统Web用例
+│   │   └── __init__.py
+│   ├── test_service/        # 服务测试（Linux/MySQL/Redis）
+│   │   ├── __init__.py
+│   │   ├── test_linux_api.py
+│   │   └── test_linux_service.py
+│   └── test_windows/            # 新增：Windows 桌面用例
+│       └── __init__.py
 ├── logs/                   # 日志目录（自动生成，无需手动创建）
 ├── allure-results/         # Allure报告原始数据（执行后自动生成）
 └── allure-report/          # Allure可视化报告（生成后可直接打开）
@@ -150,3 +174,22 @@ XPath	By.XPATH, “//div”	“//div”
 pytest tests/test_api/test_user_api.py -v
 pip install -r requirements.txt
 接口自动化测试,测试网址多个端口公用问题：
+搭建好web自动化测试框架可继续扩展其他端测试
+tests/test_service/                 # 服务测试（Linux/MySQL/Redis）
+pytest tests/test_android/ -v
+adb devices
+大厂标准架构
+接口、Web、APP 统一 Pytest
+APP 分：新手机 Appium + 旧手机 Airtest
+代码不冲突、结构干净、可直接写进简历
+企业真实工作流（1:1 还原）
+写代码 → 你现在这套框架直接用
+连接 iPhone → 开启 UDID
+Mac 启动 Appium
+运行 pytest
+自动生成 Allure 报告
+
+util = 底层工具（框架级、通用、业务无关）
+tool = 辅助小脚本（临时、一次性、非用例运行）
+必须加 __init__.py 的文件夹
+只要满足：被代码 import → 必须加

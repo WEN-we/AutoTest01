@@ -2,8 +2,8 @@ import time
 from time import sleep
 
 import pytest
-from page_objects.login_page import LoginPage
-from page_objects.home_page import HomePage
+from page_objects.web.login_page import LoginPage
+from page_objects.web.home_page import HomePage
 from utils.config_reader import ConfigReader
 from utils.logger import log
 

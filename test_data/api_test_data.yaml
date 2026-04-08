@@ -1,20 +1,148 @@
+# ====================== Web 端接口（你原有） ======================
 user_login_api:
-  - case_name: 正确用户名密码登录
+  - case_name: Web-正确用户名密码登录
     method: POST
-    # 【修复】正确接口地址！！！
     url: /api/admin/login
     json:
       userName: "admin"
       password: "123456"
     expected_code: 200
-    # 【修复】返回字段是 message
-    expected_msg: "用户未登录"
+    expected_msg: "登录成功"
 
-  - case_name: 错误密码登录
+  - case_name: Web-错误密码登录
+    method: POST
+    url: /api/admin/login
+    json:
+      userName: "admin"
+      password: "wrong_password"
+    expected_code: 200
+    expected_msg: "密码错误"
+
+  - case_name: Web-空密码登录
     method: POST
     url: /api/admin/login
     json:
       userName: "admin"
       password: ""
     expected_code: 200
-    expected_msg: "用户未登录"
+    expected_msg: "密码不能为空"
+
+
+# ====================== Android APP 接口 ======================
+user_login_android_api:
+  - case_name: Android-正确用户名密码登录
+    method: POST
+    url: /api/app/login
+    json:
+      userName: "android_user"
+      password: "app123456"
+    expected_code: 200
+    expected_msg: "登录成功"
+
+  - case_name: Android-错误密码登录
+    method: POST
+    url: /api/app/login
+    json:
+      userName: "android_user"
+      password: "wrong_password"
+    expected_code: 200
+    expected_msg: "密码错误"
+
+  - case_name: Android-空密码登录
+    method: POST
+    url: /api/app/login
+    json:
+      userName: "android_user"
+      password: ""
+    expected_code: 200
+    expected_msg: "密码不能为空"
+
+
+# ====================== Windows 桌面端接口 ======================
+user_login_windows_api:
+  - case_name: Windows-正确用户名密码登录
+    method: POST
+    url: /api/pc/login
+    json:
+      userName: "windows_user"
+      password: "pc123456"
+    expected_code: 200
+    expected_msg: "登录成功"
+
+  - case_name: Windows-错误密码登录
+    method: POST
+    url: /api/pc/login
+    json:
+      userName: "windows_user"
+      password: "wrong_password"
+    expected_code: 200
+    expected_msg: "密码错误"
+
+  - case_name: Windows-空密码登录
+    method: POST
+    url: /api/pc/login
+    json:
+      userName: "windows_user"
+      password: ""
+    expected_code: 200
+    expected_msg: "密码不能为空"
+
+
+# ====================== Harmony（鸿蒙）端接口 ======================
+user_login_harmony_api:
+  - case_name: Harmony-正确用户名密码登录
+    method: POST
+    url: /api/harmony/login
+    json:
+      userName: "harmony_user"
+      password: "harmony123456"
+    expected_code: 200
+    expected_msg: "登录成功"
+
+  - case_name: Harmony-错误密码登录
+    method: POST
+    url: /api/harmony/login
+    json:
+      userName: "harmony_user"
+      password: "wrong_password"
+    expected_code: 200
+    expected_msg: "密码错误"
+
+  - case_name: Harmony-空密码登录
+    method: POST
+    url: /api/harmony/login
+    json:
+      userName: "harmony_user"
+      password: ""
+    expected_code: 200
+    expected_msg: "密码不能为空"
+
+
+# ====================== Linux 服务端接口 ======================
+user_login_linux_api:
+  - case_name: Linux服务-正确用户名密码登录
+    method: POST
+    url: /api/server/login
+    json:
+      userName: "linux_user"
+      password: "server123456"
+    expected_code: 200
+    expected_msg: "登录成功"
+
+  - case_name: Linux服务-错误密码登录
+    method: POST
+    url: /api/server/login
+    json:
+      userName: "linux_user"
+      password: "wrong_password"
+    expected_code: 200
+    expected_msg: "密码错误"
+
+  - case_name: Linux服务-空密码登录
+    method: POST
+    url: /api/server/login
+    json:
+      userName: "linux_user"
+      password: ""
+    expected_code: 200
+    expected_msg: "密码不能为空"
