@@ -16,18 +16,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 安装依赖
+      - name: 安装系统依赖（给Playwright用）
         run: |
           sudo apt-get update
           sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
+
+      - name: 安装Python依赖（跳过Windows专属库）
+        run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install pytest playwright requests allure-pytest pytest-html pyyaml python-dotenv loguru
           playwright install chromium
 
-      - name: 运行基础冒烟集（API + UI）并生成HTML报告
-        run: python run_all_smoke.py
+      - name: 运行冒烟测试（API+UI）
+        run: |
+          pytest -m "api or ui" --html=report.html --self-contained-html
 
-      - name: 上传测试报告
+      - name: 上传HTML报告
         if: always()
         uses: actions/upload-artifact@v4
         with:

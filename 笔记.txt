@@ -230,3 +230,19 @@ tool = 辅助小脚本（临时、一次性、非用例运行）
 配置 HDC 环境变量
 用 Appium+UiAutomator2 驱动连接鸿蒙设备
 直接用你之前写的harmony_driver.py即可正常运行。
+✅ GitHub 支持无限个 workflow 文件
+✅ 两个会各自独立运行、互不干扰
+✅ 一个跑 Allure 报告
+✅ 一个跑基础 pytest 报告
+集成 GitHub Actions + Jenkins CI/CD，实现 Web / 接口自动化持续测试，支持 Allure 报告自动生成。
+APP / 鸿蒙 / 桌面端需在本地环境执行，CI 环境仅运行无 GUI 自动化。
+ci_allure.yml → 全平台 Allure 报告流程
+跑的内容：
+Linux：API 接口 + Web UI
+Windows：桌面自动化（简单演示）
+最后合并生成 一份超好看的 Allure 报告
+
+test_workflow.yml → 基础冒烟 CI 流程
+跑的内容：
+Linux：API 接口 + Web UI
+生成 简单 HTML 报告
