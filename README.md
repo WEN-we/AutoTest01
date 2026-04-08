@@ -1,4 +1,11 @@
 # 企业级电商全平台自动化测试框架
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
+[![TestFramework](https://img.shields.io/badge/TestFramework-Pytest-green.svg)](https://docs.pytest.org/)
+[![Platform](https://img.shields.io/badge/Platform-Web%20%7C%20Android%20%7C%20iOS%20%7C%20HarmonyOS%20%7C%20Windows%20%7C%20Linux-orange.svg)](README.md)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions%20%7C%20Jenkins-red.svg)](README.md)
+[![Report](https://img.shields.io/badge/Report-Allure-green.svg)](https://docs.qameta.io/allure/)
+
+---
 
 ## 项目介绍
 本项目是一套**企业级电商全平台自动化测试通用框架**，基于 Python + Pytest 构建，覆盖 Web 端、接口、Android APP、iOS APP、Windows 桌面、Linux 桌面及 Linux 服务端测试场景，集成 Allure 可视化报告与 GitHub Actions CI/CD 持续集成，实现多环境隔离、数据与用例分离、工具类高度复用，适配各类电商业务场景，可直接复用并快速适配自身业务需求，落地全流程自动化测试。
