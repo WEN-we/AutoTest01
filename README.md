@@ -6,7 +6,8 @@
 ---
 
 ## 核心特性
-✅ 全平台覆盖：Web UI + 接口 + Android APP + iOS APP + Windows 桌面 + Linux 桌面 + Linux 服务端  +HarmonyOS（鸿蒙）
+✅ 全平台覆盖：Web UI + 接口 + Android APP + iOS APP + Windows 桌面 + Linux 桌面 + Linux 服务端  + HarmonyOS（鸿蒙）
+
 ✅ 多环境隔离：支持开发、测试、生产环境一键切换，避免环境干扰  
 ✅ 数据驱动测试：测试数据与用例分离，支持 YAML 格式，便于维护与扩展  
 ✅ 统一驱动管理：全平台驱动自动初始化、自动销毁，降低维护成本  
