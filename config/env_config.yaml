@@ -5,6 +5,13 @@ active_env: test
 dev:
   base_api_url: http://dev-api.ecommerce.com
   base_ui_url: http://dev-web.ecommerce.com
+
+  android_api_url: http://dev-api.ecommerce.com/app
+  ios_api_url: http://dev-api.ecommerce.com/ios
+  harmony_api_url: http://dev-api.ecommerce.com/harmony  # 鸿蒙
+  windows_api_url: http://dev-api.ecommerce.com/pc
+  linux_server_url: 192.168.1.100
+
   db:
     host: 127.0.0.1
     port: 3306
@@ -15,16 +22,30 @@ dev:
 test:
   base_api_url: https://www.mindskip.net:7003
   base_ui_url: https://www.mindskip.net:7003
+
+  android_api_url: https://www.mindskip.net:7003/api/app
+  ios_api_url: https://www.mindskip.net:7003/api/ios
+  harmony_api_url: https://www.mindskip.net:7003/api/harmony  # 鸿蒙
+  windows_api_url: https://www.mindskip.net:7003/api/pc
+  linux_server_url: 192.168.138.129
+
   db:
     host:  www.mindskip.net
     port: 3306
     user: admin
     pwd: 123456
 
-# 生产环境（仅用于演示，实际不建议在自动化中直接操作）
+# 生产环境
 prod:
   base_api_url: http://prod-api.ecommerce.com
   base_ui_url: http://prod-web.ecommerce.com
+
+  android_api_url: http://prod-api.ecommerce.com/app
+  ios_api_url: http://prod-api.ecommerce.com/ios
+  harmony_api_url: http://prod-api.ecommerce.com/harmony  # 鸿蒙
+  windows_api_url: http://prod-api.ecommerce.com/pc
+  linux_server_url: 10.0.0.100
+
   db:
     host: 10.0.0.100
     port: 3306

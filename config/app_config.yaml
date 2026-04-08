@@ -1,0 +1,22 @@
+# APP 自动化配置
+android:
+  automationName: "UiAutomator2"
+  platformName: "Android"
+  deviceName: "Redmi 4"
+  appPackage: "com.android.settings"
+  appActivity: "com.android.settings.Settings"
+  noReset: true
+  unicodeKeyboard: true
+  resetKeyboard: true
+
+  # 👇👇👇 这三行直接强制跳过所有 SDK 检查 👇👇👇
+  skipServerInstallation: true
+  adbExecTimeout: 20000
+  suppressAdbLauncher: true
+
+ios:
+  deviceName: "iPhone 12"
+  udid: "你的手机UDID"          #真机
+  platformVersion: "17.0"
+  app: "com.xxx.app"
+  automationName: "XCUITest"
