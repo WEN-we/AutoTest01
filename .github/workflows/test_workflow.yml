@@ -2,11 +2,11 @@ name: 电商自动化测试CI
 
 on:
   push:
-    branches: [ master ] #master/main依照GitHub上面来
+    branches: [ master ]
 
 jobs:
   test:
-    runs-on: ubuntu-22.04 #22.04版本兼容playwright
+    runs-on: ubuntu-22.04
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 安装依赖 #Linux系统环境下运行
+      - name: 安装依赖
         run: |
           sudo apt-get update
           sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
@@ -27,7 +27,6 @@ jobs:
       - name: 运行基础冒烟集（API + UI）并生成HTML报告
         run: python run_all_smoke.py
 
-      # 👇 直接上传报告
       - name: 上传测试报告
         if: always()
         uses: actions/upload-artifact@v4
