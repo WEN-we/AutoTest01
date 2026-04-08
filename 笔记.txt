@@ -1,77 +1,108 @@
-ecommerce_auto_test/
+PythonProject3/
 ├── .github/
-│   └── workflows/          # GitHub Actions CI/CD配置（通用可直接复用）
-│       └── test_workflow.yml
-├── .gitignore              # Git忽略规则（企业级通用）
-├── requirements.txt        # 依赖清单（锁定版本，避免环境不一致）
-├── pytest.ini              # Pytest核心配置（企业级用例执行规范）
-├── README.md               # 项目说明文档（企业协作必备）
-├── config/                 # 配置目录（环境隔离+通用配置）
-│   ├── env_config.yaml     # 多环境配置（开发/测试/生产，通用模板）
-│   ├── app_config.yaml     # 新增：APP 通用配置
-│   ├── linux_config.yaml     # 新增：linux 通用配置
-│   ├── windows_config.yaml     # 新增：windows 通用配置
-│   └── ui_config.yaml      # UI自动化通用配置（浏览器/超时等）
-├── test_data/              # 测试数据目录（数据与用例分离）
-│   ├── api_test_data.yaml  # 接口测试数据（通用模板，可扩展）
-│   └── ui_test_data.yaml   # UI测试数据（通用模板，可扩展）
-├── utils/                  # 工具类目录（高内聚，可复用，无业务依赖）
+│   └── workflows/
+│       ├── ci_allure.yml            # GitHub Actions：分平台跑 + 汇总 Allure
+│       └── test_workflow.yml        # 旧版示例工作流（pytest-html）
+├── .gitignore                       # Git 忽略规则
+├── bat/                             # 历史/本地生成的报告与脚本
+│   ├── run_allure.bat               # 本地一键生成 Allure 报告（Windows）
+│   └── 测试报告_*/                  # 历史 Allure 报告（独立目录）
+├── config/                          # 配置（多环境/多端）
+│   ├── env_config.yaml
+│   ├── ui_config.yaml
+│   ├── app_config.yaml
+│   ├── windows_config.yaml
+│   └── linux_config.yaml
+├── page_objects/                    # 页面对象（多端）
 │   ├── __init__.py
-│   ├── config_reader.py    # 配置读取工具（通用，无需修改）
-│   ├── logger.py           # 日志封装（企业级格式，可直接复用）
-│   ├── api_client.py       # 接口请求封装（通用，适配所有HTTP接口）
-│   ├── ui_driver.py        # UI驱动封装（Playwright，通用无业务依赖）
-│   ├── android_driver.py    # 新增：安卓真机驱动(ADB调试物理机)
-│   ├── ios_driver.py        # 新增：iOS 驱动
-│   ├── linux_client.py     # 新增：Linux SSH远程执行工具(非桌面GUI)
-│   ├── linux_driver.py     # Linux桌面GUI驱动
-│   ├── windows_driver.py    # 新增：Windows 驱动
-│   ├── send_email.py        # 邮件发送（目前不好执行自动化发送邮件）
-│   └── common_utils.py     # 通用工具（时间/加密/数据处理，可扩展）
-├── page_objects/           # UI自动化PO模式（页面对象，通用模板）
+│   ├── web/
+│   │   ├── __init__.py
+│   │   ├── base_page.py
+│   │   ├── home_page.py
+│   │   └── login_page.py
+│   │   ├── order_page.py
+│   │   └── user_page.py
+│   ├── android/
+│   │   ├── __init__.py
+│   │   ├── base_android.py
+│   │   └── login_page.py
+│   ├── ios/
+│   │   └── __init__.py
+│   ├── windows/
+│   │   ├── __init__.py
+│   │   ├── base_window.py
+│   │   └── login_window.py
+│   ├── linux_gui/
+│   │   ├── __init__.py
+│   │   ├── base_linux_gui.py
+│   │   └── terminal_page.py
+│   ├── base/
+│   │   ├── __init__.py
+│   │   └── base_page.py
+│   └── harmony/                      # 新增这个文件夹
+│   │    ├── __init__.py
+│   │    ├── base_harmony.py         # 鸿蒙基类
+│   │    └── login_page.py           # 鸿蒙登录页
+├── service_objects/
 │   ├── __init__.py
-│   ├── base_page.py        # 基础页面（通用操作，所有页面继承）
-│   ├── login_page.py       # 登录页（通用模板，适配所有登录场景）
-│   ├── home_page.py        # 首页（通用模板）
-│   ├── order_page.py       # 订单页（通用模板）
-│   └── user_page.py        # 个人中心页（通用模板）
-├── tests/                  # 测试用例目录（企业级按模块拆分，通用模板）
-│   ├── __init__.py
-│   ├── conftest.py         # Pytest全局夹具（通用，无需修改）
-│   ├── test_api/           # 接口测试用例（按业务模块拆分）
-│   │   ├── __init__.py
-│   │   ├── test_user_api.py  # 用户模块接口用例（模板）
-│   │   ├── test_order_api.py # 订单模块接口用例（模板）
-│   │   ├── test_goods_api.py # 商品模块接口用例（模板）
-│   │   └── test_pay_api.py   # 支付模块接口用例（模板）
-│   ├── test_smoke/           # 冒烟测试用例（按业务模块拆分）
-│   │   ├── __init__.py
-│   │   ├── test_smoke_api.py  # 核心接口模块接口用例（模板）
-│   │   └── test_smoke_ui.py   # 核心UI模块接口用例（模板）
-│   └── test_ui/            # UI自动化用例（按业务模块拆分）
-│       ├── __init__.py
-│       ├── test_user_ui.py  # 用户模块UI用例（模板）
-│       ├── test_order_ui.py # 订单模块UI用例（模板）
-│       └── test_goods_ui.py # 商品模块UI用例（模板）
-│   ├── test_android/            # 新增：安卓 APP 用例
-│   │   ├── __init__.py
-│   │   ├── test_login_android.py
-│   │   └── test_order_android.py
-│   ├── test_ios/                # 新增：iOS APP 用例
-│   │   └── __init__.py
-│   ├── test_linux/         # Linux桌面GUI用例
-│   │   └── __init__.py
-│   ├── test_selenium/         # selenium传统Web用例
-│   │   └── __init__.py
-│   ├── test_service/        # 服务测试（Linux/MySQL/Redis）
-│   │   ├── __init__.py
-│   │   ├── test_linux_api.py
+│   ├── base_service.py
+│   └── linux_service.py
+├── test_data/                       # 测试数据
+│   ├── api_test_data.yaml
+│   └── ui_test_data.yaml
+├── tests/
+│   ├── conftest.py                  # 全局 fixture + 按端启用开关 + 自动打 marker
+│   ├── test_api/
+│   │   └── test_user_api.py
+│   ├── test_ui/
+│   │   └── test_user_ui.py
+│   ├── test_android/
+│   │   ├── test_android_appium/
+│   │   │   ├── test_demo.py
+│   │   │   └── test_login_android.py
+│   │   └── test_android_airtest/
+│   │       ├── test_airtest_redmi4.py
+│   │       └── test_login.py
+│   ├── test_ios/
+│   │   └── test_ios_demo.py
+│   ├── test_windows/
+│   │   ├── test_login.py
+│   │   ├── test_notepad.py
+│   │   └── test_windows_gui.py
+│   ├── test_linux/
+│   │   ├── test_linux_gui.py
+│   │   └── test_terminal.py
+│   ├── test_service/
 │   │   └── test_linux_service.py
-│   └── test_windows/            # 新增：Windows 桌面用例
-│       └── __init__.py
-├── logs/                   # 日志目录（自动生成，无需手动创建）
-├── allure-results/         # Allure报告原始数据（执行后自动生成）
-└── allure-report/          # Allure可视化报告（生成后可直接打开）
+│   └── test_harmony/
+│       ├── __init__.py
+│       ├── test_login_harmony.py   # 新增
+│       └── test_user_harmony.py    # 新增
+├── utils/
+│   ├── api_client.py
+│   ├── android_driver.py
+│   ├── airtest_driver.py
+│   ├── ios_driver.py
+│   ├── linux_client.py
+│   ├── linux_driver.py
+│   ├── ui_driver.py
+│   ├── windows_driver.py
+│   ├── common_utils.py
+│   ├── config_reader.py
+│   ├── logger.py
+│   ├── harmony_driver.py # 新增鸿蒙驱动
+│   └── send_email.py
+├── tools/
+│   └── get_mouse_pos.py
+├── logs/                            # 运行日志（自动生成）
+├── allure-results/                  # Allure 原始结果（执行后生成）
+└── allure-report/                   # Allure 静态报告（生成后可直接打开）
+├── pytest.ini
+├── requirements.txt
+├── run_all_smoke.py
+├── Run_CI.bat
+├── README.md
+└── 笔记.txt
 # 克隆项目（本地创建后，可初始化Git）
 git init
 # 创建虚拟环境（可选）
@@ -193,3 +224,9 @@ util = 底层工具（框架级、通用、业务无关）
 tool = 辅助小脚本（临时、一次性、非用例运行）
 必须加 __init__.py 的文件夹
 只要满足：被代码 import → 必须加
+鸿蒙依赖说明
+鸿蒙自动化不需要额外 Python 包，只需要：
+本地安装鸿蒙 HDC 工具（DevEco Studio 自带）
+配置 HDC 环境变量
+用 Appium+UiAutomator2 驱动连接鸿蒙设备
+直接用你之前写的harmony_driver.py即可正常运行。
