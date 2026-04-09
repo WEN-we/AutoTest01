@@ -28,10 +28,23 @@ jobs:
       - name: 运行接口+UI测试 + 生成HTML报告
         run: pytest tests/test_api/ tests/test_ui/ --html=report.html --self-contained-html
 
-      # 👇 直接上传报告
-      - name: 上传测试报告
+      # ==============================
+      # 【保留你原来的：下载报告功能】
+      # ==============================
+      - name: 上传测试报告（可下载）
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: 测试报告
           path: report.html
+
+      # ==============================
+      # 【新增：在线查看报告】
+      # ==============================
+      - name: 发布报告到 GitHub Pages（在线查看）
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./
