@@ -8,7 +8,7 @@ from utils.config_reader import ConfigReader
 from utils.logger import log
 
 # 读取UI测试数据
-test_data = ConfigReader.read_yaml("test_data/ui_test_data.yaml")["login_ui"]
+test_data = ConfigReader.read_yaml("test_data/ui_test_data.yaml")["login_web"]
 
 
 class TestUserUI:
