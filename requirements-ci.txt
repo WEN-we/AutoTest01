@@ -1,0 +1,9 @@
+# 云端 CI 专用依赖（只支持 Web + 接口，无设备/无系统依赖）
+pytest>=7.0
+pytest-html>=4.0
+allure-pytest>=2.13
+playwright>=1.40
+requests>=2.31
+pyyaml>=6.0
+python-dotenv>=1.0
+loguru>=0.7
