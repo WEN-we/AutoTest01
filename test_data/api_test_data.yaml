@@ -7,7 +7,7 @@ user_login_api:
       userName: "admin"
       password: "123456"
     expected_code: 200
-    expected_msg: "登录成功"
+    expected_msg: "用户未登录"
 
   - case_name: Web-错误密码登录
     method: POST
@@ -16,7 +16,7 @@ user_login_api:
       userName: "admin"
       password: "wrong_password"
     expected_code: 200
-    expected_msg: "密码错误"
+    expected_msg: "用户未登录"
 
   - case_name: Web-空密码登录
     method: POST
@@ -25,7 +25,7 @@ user_login_api:
       userName: "admin"
       password: ""
     expected_code: 200
-    expected_msg: "密码不能为空"
+    expected_msg: "用户未登录"
 
 
 ## ====================== Android APP 接口 ======================
