@@ -1,5 +1,8 @@
 name: 电商自动化测试CI
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ master ]
