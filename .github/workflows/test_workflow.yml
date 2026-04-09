@@ -26,7 +26,7 @@ jobs:
 
       # 👇 直接生成 pytest-html 简单报告！100%成功！
       - name: 运行接口+UI测试 + 生成HTML报告
-        run: pytest tests/ --html=report.html --self-contained-html || true
+        run: pytest tests/test_api/ tests/test_ui/ --html=report.html --self-contained-html
 
       # 👇 直接上传报告
       - name: 上传测试报告
