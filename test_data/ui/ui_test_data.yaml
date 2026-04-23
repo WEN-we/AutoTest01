@@ -1,4 +1,4 @@
-# Web 端登录用例
+# Web 端登录用例（本地）
 login_web:
   - case_name: 正确用户名密码登录
     username: 'admin'
@@ -8,13 +8,53 @@ login_web:
   - case_name: 空用户名登录
     username: ""
     password: '123456'
-    expected_result: '用户名不能少于5个字符'
+    expected_result: '参数不能为空'
 
   - case_name: 空密码登录
     username: 'admin'
     password: ""
-    expected_result: '密码不能少于5个字符'
+    expected_result: '参数不能为空'
 
+  - case_name: 用户名错误登录
+    username: 'adn'
+    password: "123456"
+    expected_result: '用户名或密码错误'
+
+  - case_name: 密码错误登录
+    username: 'admin'
+    password: "123"
+    expected_result: '用户名或密码错误'
+
+# Web 端登录用例（学生教务系统）
+login_syzy_web:
+
+#  - case_name: 空用户名密码登录
+#    username: "1"
+#    password: ""
+#    expected_result: ''
+#    expected_alert: "不能为空！"  # 弹窗文字提示校验
+
+#  - case_name: 空密码登录
+#    username: '13800138000'
+#    password: ""
+#    expected_result: '参数不能为空'
+#
+  - case_name: 用户名错误登录
+    username: '20240000001'
+    password: "wen12346"
+    expected_result: '用户名或密码错误'
+
+  - case_name: 密码错误登录
+    username: '20240000002'
+    password: "123"
+    expected_result: '用户名或密码错误 密码提示为：文'
+#
+login_syzy_smoken_web:
+  - case_name: 正确用户名密码登录
+    username: '20240000002'
+    password: 'Mock@1234'
+    expected_result: '登录成功'#不是断言错误文字，用来标记
+    expected_text: '个人' #断言主页文字判断登录成功
 
 # Windows 桌面登录用例
 #login_windows:

@@ -1,7 +1,7 @@
 import paramiko
 import os
-from utils.logger import logger
-from utils.config_reader import ConfigReader
+from utils.tools.logger import logger
+from utils.tools.config_reader import ConfigReader
 
 # ========== 云端 CI 模式：自动识别 GitHub ==========
 CI_MODE = os.environ.get("CI") == "true"

@@ -1,7 +1,7 @@
 from appium import webdriver
 from appium.options.ios import XCUITestOptions
-from utils.config_reader import ConfigReader
-from utils.logger import logger
+from utils.tools.config_reader import ConfigReader
+from utils.tools.logger import logger
 
 class IosDriver:
     """iOS 真机驱动 · XCUITest · 企业规范版"""

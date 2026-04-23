@@ -1,8 +1,8 @@
 import os
 import time
 import pyautogui
-from utils.config_reader import ConfigReader
-from utils.logger import logger
+from utils.tools.config_reader import ConfigReader
+from utils.tools.logger import logger
 
 class LinuxDriver:
     def __init__(self):
