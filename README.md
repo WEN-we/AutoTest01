@@ -48,110 +48,92 @@
 ## 目录结构说明
 核心采用分层架构设计，目录清晰、职责明确，便于团队协作与维护：
 ```
-PythonProject3/
+D:\Pthon.Object\PythonProject3/
 ├── .github/
 │   └── workflows/
-│       ├── ci_allure.yml            # GitHub Actions：分平台跑 + 汇总 Allure
-│       └── test_workflow.yml        # 旧版示例工作流（pytest-html）
-├── .gitignore                       # Git 忽略规则
-├── bat/                             # 历史/本地生成的报告与脚本
-│   ├── run_allure.bat               # 本地一键生成 Allure 报告（Windows）
-│   └── 测试报告_*/                  # 历史 Allure 报告（独立目录）
-├── config/                          # 配置（多环境/多端）
-│   ├── env_config.yaml
-│   ├── ui_config.yaml
+│       ├── ci_allure.yml
+│       └── test_workflow.yml
+├── allure-report/            # Allure测试报告
+├── allure-results/           # Allure测试结果
+├── bat/                      # 批处理脚本
+│   ├── 测试报告_周一022603_105920/
+│   └── run_allure.bat
+├── config/                   # 配置文件
 │   ├── app_config.yaml
-│   ├── windows_config.yaml
-│   └── linux_config.yaml
-├── page_objects/                    # 页面对象（多端）
-│   ├── __init__.py
-│   ├── web/
-│   │   ├── __init__.py
-│   │   ├── base_page.py
-│   │   ├── home_page.py
-│   │   └── login_page.py
-│   │   ├── order_page.py
-│   │   └── user_page.py
+│   ├── env_config.yaml
+│   ├── harmony_config.yaml
+│   ├── linux_config.yaml
+│   ├── ui_config.yaml
+│   └── windows_config.yaml
+├── erp/                      # ERP相关
+│   └── driver/
+│       └── driver.py
+├── local-web-login/          # 本地登录服务
+│   ├── backend_server.py
+│   └── login.html
+├── logs/                     # 日志目录
+├── page_objects/             # 页面对象
 │   ├── android/
-│   │   ├── __init__.py
-│   │   ├── base_android.py
-│   │   └── login_page.py
-│   ├── ios/
-│   │   └── __init__.py
-│   ├── windows/
-│   │   ├── __init__.py
-│   │   ├── base_window.py
-│   │   └── login_window.py
-│   ├── linux_gui/
-│   │   ├── __init__.py
-│   │   ├── base_linux_gui.py
-│   │   └── terminal_page.py
 │   ├── base/
+│   ├── harmony/
+│   ├── ios/
+│   ├── linux_gui/
+│   ├── web/
+│   └── windows/
+├── performance/              # 性能测试
+│   ├── tasks/
 │   │   ├── __init__.py
-│   │   └── base_page.py
-│   └── harmony/                      # 新增这个文件夹
-│   │    ├── __init__.py
-│   │    ├── base_harmony.py         # 鸿蒙基类
-│   │    └── login_page.py           # 鸿蒙登录页
-├── service_objects/
+│   │   ├── order_tasks.py
+│   │   └── user_tasks.py
+│   ├── __init__.py
+│   ├── config.py
+│   ├── locustfile.py
+│   └── perf_data.yaml
+├── report/                   # 测试报告
+├── service_objects/          # 服务对象
 │   ├── __init__.py
 │   ├── base_service.py
 │   └── linux_service.py
-├── test_data/                       # 测试数据
+├── test_data/                # 测试数据
 │   ├── api_test_data.yaml
 │   └── ui_test_data.yaml
-├── tests/
-│   ├── conftest.py                  # 全局 fixture + 按端启用开关 + 自动打 marker
-│   ├── test_api/
-│   │   └── test_user_api.py
-│   ├── test_ui/
-│   │   └── test_user_ui.py
+├── tests/                    # 测试用例
 │   ├── test_android/
-│   │   ├── test_android_appium/
-│   │   │   ├── test_demo.py
-│   │   │   └── test_login_android.py
-│   │   └── test_android_airtest/
-│   │       ├── test_airtest_redmi4.py
-│   │       └── test_login.py
+│   ├── test_api/
+│   ├── test_harmony/
 │   ├── test_ios/
-│   │   └── test_ios_demo.py
-│   ├── test_windows/
-│   │   ├── test_login.py
-│   │   ├── test_notepad.py
-│   │   └── test_windows_gui.py
 │   ├── test_linux/
-│   │   ├── test_linux_gui.py
-│   │   └── test_terminal.py
+│   ├── test_selenium/
 │   ├── test_service/
-│   │   └── test_linux_service.py
-│   └── test_harmony/
-│       ├── __init__.py
-│       ├── test_login_harmony.py   # 新增
-│       └── test_user_harmony.py    # 新增
-├── utils/
-│   ├── api_client.py
-│   ├── android_driver.py
+│   ├── test_smoke/
+│   ├── test_ui/
+│   └── test_windows/
+├── tools/                    # 工具脚本
+│   └── get_mouse_pos.py
+├── utils/                    # 工具类
+│   ├── __init__.py
 │   ├── airtest_driver.py
+│   ├── android_driver.py
+│   ├── api_client.py
+│   ├── common_utils.py
+│   ├── config_reader.py
+│   ├── db_util.py
+│   ├── harmony_driver.py
 │   ├── ios_driver.py
 │   ├── linux_client.py
 │   ├── linux_driver.py
-│   ├── ui_driver.py
-│   ├── windows_driver.py
-│   ├── common_utils.py
-│   ├── config_reader.py
 │   ├── logger.py
-│   ├── harmony_driver.py # 新增鸿蒙驱动
-│   └── send_email.py
-├── tools/
-│   └── get_mouse_pos.py
-├── logs/                            # 运行日志（自动生成）
-├── allure-results/                  # Allure 原始结果（执行后生成）
-└── allure-report/                   # Allure 静态报告（生成后可直接打开）
+│   ├── selenium_driver.py
+│   ├── send_email.py
+│   ├── ui_driver.py
+│   └── windows_driver.py
+├── .gitignore
+├── README.md
+├── Run_CI.bat
 ├── pytest.ini
+├── requirements-ci.txt
 ├── requirements.txt
 ├── run_all_smoke.py
-├── Run_CI.bat
-├── README.md
 └── 笔记.txt
 ```
 ---
