@@ -1,6 +1,6 @@
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
-from utils.config_reader import ConfigReader
+from utils.tools.config_reader import ConfigReader
 
 class AndroidDriver:
     def __init__(self):

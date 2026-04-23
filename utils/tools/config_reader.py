@@ -28,6 +28,12 @@ class ConfigReader:
         active_env = env_config["active_env"]
         return env_config[active_env]
 
+    # ====================== 【新增：数据库配置】只需加这一个方法 ======================
+    @staticmethod
+    def get_db_config():
+        env = ConfigReader.get_env_config()
+        return env["db"]
+
     @staticmethod
     def get_ui_config():
         """获取UI自动化配置（替换占位符）"""
@@ -107,7 +113,4 @@ class ConfigReader:
 if __name__ == "__main__":
     env_config = ConfigReader.get_env_config()
     print("测试环境API地址：", env_config["base_api_url"])
-    print("Android 接口地址：", ConfigReader.get_android_config()["base_api_url"])
-    print("iOS 接口地址：", ConfigReader.get_ios_config()["base_api_url"])
-    print("鸿蒙 接口地址：", ConfigReader.get_harmony_config()["base_api_url"])
-    print("Windows 接口地址：", ConfigReader.get_windows_config()["base_api_url"])
+    print("数据库配置：", ConfigReader.get_db_config())  # 测试数据库配置

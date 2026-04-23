@@ -1,6 +1,6 @@
 from service_objects.base_service import BaseService
-from utils.linux_client import LinuxClient
-from utils.config_reader import ConfigReader
+from utils.tools.linux_client import LinuxClient
+from utils.tools.config_reader import ConfigReader
 
 class LinuxService(BaseService):
     """Linux SSH 服务对象（SO）"""

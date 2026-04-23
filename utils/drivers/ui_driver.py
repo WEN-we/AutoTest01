@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
-from utils.config_reader import ConfigReader
-from utils.logger import log
+from utils.tools.config_reader import ConfigReader
+from utils.tools.logger import log
 
 
 class UIDriver:

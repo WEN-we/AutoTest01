@@ -3,8 +3,8 @@ import subprocess
 import pyautogui
 import pygetwindow as gw
 import time
-from utils.logger import logger
-from utils.config_reader import ConfigReader  # 你的配置工具
+from utils.tools.logger import logger
+from utils.tools.config_reader import ConfigReader  # 你的配置工具
 
 class WindowsDriver:
     """

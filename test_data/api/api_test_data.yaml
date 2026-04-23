@@ -1,31 +1,91 @@
-# ====================== Web 端接口（你原有） ======================
+# ====================== Web 端接口（云班课与本地） ======================
 user_login_api:
-  - case_name: Web-正确用户名密码登录
+  - case_name: Web-云班课错误密码登录
     method: POST
-    url: /api/admin/login
+    url: "/account-login"
     json:
-      userName: "admin"
+      account: "19892142453"
       password: "123456"
     expected_code: 200
-    expected_msg: "用户未登录"
+    errorMessage: "你输入的账号或密码不正确"
+    errorCode: 'err.invalid.userPassword'
 
-  - case_name: Web-错误密码登录
+  - case_name: Web-云班课错误账户名登录
     method: POST
-    url: /api/admin/login
+    url: "/account-login"
     json:
-      userName: "admin"
-      password: "wrong_password"
+      account: "1111111"
+      password: "@wen123456"
     expected_code: 200
-    expected_msg: "用户未登录"
+    errorMessage: "你输入的账号或密码不正确"
+    errorCode: 'err.invalid.userPassword'
 
-  - case_name: Web-空密码登录
+  - case_name: Web-云班课账户名为空登录
     method: POST
-    url: /api/admin/login
+    url: "/account-login"
     json:
-      userName: "admin"
+      account: ""
+      password: "@wen123456"
+    expected_code: 200
+    errorMessage: "请填写account"
+    errorCode: 'err.validation.empty'
+
+  - case_name: Web-云班课密码为空登录
+    method: POST
+    url: "/account-login"
+    json:
+      account: "19892142453"
       password: ""
     expected_code: 200
-    expected_msg: "用户未登录"
+    errorMessage: "请填写password"
+    errorCode: 'err.validation.empty'
+
+  - case_name: Web-云班课账户名与密码为空登录
+    method: POST
+    url: "/account-login"
+    json:
+      account: ""
+      password: ""
+    expected_code: 200
+    errorMessage: "请填写account"
+    errorCode: 'err.validation.empty'
+
+user_smoken_login_api:
+  - case_name: Web-云班课正确登录
+    method: POST
+    url: "/account-login"
+    json:
+      account: "19892142453"
+      password: "@wen123456"
+    expected_code: 200
+
+#  - case_name: Web-正确用户名密码登录
+#    method: POST
+#    url: "/login"
+#    json:
+#      username: "admin"
+#      password: "123456"
+#    expected_code: 200
+#    expected_msg: "成功"
+
+
+#  - case_name: Web-错误密码登录
+#    method: POST
+#    url: /login
+#    json:
+#      username: "admin"
+#      password: "wrong_password"
+#    expected_code: 200
+#    expected_msg: "用户名或密码错误"
+#
+#  - case_name: Web-空密码登录
+#    method: POST
+#    url: /login
+#    json:
+#      username: "admin"
+#      password: ""
+#    expected_code: 400
+#    expected_msg: "不能为空"
 
 
 ## ====================== Android APP 接口 ======================
