@@ -1,0 +1,45 @@
+# AI测试配置文件
+
+# AI模型配置
+ai_models:
+  # 模型优先级从高到低
+  - type: "qwen"
+    name: "通义千问"
+    api_key: "${QWEN_API_KEY}"  # 从环境变量读取
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    model_id: "qwen-turbo"
+  
+  - type: "doubao"
+    name: "豆包"
+    api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
+    base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+    model_id: "ep-20240417172235-49v4x"
+  
+  - type: "deepseek"
+    name: "DeepSeek"
+    api_key: "${DEEPSEEK_API_KEY}"  # 从环境变量读取
+    base_url: "https://api.deepseek.com/v1/chat/completions"
+    model_id: "deepseek-chat"
+  
+  - type: "mock"  # 移到最后一位
+    name: "模拟模式"
+    api_key: null
+    base_url: null
+    model_id: null
+
+# AI测试参数
+ai_test_params:
+  max_tokens: 2000
+  temperature: 0.7
+  timeout: 30
+  retry_count: 3
+
+# 测试场景配置
+test_scenarios:
+  login_page:
+    url: " http://127.0.0.1:8080"
+    description: "登录页面测试"
+  
+  home_page:
+    url: " http://127.0.0.1:8080"
+    description: "首页测试"
