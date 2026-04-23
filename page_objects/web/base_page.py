@@ -1,4 +1,4 @@
-from utils.logger import log
+from utils.tools.logger import log
 
 
 class BasePage:

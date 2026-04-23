@@ -13,15 +13,15 @@ dev:
   linux_server_url: 192.168.1.100
 
   db:
-    host: 127.0.0.1
-    port: 3306
-    user: dev_user
-    pwd: dev123456
+    host: localhost  # 数据库地址/主机名
+    port: 3306              # 数据库端口（MySQL默认3306）
+    user: root             # 数据库登录用户名
+    pwd: "${DB_PASSWORD}"            # 数据库登录密码
 
 # 测试环境
 test:
-  base_api_url: https://www.mindskip.net:7003
-  base_ui_url: https://www.mindskip.net:7003
+  base_api_url: https://coreapi.mosoteach.cn/passports
+  base_ui_url: https://jw.syzyedu.com/jsxsd/
 
   android_api_url: https://www.mindskip.net:7003/api/app
   ios_api_url: https://www.mindskip.net:7003/api/ios
@@ -30,10 +30,11 @@ test:
   linux_server_url: 192.168.138.129
 
   db:
-    host:  www.mindskip.net
-    port: 3306
-    user: admin
-    pwd: 123456
+    host: localhost  # 数据库地址/主机名
+    port: 3306              # 数据库端口（MySQL默认3306）
+    user: root             # 数据库登录用户名
+    pwd: "${DB_PASSWORD}"            # 数据库登录密码
+    database: test_auto
 
 # 生产环境
 prod:
@@ -46,8 +47,9 @@ prod:
   windows_api_url: http://prod-api.ecommerce.com/pc
   linux_server_url: 10.0.0.100
 
+  # 数据库配置
   db:
-    host: 10.0.0.100
-    port: 3306
-    user: prod_user
-    pwd: prod123456
+    host: localhost  # 数据库地址/主机名
+    port: 3306              # 数据库端口（MySQL默认3306）
+    user: root             # 数据库登录用户名
+    pwd: "${DB_PASSWORD}"            # 数据库登录密码
