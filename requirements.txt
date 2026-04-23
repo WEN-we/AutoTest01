@@ -1,7 +1,7 @@
 # ==============================
 # 核心测试框架
 # ==============================
-pytest==7.4.4
+pytest==9.0.3
 pytest-rerunfailures==13.0
 pytest-xdist==3.3.1
 allure-pytest==2.13.5
@@ -20,8 +20,8 @@ unittest-xml-reporting==3.2.0
 # Web 自动化（Playwright）
 # ==============================
 playwright==1.42.0
-requests==2.31.0
-urllib3==1.26.18
+requests==2.33.1
+urllib3==1.26.15
 charset-normalizer==3.4.4
 idna==3.11
 certifi==2025.11.12
@@ -29,7 +29,7 @@ certifi==2025.11.12
 # ==============================
 # 数据与配置
 # ==============================
-pyyaml==6.0.1
+pyyaml==6.0.2
 openpyxl==3.1.2
 python-dotenv==1.0.0
 filelock==3.20.1
@@ -39,7 +39,7 @@ packaging==25.0
 # APP 自动化（Appium + iOS）
 # ==============================
 Appium-Python-Client==4.0.1
-typing-extensions==4.8.0
+typing-extensions==4.15.0
 protobuf==3.20.3
 attrs==24.3.0
 tidevice==0.12.11
@@ -85,3 +85,7 @@ wrapt==1.17.3
 deprecated==1.2.18
 python-dateutil==2.9.0
 requests-toolbelt==1.0.0
+# Mysql
+pymysql
+#性能测试
+locust==2.15.1
