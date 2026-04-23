@@ -1,0 +1,158 @@
+name: Web 端自动化测试 CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * *'  # 每天凌晨执行
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  web-tests:
+    name: Web 端 UI 测试
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
+
+      - name: 缓存依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install chromium
+
+      - name: 运行 Web 端 UI 测试
+        run: |
+          pytest tests/test_ui/ -v --alluredir=allure-results-ui
+
+      - name: 上传 UI 测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: allure-results-ui
+
+  api-tests:
+    name: Web 端 API 测试
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行 API 测试
+        run: |
+          pytest tests/test_api/ -v --alluredir=allure-results-api
+
+      - name: 上传 API 测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: allure-results-api
+
+  ai-tests:
+    name: AI 自主测试
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 运行 AI 自主测试
+        run: |
+          pytest tests/test_ai/ -v --alluredir=allure-results-ai
+        env:
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: 上传 AI 测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-test-results
+          path: allure-results-ai
+
+  allure-report:
+    name: 生成 Allure 报告
+    needs: [web-tests, api-tests, ai-tests]
+    runs-on: ubuntu-22.04
+    if: always()
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载测试结果
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 合并测试结果
+        run: |
+          mkdir -p merged-allure-results
+          cp -r artifacts/ui-test-results/* merged-allure-results/ 2>/dev/null || true
+          cp -r artifacts/api-test-results/* merged-allure-results/ 2>/dev/null || true
+          cp -r artifacts/ai-test-results/* merged-allure-results/ 2>/dev/null || true
+
+      - name: 安装 Allure
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          npm install -g allure-commandline
+
+      - name: 生成报告
+        run: allure generate merged-allure-results -o allure-report --clean
+
+      - name: 上传 Allure 报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report
+
+      - name: 发布 GitHub Pages 报告
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
