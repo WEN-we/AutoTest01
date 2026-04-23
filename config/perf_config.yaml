@@ -1,0 +1,42 @@
+# 性能测试数据配置文件
+# 此文件用于存储压测过程中使用的测试数据，包括账号信息和接口参数
+
+# 测试账号信息
+# 注意：实际测试时需要确保这些账号在系统中存在
+users:
+#  - username: "admin"  # 测试账号1
+#    password: "123456"  # 测试账号1的密码
+#  - username: "user"  # 测试账号2
+#    password: "123456"  # 测试账号2的密码
+#  - username: "student"  # 测试账号3
+#    password: "123456"  # 测试账号3的密码
+#  - username: "teacher"  # 测试账号4
+#    password: "123456"  # 测试账号4的密码
+
+# 接口参数配置
+# 包含各个模块的接口端点和参数
+api_params:
+  # 用户模块参数
+  user:
+    login:
+      endpoint: "/login"  # 本地登录接口路径
+    user_info:
+      endpoint: "/user/info"  # 假设的用户信息接口路径（当前本地服务可能未实现）
+    user_list:
+      endpoint: "/users"  # 假设的用户列表接口路径（当前本地服务可能未实现）
+      page: 1  # 分页参数：页码
+      page_size: 10  # 分页参数：每页数量
+  # 订单模块参数
+  # 注意：当前本地服务可能未实现订单相关接口，仅供将来扩展使用
+  order:
+    create:
+      endpoint: "/orders"  # 假设的创建订单接口路径
+      product_id: 1  # 产品ID
+      quantity: 2  # 购买数量
+    list:
+      endpoint: "/orders"  # 假设的订单列表接口路径
+      page: 1  # 分页参数：页码
+      page_size: 10  # 分页参数：每页数量
+    detail:
+      endpoint: "/orders/{order_id}"  # 假设的订单详情接口路径
+      # {order_id} 是占位符，实际请求时会被替换为真实的订单ID
