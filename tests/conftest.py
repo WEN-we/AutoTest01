@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from utils.logger import logger
+from utils.tools.logger import logger
 
 
 def _truthy_env(name: str) -> bool:
@@ -96,7 +96,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 @pytest.fixture(scope="session", name="web_driver")
 def fixture_web_driver():
     logger.info("===== Web 驱动初始化 =====")
-    from utils.ui_driver import UIDriver
+    from utils.drivers.ui_driver import UIDriver
 
     web = UIDriver()
     driver = web.start_driver()
@@ -115,7 +115,7 @@ def fixture_ui_driver(web_driver):
 
 @pytest.fixture(scope="session", name="api_client")
 def fixture_api_client():
-    from utils.api_client import APIClient
+    from utils.tools.api_client import APIClient
 
     logger.info("===== API Client 初始化 =====")
     client = APIClient()
@@ -127,8 +127,8 @@ def fixture_harmony_api_client(request: pytest.FixtureRequest):
     if not _enabled("harmony") and not request.config.getoption("--run-all"):
         pytest.skip("未启用 Harmony 端：请设置 ENABLE_HARMONY=1 或使用 --run-all")
 
-    from utils.api_client import APIClient
-    from utils.config_reader import ConfigReader
+    from utils.tools.api_client import APIClient
+    from utils.tools.config_reader import ConfigReader
 
     base_url = ConfigReader.get_harmony_config()["base_api_url"]
     logger.info(f"===== Harmony API Client 初始化: {base_url} =====")
@@ -143,7 +143,7 @@ def fixture_android_driver(request: pytest.FixtureRequest):
     if not _enabled("android") and not request.config.getoption("--run-all"):
         pytest.skip("未启用 Android 端：请设置 ENABLE_ANDROID=1 或使用 --run-all")
     logger.info("===== 安卓新机型驱动初始化 =====")
-    from utils.android_driver import AndroidDriver
+    from utils.drivers.android_driver import AndroidDriver
 
     ad = AndroidDriver()
     driver = ad.start_driver()
@@ -159,7 +159,7 @@ def fixture_ios_driver(request: pytest.FixtureRequest):
     if not _enabled("ios") and not request.config.getoption("--run-all"):
         pytest.skip("未启用 iOS 端：请设置 ENABLE_IOS=1 或使用 --run-all")
     logger.info("===== iOS 驱动初始化 =====")
-    from utils.ios_driver import IosDriver
+    from utils.drivers.ios_driver import IosDriver
 
     ios = IosDriver()
     driver = ios.start_driver()
@@ -175,7 +175,7 @@ def fixture_air_driver(request: pytest.FixtureRequest):
     if not _enabled("android") and not request.config.getoption("--run-all"):
         pytest.skip("未启用 Android(Airtest) 端：请设置 ENABLE_ANDROID=1 或使用 --run-all")
     logger.info("===== 安卓旧机型驱动（Airtest）初始化 =====")
-    from utils.airtest_driver import AirtestDriver
+    from utils.drivers.airtest_driver import AirtestDriver
 
     air = AirtestDriver()
     yield air
@@ -194,7 +194,7 @@ def fixture_windows_driver(request: pytest.FixtureRequest):
     ):
         pytest.skip("非 Windows 平台且未启用 Windows 端：请设置 ENABLE_WINDOWS=1 或使用 --run-all")
     logger.info("===== Windows 驱动初始化 =====")
-    from utils.windows_driver import WindowsDriver
+    from utils.drivers.windows_driver import WindowsDriver
 
     win = WindowsDriver()
     yield win
@@ -212,7 +212,7 @@ def fixture_linux_driver(request: pytest.FixtureRequest):
     ):
         pytest.skip("非 Linux 平台且未启用 Linux 端：请设置 ENABLE_LINUX=1 或使用 --run-all")
     logger.info("===== Linux GUI 驱动初始化 =====")
-    from utils.linux_driver import LinuxDriver
+    from utils.drivers.linux_driver import LinuxDriver
 
     linux_gui = LinuxDriver()
     yield linux_gui
@@ -234,7 +234,7 @@ def fixture_linux_client(request: pytest.FixtureRequest):
     if not _enabled("service") and not request.config.getoption("--run-all"):
         pytest.skip("未启用 service 端：请设置 ENABLE_SERVICE=1 或使用 --run-all")
     logger.info("===== Linux SSH 连接 =====")
-    from utils.linux_client import LinuxClient
+    from utils.tools.linux_client import LinuxClient
 
     client = LinuxClient()
     client.connect()
