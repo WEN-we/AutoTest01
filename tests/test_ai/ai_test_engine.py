@@ -4,8 +4,9 @@ AI 自主测试核心引擎
 """
 import json
 from utils.tools.logger import log as logger
-from tests.test_ai.ai_client import AIClient
+from utils.tools.ai_client import AIClient
 from utils.tools.config_reader import ConfigReader
+from utils.tools.path_manager import get_test_data_path
 
 
 class AITestEngine:
@@ -33,7 +34,9 @@ class AITestEngine:
             str: 系统提示词
         """
         try:
-            prompt_config = ConfigReader.read_yaml("tests/test_ai/prompt.yaml")
+            # 使用路径管理工具获取提示词文件路径
+            prompt_path = get_test_data_path("test_ai", "prompt.yaml")
+            prompt_config = ConfigReader.read_yaml(prompt_path)
             return prompt_config.get("system_prompt", "")
         except Exception as e:
             logger.error(f"加载系统提示词失败: {e}")

@@ -11,6 +11,7 @@ from locust import TaskSet, task
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.tools.logger import log as logger
+from utils.tools.path_manager import get_config_path
 
 # 从数据库获取用户数据
 def get_users_from_db():
@@ -35,10 +36,8 @@ def get_users_from_db():
     return users
 
 # 加载压测数据
-# 获取项目根目录
-CURRENT_FILE = os.path.abspath(__file__)
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(CURRENT_FILE))))
-perf_data_path = os.path.join(PROJECT_ROOT, 'config', 'perf_config.yaml')
+# 使用路径管理工具获取配置文件路径
+perf_data_path = get_config_path('perf_config.yaml')
 
 # 优先从数据库获取用户数据
 users_from_db = get_users_from_db()

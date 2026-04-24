@@ -2,8 +2,11 @@ import yaml
 import os
 from pathlib import Path
 
-# 获取项目根目录（自动识别，不用硬编码路径）
-PROJECT_ROOT = Path(__file__).parent.parent
+# 导入路径管理工具
+from utils.tools.path_manager import get_path
+
+# 获取项目根目录（使用路径管理工具）
+PROJECT_ROOT = Path(get_path())
 
 
 class ConfigReader:
@@ -12,7 +15,8 @@ class ConfigReader:
     @staticmethod
     def read_yaml(file_path):
         """读取YAML文件"""
-        full_path = PROJECT_ROOT / file_path
+        # 使用路径管理工具获取完整路径
+        full_path = get_path(file_path)
         try:
             with open(full_path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f)

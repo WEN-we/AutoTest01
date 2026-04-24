@@ -47,7 +47,7 @@ login_syzy_web:
   - case_name: 密码错误登录
     username: '20240000002'
     password: "123"
-    expected_result: '用户名或密码错误 密码提示为：文'
+    expected_result: '用户名或密码错误   密码提示为：文'
 #
 login_syzy_smoken_web:
   - case_name: 正确用户名密码登录
