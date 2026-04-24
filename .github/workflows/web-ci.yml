@@ -31,13 +31,31 @@ jobs:
 
       - name: 设置 Python
         uses: actions/setup-python@v5
+
+      # 显式设置 Node.js 版本
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # 显式设置 Node.js 版本
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # 显式设置 Node.js 版本
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 安装系统依赖
         run: |
           sudo apt-get update
-          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 libasound2
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1
 
       - name: 缓存依赖
         uses: actions/cache@v4
@@ -165,6 +183,12 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+
+      # 显式设置 Node.js 版本
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
       - name: 下载测试结果
         uses: actions/download-artifact@v4
