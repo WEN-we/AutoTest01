@@ -60,6 +60,13 @@ jobs:
           name: ui-test-results
           path: allure-results-ui
 
+      - name: 上传 UI 测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-logs
+          path: logs/
+
   api-tests:
     name: Web 端 API 测试
     runs-on: ubuntu-22.04
@@ -87,6 +94,13 @@ jobs:
         with:
           name: api-test-results
           path: allure-results-api
+
+      - name: 上传 API 测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-logs
+          path: logs/
 
   ai-tests:
     name: AI 自主测试
@@ -128,6 +142,13 @@ jobs:
         with:
           name: ai-test-results
           path: allure-results-ai
+
+      - name: 上传 AI 测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-test-logs
+          path: logs/
 
   allure-report:
     name: 生成 Allure 报告
