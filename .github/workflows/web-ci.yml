@@ -40,17 +40,16 @@ jobs:
 
       # 显式设置 Node.js 版本
       - name: 设置 Node.js 版本
-        uses: actions/setup-node@v4
+        uses: actions/setup- name: 设置 Python
+        uses: actions/setup-python@v5
         with:
-          node-version: '24'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       # 显式设置 Node.js 版本
       - name: 设置 Node.js 版本
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 安装系统依赖
         run: |
