@@ -8,6 +8,12 @@ on:
   schedule:
     - cron: '0 0 * * *'  # 每天凌晨执行
 
+# 添加权限配置，确保 GitHub Actions 有足够的权限
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 env:
   PYTHON_VERSION: "3.11"
 
