@@ -3,10 +3,14 @@ import os
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 
+# 导入路径管理工具
+from utils.tools.path_manager import get_config_path
+
 class HarmonyDriver:
     @staticmethod
     def get_driver():
-        config_path = os.path.join(os.path.dirname(__file__), "../../config/harmony_config.yaml")
+        # 使用路径管理工具获取配置文件路径
+        config_path = get_config_path("harmony_config.yaml")
         with open(config_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
 

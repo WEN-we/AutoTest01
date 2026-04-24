@@ -1,10 +1,12 @@
 from appium import webdriver
 from appium.options.android import UiAutomator2Options
 from utils.tools.config_reader import ConfigReader
+from utils.tools.path_manager import get_config_path
 
 class AndroidDriver:
     def __init__(self):
-        self.config = ConfigReader.read_yaml("config/app_config.yaml")
+        # 使用路径管理工具获取配置文件路径
+        self.config = ConfigReader.read_yaml(get_config_path("app_config.yaml"))
         self.android_cfg = self.config["android"]
 
     def start_driver(self):

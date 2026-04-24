@@ -2,8 +2,11 @@ from loguru import logger
 import os
 from pathlib import Path
 
+# 导入路径管理工具
+from utils.tools.path_manager import get_log_path
+
 # 日志目录（自动创建）
-LOG_DIR = Path(__file__).parent.parent / "logs"
+LOG_DIR = Path(get_log_path())
 LOG_DIR.mkdir(exist_ok=True)
 
 # 配置日志（企业级格式）

@@ -5,6 +5,7 @@ import pygetwindow as gw
 import time
 from utils.tools.logger import logger
 from utils.tools.config_reader import ConfigReader  # 你的配置工具
+from utils.tools.path_manager import get_config_path
 
 class WindowsDriver:
     """
@@ -13,8 +14,8 @@ class WindowsDriver:
     读取：config/windows_config.yaml
     """
     def __init__(self):
-        # 从配置文件读取 → 完全分层
-        self.cfg = ConfigReader.read_yaml("config/windows_config.yaml")
+        # 使用路径管理工具获取配置文件路径
+        self.cfg = ConfigReader.read_yaml(get_config_path("windows_config.yaml"))
         self.win_cfg = self.cfg["windows_gui"]
 
         # 从配置加载，不写死

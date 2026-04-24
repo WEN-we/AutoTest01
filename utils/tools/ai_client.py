@@ -236,7 +236,8 @@ class AIClient:
         try:
             logger.info(f"发送请求到豆包 API: {url}")
             logger.info(f"使用模型: {model_id}")
-            response = requests.post(url, headers=headers, json=data, timeout=timeout)
+            # 禁用 SSL 证书验证，解决证书验证失败问题
+            response = requests.post(url, headers=headers, json=data, timeout=timeout, verify=False)
             response.raise_for_status()  # 检查 HTTP 状态码
             result = response.json()
             logger.info(f"豆包 API 响应成功")

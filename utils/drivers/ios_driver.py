@@ -2,11 +2,13 @@ from appium import webdriver
 from appium.options.ios import XCUITestOptions
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import logger
+from utils.tools.path_manager import get_config_path
 
 class IosDriver:
     """iOS 真机驱动 · XCUITest · 企业规范版"""
     def __init__(self):
-        self.config = ConfigReader.read_yaml("config/app_config.yaml")
+        # 使用路径管理工具获取配置文件路径
+        self.config = ConfigReader.read_yaml(get_config_path("app_config.yaml"))
         self.ios_cfg = self.config["ios"]
 
     def start_driver(self):

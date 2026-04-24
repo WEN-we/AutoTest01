@@ -7,7 +7,7 @@ import time
 import pytest
 import allure
 from tests.test_ai.ai_test_engine import AITestEngine
-from tests.test_ai.ai_base_page import AIBasePage
+from ai_page_objects.base.ai_base_page import AIBasePage
 from utils.tools.logger import log as logger
 from utils.tools.config_reader import ConfigReader
 
