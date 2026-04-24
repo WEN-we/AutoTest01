@@ -166,3 +166,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-report
+          # 添加以下配置以确保报告发布成功
+          allow_empty_commit: true
+          keep_files: true
+          force_orphan: true
