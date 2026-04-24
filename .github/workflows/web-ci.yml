@@ -8,19 +8,23 @@ on:
   schedule:
     - cron: '0 0 * * *'  # 每天凌晨执行
 
-# 添加权限配置，确保 GitHub Actions 有足够的权限
+# 配置权限
 permissions:
   contents: write
   pages: write
   id-token: write
 
+# 环境变量
 env:
   PYTHON_VERSION: "3.11"
+  # 强制使用 Node.js 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  # Web 端 UI 测试
   web-tests:
     name: Web 端 UI 测试
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -67,9 +71,10 @@ jobs:
           name: ui-test-logs
           path: logs/
 
+  # Web 端 API 测试
   api-tests:
     name: Web 端 API 测试
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -102,9 +107,10 @@ jobs:
           name: api-test-logs
           path: logs/
 
+  # AI 自主测试
   ai-tests:
     name: AI 自主测试
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -150,10 +156,11 @@ jobs:
           name: ai-test-logs
           path: logs/
 
+  # 生成 Allure 报告
   allure-report:
     name: 生成 Allure 报告
     needs: [web-tests, api-tests, ai-tests]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: always()
     steps:
       - name: 检出代码
@@ -187,13 +194,12 @@ jobs:
           path: allure-report
 
       - name: 发布 GitHub Pages 报告
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-report
-          # 添加以下配置以确保报告发布成功
           allow_empty_commit: true
           keep_files: true
           force_orphan: true
