@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./img/ChatGPT Image 2026年4月25日 17_27_02.png" alt="Logo" width="200" height="200">
+  <img src="img/fufu.png" alt="Logo" width="200" height="200">
   
   # 企业级电商全平台自动化测试框架
   
