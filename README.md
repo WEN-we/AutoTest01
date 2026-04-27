@@ -11,7 +11,7 @@
   [![CI](https://img.shields.io/badge/CI-GitHub%20Actions%20%7C%20Jenkins-red.svg)](README.md)
   [![Report](https://img.shields.io/badge/Report-Allure-green.svg)](https://docs.qameta.io/allure/)
   
-  [English](#) | 简体中文
+  [English](README_en.md) | 简体中文
 </div>
 
 ---
