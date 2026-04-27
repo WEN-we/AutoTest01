@@ -349,3 +349,38 @@ allure serve allure-results
   <h3>🌟 企业级电商全平台自动化测试框架 🌟</h3>
   <p>让自动化测试更简单、更高效</p>
 </div>
+
+---
+
+## 支持与打赏
+
+如果您觉得这个项目对您有帮助，欢迎通过以下方式支持我：
+
+### 国内用户
+
+| 微信                   | 支付宝                   |
+|:---------------------|:----------------------|
+| ![微信收款码](img/wx.jpg) | ![支付宝收款码](img/wx.jpg) |
+
+
+
+
+> 感谢您的支持与鼓励，您的支持是我持续开发的动力！
+
+### 海外用户
+
+| PayPal | Buy Me a Coffee |
+| :--- | :--- |
+| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=您的PayPal按钮ID) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/您的用户名) |
+
+#请将以下内容替换为您的实际收款链接：
+您的PayPal按钮ID 替换为您的PayPal捐赠按钮ID
+您的用户名替换为您的Buy Me a Coffee用户名
+
+---
+
+## 结束语
+
+感谢您对本项目的关注与支持！如果您有任何问题或建议，欢迎在 GitHub 上提交 Issue 或 Pull Request。
+
+开源不易，希望这个项目能够为您的自动化测试工作带来帮助。让我们一起构建更高效、更可靠的测试框架！

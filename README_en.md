@@ -349,3 +349,35 @@ The project has provided workflow: `.github/workflows/ci_allure.yml`, which will
   <h3>🌟 Enterprise E-commerce Full-Platform Automated Testing Framework 🌟</h3>
   <p>Make automated testing simpler and more efficient</p>
 </div>
+
+---
+
+## Support & Donation
+
+If you find this project helpful, you can support me through the following methods:
+
+### China Local Payment
+
+| WeChat | Alipay |
+| :--- | :--- |
+| ![WeChat QR Code](WeChat_QR_Code_URL) | ![Alipay QR Code](Alipay_QR_Code_URL) |
+
+> Thank you for your support and encouragement! Your support is the motivation for my continuous development.
+
+### Global Payment
+
+| PayPal | Buy Me a Coffee |
+| :--- | :--- |
+| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=YOUR_PAYPAL_BUTTON_ID) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/YOUR_USERNAME) |
+
+> To use your actual payment links, replace:
+> - `YOUR_PAYPAL_BUTTON_ID` with your PayPal donate button ID
+> - `YOUR_USERNAME` with your Buy Me a Coffee username
+
+---
+
+## Conclusion
+
+Thank you for your attention and support! If you have any questions or suggestions, please feel free to submit issues or pull requests on GitHub.
+
+Open source is not easy, and I hope this project can help with your automated testing work. Let's build more efficient and reliable testing frameworks together!
