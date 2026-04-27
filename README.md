@@ -63,93 +63,80 @@
 核心采用分层架构设计，目录清晰、职责明确，便于团队协作与维护：
 
 ```
-D:\Pthon.Object\PythonProject3/
-├── .github/                 # GitHub Actions 配置
-│   └── workflows/
-│       ├── ci_allure.yml
-│       └── test_workflow.yml
-├── allure-report/           # Allure测试报告
-├── allure-results/          # Allure测试结果
-├── bat/                     # 批处理脚本
-│   ├── 测试报告_周一022603_105920/
-│   └── run_allure.bat
-├── config/                  # 配置文件
-│   ├── app_config.yaml
-│   ├── env_config.yaml
-│   ├── harmony_config.yaml
-│   ├── linux_config.yaml
-│   ├── ui_config.yaml
-│   └── windows_config.yaml
-├── erp/                     # ERP相关
-│   └── driver/
-│       └── driver.py
-├── local-web-login/         # 本地登录服务
-│   ├── backend_server.py
-│   └── login.html
-├── logs/                    # 日志目录
-├── page_objects/            # 页面对象
-│   ├── android/
-│   ├── base/
-│   ├── harmony/
-│   ├── ios/
-│   ├── linux_gui/
-│   ├── web/
-│   └── windows/
-├── performance/             # 性能测试
-│   ├── tasks/
-│   │   ├── __init__.py
-│   │   ├── order_tasks.py
-│   │   └── user_tasks.py
-│   ├── __init__.py
-│   ├── config.py
-│   ├── locustfile.py
-│   └── perf_data.yaml
-├── report/                  # 测试报告
-├── service_objects/         # 服务对象
-│   ├── __init__.py
-│   ├── base_service.py
-│   └── linux_service.py
-├── test_data/               # 测试数据
-│   ├── api_test_data.yaml
-│   └── ui_test_data.yaml
-├── tests/                   # 测试用例
-│   ├── test_android/
-│   ├── test_api/
-│   ├── test_harmony/
-│   ├── test_ios/
-│   ├── test_linux/
-│   ├── test_selenium/
-│   ├── test_service/
-│   ├── test_smoke/
-│   ├── test_ui/
-│   └── test_windows/
-├── tools/                   # 工具脚本
-│   └── get_mouse_pos.py
-├── utils/                   # 工具类
-│   ├── __init__.py
-│   ├── airtest_driver.py
-│   ├── android_driver.py
-│   ├── api_client.py
-│   ├── common_utils.py
-│   ├── config_reader.py
-│   ├── db_util.py
-│   ├── harmony_driver.py
-│   ├── ios_driver.py
-│   ├── linux_client.py
-│   ├── linux_driver.py
-│   ├── logger.py
-│   ├── selenium_driver.py
-│   ├── send_email.py
-│   ├── ui_driver.py
-│   └── windows_driver.py
-├── .gitignore
-├── README.md
-├── Run_CI.bat
-├── pytest.ini
-├── requirements-ci.txt
-├── requirements.txt
-├── run_all_smoke.py
-└── 笔记.txt
+AutoTest01/                     # repo 根（默认分支: master）
+├─ .github/
+│  └─ workflows/                # GitHub Actions 工作流（CI/CD 配置）
+├─ .gitignore
+├─ README.md
+├─ README_en.md
+├─ Run_CI.bat                   # 一键运行 CI（Windows batch）
+├─ 笔记.txt                      # 个人笔记 / 文档
+├─ pytest.ini                   # pytest 配置
+├─ requirements.txt
+├─ requirements-ci.txt
+├─ Run_CI.bat
+├─ bat/
+│  └─ run_allure.bat            # Allure 报告相关 batch 脚本
+├─ ai_page_objects/
+│  ├─ __init__.py
+│  ├─ base/                     # AI 相关 page object 基础
+│  └─ web/                      # AI web page objects
+├─ page_objects/
+│  ├─ __init__.py
+│  ├─ android/
+│  ├─ base/
+│  ├─ harmony/
+│  ├─ ios/
+│  ├─ linux_gui/
+│  ├─ web/
+│  └─ windows/                  # 各平台的 page object 目录（按平台分）
+├─ service_objects/
+│  ├─ __init__.py
+│  ├─ base_service.py
+│  └─ linux_service.py          # 服务层封装（例如启动/管理服务）
+├─ config/
+│  ├─ ai_config.yaml
+│  ├─ app_config.yaml
+│  ├─ env_config.yaml
+│  ├─ harmony_config.yaml
+│  ├─ linux_config.yaml
+│  ├─ perf_config.yaml
+│  ├─ ui_config.yaml
+│  └─ windows_config.yaml       # 各类运行/环境/平台配置文件（yaml）
+├─ erp/
+│  └─ driver/                   # ERP 相关驱动（目录存在，可能为空）
+├─ img/
+│  ├─ fufu.png
+│  └─ img.png                   # 演示/文档用图片资源
+├─ local_web_login/
+│  ├─ __init__.py
+│  └─ backend_server.py         # 本地登录后端服务（示例/测试用）
+├─ test_data/
+│  ├─ ai/
+│  ├─ api/
+│  └─ ui/                       # 测试用的数据（按类别）
+├─ tests/
+│  ├─ __init__.py
+│  ├─ conftest.py               # pytest 固件/夹具
+│  ├─ test_ai/
+│  ├─ test_android/
+│  ├─ test_api/
+│  ├─ test_harmony/
+│  ├─ test_ios/
+│  ├─ test_linux/
+│  ├─ test_performance/
+│  ├─ test_selenium/
+│  ├─ test_service/
+│  ├─ test_smoke/
+│  ├─ test_ui/
+│  ├─ test_whitebox/
+│  └─ test_windows/             # 各类测试集（按平台/类型分）
+├─ tools/
+│  └─ get_mouse_pos.py          # 小工具脚本
+└─ utils/
+   ├─ __init__.py
+   ├─ drivers/                  # 驱动相关工具/封装
+   └─ tools/                    # 工具集合
 ```
 
 ---
