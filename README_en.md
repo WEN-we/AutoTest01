@@ -63,23 +63,23 @@ This project is an **enterprise-level e-commerce full-platform automated testing
 The core adopts a layered architecture design with clear directories and clear responsibilities, facilitating team collaboration and maintenance:
 
 ```
-AutoTest01/                     # repo 根（默认分支: master）
+AutoTest01/                     # Repository root (default branch: master)
 ├─ .github/
-│  └─ workflows/                # GitHub Actions 工作流（CI/CD 配置）
+│  └─ workflows/                # GitHub Actions workflows (CI/CD configuration)
 ├─ .gitignore
 ├─ README.md
 ├─ README_en.md
-├─ Run_CI.bat                   # 一键运行 CI（Windows batch）
-├─ 笔记.txt                      # 个人笔记 / 文档
-├─ pytest.ini                   # pytest 配置
+├─ Run_CI.bat                   # One-click CI runner (Windows batch)
+├─ notes.txt                    # Personal notes / documentation
+├─ pytest.ini                   # pytest configuration
 ├─ requirements.txt
 ├─ requirements-ci.txt
 ├─ Run_CI.bat
 ├─ bat/
-│  └─ run_allure.bat            # Allure 报告相关 batch 脚本
+│  └─ run_allure.bat            # Allure report related batch scripts
 ├─ ai_page_objects/
 │  ├─ __init__.py
-│  ├─ base/                     # AI 相关 page object 基础
+│  ├─ base/                     # AI related page object base
 │  └─ web/                      # AI web page objects
 ├─ page_objects/
 │  ├─ __init__.py
@@ -89,11 +89,11 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ ios/
 │  ├─ linux_gui/
 │  ├─ web/
-│  └─ windows/                  # 各平台的 page object 目录（按平台分）
+│  └─ windows/                  # Page object directories by platform
 ├─ service_objects/
 │  ├─ __init__.py
 │  ├─ base_service.py
-│  └─ linux_service.py          # 服务层封装（例如启动/管理服务）
+│  └─ linux_service.py          # Service layer encapsulation (e.g., start/manage services)
 ├─ config/
 │  ├─ ai_config.yaml
 │  ├─ app_config.yaml
@@ -102,22 +102,22 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ linux_config.yaml
 │  ├─ perf_config.yaml
 │  ├─ ui_config.yaml
-│  └─ windows_config.yaml       # 各类运行/环境/平台配置文件（yaml）
+│  └─ windows_config.yaml       # Various runtime/environment/platform config files (yaml)
 ├─ erp/
-│  └─ driver/                   # ERP 相关驱动（目录存在，可能为空）
+│  └─ driver/                   # ERP related drivers (directory may be empty)
 ├─ img/
 │  ├─ fufu.png
-│  └─ img.png                   # 演示/文档用图片资源
+│  └─ img.png                   # Demo/documentation image resources
 ├─ local_web_login/
 │  ├─ __init__.py
-│  └─ backend_server.py         # 本地登录后端服务（示例/测试用）
+│  └─ backend_server.py         # Local login backend service (example/testing)
 ├─ test_data/
 │  ├─ ai/
 │  ├─ api/
-│  └─ ui/                       # 测试用的数据（按类别）
+│  └─ ui/                       # Test data by category
 ├─ tests/
 │  ├─ __init__.py
-│  ├─ conftest.py               # pytest 固件/夹具
+│  ├─ conftest.py               # pytest fixtures
 │  ├─ test_ai/
 │  ├─ test_android/
 │  ├─ test_api/
@@ -130,13 +130,13 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ test_smoke/
 │  ├─ test_ui/
 │  ├─ test_whitebox/
-│  └─ test_windows/             # 各类测试集（按平台/类型分）
+│  └─ test_windows/             # Test suites by platform/type
 ├─ tools/
-│  └─ get_mouse_pos.py          # 小工具脚本
+│  └─ get_mouse_pos.py          # Utility scripts
 └─ utils/
    ├─ __init__.py
-   ├─ drivers/                  # 驱动相关工具/封装
-   └─ tools/                    # 工具集合
+   ├─ drivers/                  # Driver-related utilities/wrappers
+   └─ tools/                    # Tool collection
 ```
 
 ---
@@ -345,13 +345,6 @@ The project has provided workflow: `.github/workflows/ci_allure.yml`, which will
 
 ---
 
-<div align="center">
-  <h3>🌟 Enterprise E-commerce Full-Platform Automated Testing Framework 🌟</h3>
-  <p>Make automated testing simpler and more efficient</p>
-</div>
-
----
-
 ## Support & Donation
 
 If you find this project helpful, you can support me through the following methods:
@@ -360,7 +353,7 @@ If you find this project helpful, you can support me through the following metho
 
 | WeChat | Alipay |
 | :--- | :--- |
-| ![WeChat QR Code](WeChat_QR_Code_URL) | ![Alipay QR Code](Alipay_QR_Code_URL) |
+| ![WeChat QR Code](img/wx.jpg) | ![Alipay QR Code](img/zfb.jpg) |
 
 > Thank you for your support and encouragement! Your support is the motivation for my continuous development.
 
@@ -368,11 +361,10 @@ If you find this project helpful, you can support me through the following metho
 
 | PayPal | Buy Me a Coffee |
 | :--- | :--- |
-| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=YOUR_PAYPAL_BUTTON_ID) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/YOUR_USERNAME) |
+| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/wenwen158) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/YOUR_USERNAME) |
 
-> To use your actual payment links, replace:
-> - `YOUR_PAYPAL_BUTTON_ID` with your PayPal donate button ID
-> - `YOUR_USERNAME` with your Buy Me a Coffee username
+> To complete the donation links:
+> - Replace `YOUR_USERNAME` in the Buy Me a Coffee link with your actual username
 
 ---
 
@@ -381,3 +373,10 @@ If you find this project helpful, you can support me through the following metho
 Thank you for your attention and support! If you have any questions or suggestions, please feel free to submit issues or pull requests on GitHub.
 
 Open source is not easy, and I hope this project can help with your automated testing work. Let's build more efficient and reliable testing frameworks together!
+
+---
+
+<div align="center">
+  <h3>🌟 Enterprise E-commerce Full-Platform Automated Testing Framework 🌟</h3>
+  <p>Make automated testing simpler and more efficient</p>
+</div>
