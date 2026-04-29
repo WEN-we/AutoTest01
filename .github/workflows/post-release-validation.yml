@@ -1,4 +1,3 @@
-# .github/workflows/post-release-post-release-validation.yml
 name: Web 端发布后验证 CI
 
 on:
