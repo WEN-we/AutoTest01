@@ -110,10 +110,12 @@ jobs:
     steps:
       - name: 检查 API 健康状态
         run: |
+          # 使用完整的 API URL
           curl -f -s -o /dev/null -w "API 健康检查: %{http_code}\n" ${{ secrets.PROD_API_URL }}/health || exit 1
 
       - name: 检查 UI 健康状态
         run: |
+          # 使用完整的 UI URL
           curl -f -s -o /dev/null -w "UI 健康检查: %{http_code}\n" ${{ secrets.PROD_UI_URL }} || exit 1
 
   # 4. 性能监控
@@ -191,7 +193,7 @@ jobs:
           name: post-release-report
           path: post-release-report
 
-      - name: 发布到 GitHub Pages
+      - name: 发布 GitHub Pages 报告
         uses: peaceiris/actions-gh-pages@v4
         if: always()
         with:
@@ -200,3 +202,4 @@ jobs:
           publish_dir: post-release-report
           allow_empty_commit: true
           keep_files: true
+          force_orphan: true

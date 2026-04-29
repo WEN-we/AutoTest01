@@ -1,4 +1,4 @@
-name: Web 端自动化测试 CI
+name: Web 端发布前验证 CI
 
 on:
   push:
