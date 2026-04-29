@@ -4,7 +4,7 @@ from utils.tools.logger import log
 from utils.tools.db_util import DBUtil
 from utils.tools.api_client import APIClient
 
-test_data = ConfigReader.read_yaml("test_data/api_test_data.yaml")["user_smoken_login_api"]
+test_data = ConfigReader.read_yaml("test_data/api/api_test_data.yaml")["user_smoken_login_api"]
 
 
 # 🔥 标记为冒烟用例（企业标准）

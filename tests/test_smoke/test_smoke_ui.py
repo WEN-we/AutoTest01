@@ -5,7 +5,7 @@ from page_objects.web.home_page import HomePage
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
 
-test_data = ConfigReader.read_yaml("test_data/ui_test_data.yaml")["login_syzy_smoken_web"]
+test_data = ConfigReader.read_yaml("test_data/ui/ui_test_data.yaml")["login_syzy_smoken_web"]
 
 class TestUserUI:
     """用户模块UI用例（最终版：用首页元素文字断言成功）"""
