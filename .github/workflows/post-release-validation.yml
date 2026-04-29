@@ -1,0 +1,202 @@
+# .github/workflows/post-release-post-release-validation.yml
+name: Web 端发布后验证 CI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '验证环境'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  PYTHON_VERSION: "3.11"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # 1. Web 端生产环境验证
+  web-prod-validation:
+    name: Web 端生产环境验证
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1
+
+      - name: 缓存依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+          playwright install chromium
+
+      - name: 运行 Web 端生产环境验证
+        run: |
+          pytest tests/test_smoke/test_smoke_ui.py -v --alluredir=allure-results-web-prod
+        env:
+          UI_URL: ${{ secrets.PROD_UI_URL }}
+          HEADLESS: true
+
+      - name: 上传 Web 端验证结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-prod-results
+          path: allure-results-web-prod
+
+  # 2. API 生产环境验证
+  api-prod-validation:
+    name: API 生产环境验证
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: 运行 API 生产环境验证
+        run: |
+          pytest tests/test_smoke/test_smoke_api.py -v --alluredir=allure-results-api-prod
+        env:
+          API_URL: ${{ secrets.PROD_API_URL }}
+
+      - name: 上传 API 验证结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-prod-results
+          path: allure-results-api-prod
+
+  # 3. 健康检查
+  health-check:
+    name: 健康检查
+    runs-on: ubuntu-latest
+    needs: [web-prod-validation, api-prod-validation]
+    steps:
+      - name: 检查 API 健康状态
+        run: |
+          curl -f -s -o /dev/null -w "API 健康检查: %{http_code}\n" ${{ secrets.PROD_API_URL }}/health || exit 1
+
+      - name: 检查 UI 健康状态
+        run: |
+          curl -f -s -o /dev/null -w "UI 健康检查: %{http_code}\n" ${{ secrets.PROD_UI_URL }} || exit 1
+
+  # 4. 性能监控
+  performance-monitor:
+    name: 性能监控
+    runs-on: ubuntu-latest
+    needs: health-check
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 安装 Python 依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: 运行性能监控测试
+        run: |
+          pytest tests/test_performance/ -v --alluredir=allure-results-performance
+        env:
+          TARGET_ENV: production
+          API_URL: ${{ secrets.PROD_API_URL }}
+
+      - name: 上传性能测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: allure-results-performance
+
+  # 5. 生成发布后验证报告
+  post-release-report:
+    name: 生成发布后验证报告
+    needs: [web-prod-validation, api-prod-validation, performance-monitor]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: 下载测试结果
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 合并测试结果
+        run: |
+          mkdir -p merged-allure-results
+          cp -r artifacts/web-prod-results/* merged-allure-results/ 2>/dev/null || true
+          cp -r artifacts/api-prod-results/* merged-allure-results/ 2>/dev/null || true
+          cp -r artifacts/performance-results/* merged-allure-results/ 2>/dev/null || true
+
+      - name: 安装 Allure
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          npm install -g allure-commandline
+
+      - name: 生成报告
+        run: allure generate merged-allure-results -o post-release-report --clean
+
+      - name: 上传发布后验证报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-release-report
+          path: post-release-report
+
+      - name: 发布到 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: post-release-report
+          allow_empty_commit: true
+          keep_files: true
