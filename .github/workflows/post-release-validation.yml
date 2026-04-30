@@ -1,6 +1,8 @@
 name: Web 端发布后验证 CI
 
 on:
+  push:
+    branches: [ master ]
   release:
     types: [published]
   workflow_dispatch:
@@ -13,6 +15,12 @@ on:
         options:
           - production
           - staging
+
+# 配置权限
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 env:
   PYTHON_VERSION: "3.11"
