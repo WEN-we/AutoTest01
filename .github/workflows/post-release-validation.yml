@@ -146,7 +146,12 @@ jobs:
 
       - name: 运行性能监控测试
         run: |
-          pytest tests/test_performance/ -v --alluredir=allure-results-performance
+          # 检查是否存在性能测试目录
+          if [ -d "tests/test_performance/" ] && [ "$(ls -A tests/test_performance/)" ]; then
+            pytest tests/test_performance/ -v --alluredir=allure-results-performance
+          else
+            echo "性能测试目录不存在或为空，跳过性能测试"
+          fi
         env:
           TARGET_ENV: production
           API_URL: ${{ secrets.PROD_API_URL }}
