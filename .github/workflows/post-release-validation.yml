@@ -121,7 +121,7 @@ jobs:
   performance-monitor:
     name: 性能监控
     runs-on: ubuntu-latest
-    needs: health-check
+    needs: service-check
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
