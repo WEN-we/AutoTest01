@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   release:
     types: [published]
+  schedule:
+    - cron: '0 0 * * *'  # 每天凌晨执行
   workflow_dispatch:
     inputs:
       environment:
@@ -148,7 +150,8 @@ jobs:
         run: |
           # 检查是否存在性能测试目录
           if [ -d "tests/test_performance/" ] && [ "$(ls -A tests/test_performance/)" ]; then
-            pytest tests/test_performance/ -v --alluredir=allure-results-performance
+            # 使用 Locust 运行性能测试（无头模式）
+            locust -f tests/test_performance/locustfile.py --headless -u 50 -r 5 -t 5m --csv=performance_report
           else
             echo "性能测试目录不存在或为空，跳过性能测试"
           fi
