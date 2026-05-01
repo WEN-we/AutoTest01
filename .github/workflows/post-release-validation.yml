@@ -293,8 +293,8 @@ jobs:
 
       - name: 初始化测试数据库
         run: |
-          # 创建用户表
-          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} test_auto <<EOF
+          # 创建用户表（使用 -D 参数指定数据库）
+          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -D test_auto <<EOF
           CREATE TABLE IF NOT EXISTS user (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(50) NOT NULL,
