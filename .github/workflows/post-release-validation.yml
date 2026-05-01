@@ -27,6 +27,12 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 产物目录配置
+  ARTIFACTS_DIR: "ci-artifacts"
+  REPORTS_DIR: "${{ env.ARTIFACTS_DIR }}/reports"
+  LOGS_DIR: "${{ env.ARTIFACTS_DIR }}/logs"
+  METRICS_DIR: "${{ env.ARTIFACTS_DIR }}/metrics"
+  METADATA_DIR: "${{ env.ARTIFACTS_DIR }}/metadata"
 
 jobs:
   # 1. Web 端生产环境验证
@@ -79,19 +85,42 @@ jobs:
           pip install -r requirements-ci.txt
           playwright install chromium
 
+      - name: 创建产物目录
+        run: |
+          mkdir -p ${{ env.REPORTS_DIR }} ${{ env.LOGS_DIR }} ${{ env.METADATA_DIR }}
+
       - name: 运行 Web 端生产环境验证
         run: |
-          pytest tests/test_smoke/test_smoke_ui.py -v --alluredir=allure-results-web-prod
+          pytest tests/test_smoke/test_smoke_ui.py -v \
+            --alluredir=${{ env.REPORTS_DIR }}/allure-web-prod \
+            --tb=short \
+            --log-file=${{ env.LOGS_DIR }}/web-test.log \
+            --log-level=INFO
         env:
           UI_URL: ${{ secrets.PROD_UI_URL }}
           HEADLESS: true
+
+      - name: 收集环境信息
+        run: |
+          echo "=== 环境信息 ===" > ${{ env.METADATA_DIR }}/env-info.txt
+          echo "Python 版本: $(python --version)" >> ${{ env.METADATA_DIR }}/env-info.txt
+          echo "操作系统: $(uname -a)" >> ${{ env.METADATA_DIR }}/env-info.txt
+          echo "工作目录: $(pwd)" >> ${{ env.METADATA_DIR }}/env-info.txt
+          echo "时间: $(date)" >> ${{ env.METADATA_DIR }}/env-info.txt
 
       - name: 上传 Web 端验证结果
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: web-prod-results
-          path: allure-results-web-prod
+          path: ${{ env.REPORTS_DIR }}/allure-web-prod
+
+      - name: 上传 Web 端测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-prod-logs
+          path: ${{ env.LOGS_DIR }}
 
   # 2. API 生产环境验证
   api-prod-validation:
@@ -111,9 +140,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
 
+      - name: 创建产物目录
+        run: |
+          mkdir -p ${{ env.REPORTS_DIR }} ${{ env.LOGS_DIR }}
+
       - name: 运行 API 生产环境验证
         run: |
-          pytest tests/test_smoke/test_smoke_api.py -v --alluredir=allure-results-api-prod
+          pytest tests/test_smoke/test_smoke_api.py -v \
+            --alluredir=${{ env.REPORTS_DIR }}/allure-api-prod \
+            --tb=short \
+            --log-file=${{ env.LOGS_DIR }}/api-test.log \
+            --log-level=INFO
         env:
           API_URL: ${{ secrets.PROD_API_URL }}
 
@@ -122,7 +159,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: api-prod-results
-          path: allure-results-api-prod
+          path: ${{ env.REPORTS_DIR }}/allure-api-prod
+
+      - name: 上传 API 测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-prod-logs
+          path: ${{ env.LOGS_DIR }}
 
   # 3. 服务可用性检查
   service-check:
@@ -234,15 +278,22 @@ jobs:
           sleep 8
           curl -s http://127.0.0.1:8080/ || echo "服务启动失败"
 
+      - name: 创建产物目录
+        run: |
+          mkdir -p ${{ env.REPORTS_DIR }} ${{ env.LOGS_DIR }} ${{ env.METRICS_DIR }}
+
       - name: 运行性能监控测试
         run: |
-          # 检查是否存在性能测试目录
           if [ -d "tests/test_performance/" ] && [ "$(ls -A tests/test_performance/)" ]; then
-            # 检查本地服务是否可用
             if curl -f -s -o /dev/null http://127.0.0.1:8080/ 2>/dev/null; then
               echo "本地服务可用，开始性能测试"
-              # 使用 Locust 运行性能测试（无头模式，较小压力）
-              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 2m --csv=performance_report
+              # 运行性能测试并生成多种报告
+              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 2m \
+                --csv=${{ env.METRICS_DIR }}/performance_report \
+                --logfile=${{ env.LOGS_DIR }}/locust.log
+              # 生成 HTML 报告
+              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 30s \
+                --html=${{ env.REPORTS_DIR }}/performance-report.html
             else
               echo "本地服务不可用，跳过性能测试"
             fi
@@ -253,12 +304,23 @@ jobs:
           TARGET_ENV: production
           API_URL: http://127.0.0.1:8080
 
-      - name: 上传性能测试结果
+      - name: 上传性能测试报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: performance-results
-          path: allure-results-performance
+          name: performance-reports
+          path: |
+            ${{ env.REPORTS_DIR }}/performance-report.html
+            ${{ env.METRICS_DIR }}/
+
+      - name: 上传性能测试日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-logs
+          path: |
+            ${{ env.LOGS_DIR }}
+            login_server.log
 
   # 5. 生成发布后验证报告
   post-release-report:
@@ -280,12 +342,24 @@ jobs:
         with:
           path: artifacts
 
+      - name: 创建产物目录
+        run: |
+          mkdir -p ${{ env.REPORTS_DIR }} ${{ env.METADATA_DIR }}
+
       - name: 合并测试结果
         run: |
           mkdir -p merged-allure-results
           cp -r artifacts/web-prod-results/* merged-allure-results/ 2>/dev/null || true
           cp -r artifacts/api-prod-results/* merged-allure-results/ 2>/dev/null || true
-          cp -r artifacts/performance-results/* merged-allure-results/ 2>/dev/null || true
+
+      - name: 生成测试摘要
+        run: |
+          echo "=== 测试摘要 ===" > ${{ env.METADATA_DIR }}/test-summary.txt
+          echo "工作流名称: ${{ github.workflow }}" >> ${{ env.METADATA_DIR }}/test-summary.txt
+          echo "触发事件: ${{ github.event_name }}" >> ${{ env.METADATA_DIR }}/test-summary.txt
+          echo "分支: ${{ github.ref }}" >> ${{ env.METADATA_DIR }}/test-summary.txt
+          echo "提交: ${{ github.sha }}" >> ${{ env.METADATA_DIR }}/test-summary.txt
+          echo "运行时间: $(date)" >> ${{ env.METADATA_DIR }}/test-summary.txt
 
       - name: 安装 Allure
         run: |
