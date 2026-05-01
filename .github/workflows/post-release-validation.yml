@@ -93,18 +93,10 @@ jobs:
           name: web-prod-results
           path: allure-results-web-prod
 
-  # 2. API 生产环境验证（使用共享服务）
+  # 2. API 生产环境验证
   api-prod-validation:
     name: API 生产环境验证
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
-          MYSQL_DATABASE: test_auto
-        ports:
-          - 3306:3306
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -118,107 +110,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
-
-      - name: 安装 MySQL 客户端
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mysql-client
-
-      - name: 等待 MySQL 服务启动
-        run: |
-          for i in {1..30}; do
-            if mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1" 2>/dev/null; then
-              echo "MySQL 服务已启动"
-              break
-            fi
-            sleep 2
-          done
-
-      - name: 初始化数据库
-        run: |
-          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} <<EOF
-          CREATE TABLE IF NOT EXISTS user (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL,
-            password VARCHAR(100) NOT NULL
-          );
-          INSERT INTO user (username, password) VALUES
-            ('admin', '123456'), ('user', '123456'), ('student', '123456'), ('teacher', '123456');
-          EOF
-
-      - name: 初始化测试数据库
-        run: |
-          # 使用 TCP/IP 连接 (127.0.0.1) 而不是 socket
-          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} <<EOF
-          CREATE DATABASE IF NOT EXISTS test_auto;
-          USE test_auto;
-          CREATE TABLE IF NOT EXISTS user (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL,
-            password VARCHAR(100) NOT NULL
-          );
-          EOF
-          # 生成 1000 个测试用户数据
-          python3 << 'EOF'
-          import random
-          import string
-          import pymysql
-          
-          # 用户名字符集：中文、英文、数字
-          chinese_chars = ''.join(chr(i) for i in range(0x4e00, 0x4e00 + 200))  # 200个常用汉字
-          username_chars = chinese_chars + string.ascii_letters + string.digits
-          
-          # 密码字符集：英文大小写、数字、特殊符号（不含中文）
-          password_chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
-          
-          def generate_username(length=8):
-              """生成用户名（支持中文、英文、数字）"""
-              return ''.join(random.choice(username_chars) for _ in range(length))
-          
-          def generate_password(length=12):
-              """生成密码（英文大小写、数字、特殊符号）"""
-              return ''.join(random.choice(password_chars) for _ in range(length))
-          
-          # 连接数据库（使用 127.0.0.1 确保 TCP/IP 连接）
-          db = pymysql.connect(
-              host="127.0.0.1",
-              port=3306,
-              user="root",
-              password=os.getenv("MYSQL_ROOT_PASSWORD", ""),
-              database="test_auto",
-              charset="utf8mb4"
-          )
-          cursor = db.cursor()
-          
-          # 生成 1000 个唯一用户
-          users = []
-          used_usernames = set()  # 用于跟踪已使用的用户名
-          count = 0
-          max_attempts = 5000  # 最大尝试次数，防止无限循环
-          
-          while count < 1000 and max_attempts > 0:
-              username = generate_username(random.randint(6, 12))
-              if username not in used_usernames:
-                  password = generate_password(random.randint(10, 16))
-                  users.append((username, password))
-                  used_usernames.add(username)
-                  count += 1
-              max_attempts -= 1
-          
-          # 批量插入
-          cursor.executemany("INSERT INTO user (username, password) VALUES (%s, %s)", users)
-          db.commit()
-          
-          print(f"成功插入 {len(users)} 个测试用户")
-          
-          cursor.close()
-          db.close()
-          EOF
-
-      - name: 验证数据库连接
-        run: |
-          # 使用 TCP/IP 连接测试
-          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT COUNT(*) FROM test_auto.user;"
 
       - name: 运行 API 生产环境验证
         run: |
