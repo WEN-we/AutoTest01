@@ -29,10 +29,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # 产物目录配置
   ARTIFACTS_DIR: "ci-artifacts"
-  REPORTS_DIR: "${{ env.ARTIFACTS_DIR }}/reports"
-  LOGS_DIR: "${{ env.ARTIFACTS_DIR }}/logs"
-  METRICS_DIR: "${{ env.ARTIFACTS_DIR }}/metrics"
-  METADATA_DIR: "${{ env.ARTIFACTS_DIR }}/metadata"
+  REPORTS_DIR: "ci-artifacts/reports"
+  LOGS_DIR: "ci-artifacts/logs"
+  METRICS_DIR: "ci-artifacts/metrics"
+  METADATA_DIR: "ci-artifacts/metadata"
 
 jobs:
   # 1. Web 端生产环境验证
