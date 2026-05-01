@@ -103,12 +103,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y mysql-client
 
+      - name: 等待 MySQL 服务启动
+        run: |
+          # 循环等待 MySQL 启动，最多等待 60 秒
+          for i in {1..30}; do
+            if mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1" 2>/dev/null; then
+              echo "MySQL 服务已启动"
+              break
+            fi
+            echo "等待 MySQL 启动... (第 $i 次尝试)"
+            sleep 2
+          done
+
       - name: 初始化测试数据库
         run: |
-          # 等待 MySQL 启动
-          sleep 15
-          # 创建用户表
-          mysql -h localhost -u root -p${MYSQL_ROOT_PASSWORD} test_auto <<EOF
+          # 使用 TCP/IP 连接 (127.0.0.1) 而不是 socket
+          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} <<EOF
+          CREATE DATABASE IF NOT EXISTS test_auto;
+          USE test_auto;
           CREATE TABLE IF NOT EXISTS user (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(50) NOT NULL,
@@ -136,9 +148,10 @@ jobs:
               """生成密码（英文大小写、数字、特殊符号）"""
               return ''.join(random.choice(password_chars) for _ in range(length))
           
-          # 连接数据库
+          # 连接数据库（使用 127.0.0.1 确保 TCP/IP 连接）
           db = pymysql.connect(
-              host="localhost",
+              host="127.0.0.1",
+              port=3306,
               user="root",
               password=os.getenv("MYSQL_ROOT_PASSWORD", ""),
               database="test_auto",
@@ -173,8 +186,8 @@ jobs:
 
       - name: 验证数据库连接
         run: |
-          # 测试数据库连接
-          mysql -h localhost -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT COUNT(*) FROM test_auto.user;"
+          # 使用 TCP/IP 连接测试
+          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT COUNT(*) FROM test_auto.user;"
 
       - name: 运行 API 生产环境验证
         run: |
