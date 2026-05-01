@@ -98,6 +98,84 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
 
+      - name: 安装 MySQL 客户端
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: 初始化测试数据库
+        run: |
+          # 等待 MySQL 启动
+          sleep 15
+          # 创建用户表
+          mysql -h localhost -u root -p${MYSQL_ROOT_PASSWORD} test_auto <<EOF
+          CREATE TABLE IF NOT EXISTS user (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            password VARCHAR(100) NOT NULL
+          );
+          EOF
+          # 生成 1000 个测试用户数据
+          python3 << 'EOF'
+          import random
+          import string
+          import pymysql
+          
+          # 用户名字符集：中文、英文、数字
+          chinese_chars = ''.join(chr(i) for i in range(0x4e00, 0x4e00 + 200))  # 200个常用汉字
+          username_chars = chinese_chars + string.ascii_letters + string.digits
+          
+          # 密码字符集：英文大小写、数字、特殊符号（不含中文）
+          password_chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
+          
+          def generate_username(length=8):
+              """生成用户名（支持中文、英文、数字）"""
+              return ''.join(random.choice(username_chars) for _ in range(length))
+          
+          def generate_password(length=12):
+              """生成密码（英文大小写、数字、特殊符号）"""
+              return ''.join(random.choice(password_chars) for _ in range(length))
+          
+          # 连接数据库
+          db = pymysql.connect(
+              host="localhost",
+              user="root",
+              password=os.getenv("MYSQL_ROOT_PASSWORD", ""),
+              database="test_auto",
+              charset="utf8mb4"
+          )
+          cursor = db.cursor()
+          
+          # 生成 1000 个唯一用户
+          users = []
+          used_usernames = set()  # 用于跟踪已使用的用户名
+          count = 0
+          max_attempts = 5000  # 最大尝试次数，防止无限循环
+          
+          while count < 1000 and max_attempts > 0:
+              username = generate_username(random.randint(6, 12))
+              if username not in used_usernames:
+                  password = generate_password(random.randint(10, 16))
+                  users.append((username, password))
+                  used_usernames.add(username)
+                  count += 1
+              max_attempts -= 1
+          
+          # 批量插入
+          cursor.executemany("INSERT INTO user (username, password) VALUES (%s, %s)", users)
+          db.commit()
+          
+          print(f"成功插入 {len(users)} 个测试用户")
+          
+          cursor.close()
+          db.close()
+          EOF
+
+      - name: 验证数据库连接
+        run: |
+          # 测试数据库连接
+          mysql -h localhost -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT COUNT(*) FROM test_auto.user;"
+
       - name: 运行 API 生产环境验证
         run: |
           pytest tests/test_smoke/test_smoke_api.py -v --alluredir=allure-results-api-prod
