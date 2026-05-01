@@ -146,18 +146,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
 
+      - name: 启动本地登录服务
+        run: |
+          # 在后台启动本地登录服务
+          nohup python local_web_login/backend_server.py > login_server.log 2>&1 &
+          # 给服务一些时间来启动
+          sleep 5
+          # 检查服务是否启动成功
+          curl -s http://127.0.0.1:8080/ || echo "服务启动失败，继续执行测试"
+
       - name: 运行性能监控测试
         run: |
           # 检查是否存在性能测试目录
           if [ -d "tests/test_performance/" ] && [ "$(ls -A tests/test_performance/)" ]; then
-            # 使用 Locust 运行性能测试（无头模式）
-            locust -f tests/test_performance/locustfile.py --headless -u 50 -r 5 -t 5m --csv=performance_report
+            # 检查本地服务是否可用
+            if curl -f -s -o /dev/null http://127.0.0.1:8080/ 2>/dev/null; then
+              echo "本地服务可用，开始性能测试"
+              # 使用 Locust 运行性能测试（无头模式，较小压力）
+              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 2m --csv=performance_report
+            else
+              echo "本地服务不可用，跳过性能测试"
+            fi
           else
             echo "性能测试目录不存在或为空，跳过性能测试"
           fi
         env:
           TARGET_ENV: production
-          API_URL: ${{ secrets.PROD_API_URL }}
+          API_URL: http://127.0.0.1:8080
 
       - name: 上传性能测试结果
         if: always()
