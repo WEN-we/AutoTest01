@@ -93,10 +93,18 @@ jobs:
           name: web-prod-results
           path: allure-results-web-prod
 
-  # 2. API 生产环境验证
+  # 2. API 生产环境验证（使用共享服务）
   api-prod-validation:
     name: API 生产环境验证
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_DATABASE: test_auto
+        ports:
+          - 3306:3306
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -118,15 +126,25 @@ jobs:
 
       - name: 等待 MySQL 服务启动
         run: |
-          # 循环等待 MySQL 启动，最多等待 60 秒
           for i in {1..30}; do
             if mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1" 2>/dev/null; then
               echo "MySQL 服务已启动"
               break
             fi
-            echo "等待 MySQL 启动... (第 $i 次尝试)"
             sleep 2
           done
+
+      - name: 初始化数据库
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} <<EOF
+          CREATE TABLE IF NOT EXISTS user (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            password VARCHAR(100) NOT NULL
+          );
+          INSERT INTO user (username, password) VALUES
+            ('admin', '123456'), ('user', '123456'), ('student', '123456'), ('teacher', '123456');
+          EOF
 
       - name: 初始化测试数据库
         run: |
@@ -236,6 +254,14 @@ jobs:
     name: 性能监控
     runs-on: ubuntu-latest
     needs: service-check
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_DATABASE: test_auto
+        ports:
+          - 3306:3306
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -250,14 +276,72 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
 
+      - name: 安装 MySQL 客户端
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: 等待 MySQL 启动
+        run: |
+          for i in {1..30}; do
+            if mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1" 2>/dev/null; then
+              echo "MySQL 服务已启动"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: 初始化测试数据库
+        run: |
+          # 创建用户表
+          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} test_auto <<EOF
+          CREATE TABLE IF NOT EXISTS user (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) NOT NULL,
+            password VARCHAR(100) NOT NULL
+          );
+          EOF
+          # 生成 1000 个测试用户
+          python3 << 'EOF'
+          import random
+          import string
+          import pymysql
+          
+          chinese_chars = ''.join(chr(i) for i in range(0x4e00, 0x4e00 + 200))
+          username_chars = chinese_chars + string.ascii_letters + string.digits
+          password_chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
+          
+          def gen_username(length=8):
+              return ''.join(random.choice(username_chars) for _ in range(length))
+          
+          def gen_password(length=12):
+              return ''.join(random.choice(password_chars) for _ in range(length))
+          
+          db = pymysql.connect(host="127.0.0.1", port=3306, user="root", password=os.getenv("MYSQL_ROOT_PASSWORD", ""), database="test_auto", charset="utf8mb4")
+          cursor = db.cursor()
+          
+          users = []
+          used = set()
+          for _ in range(1000):
+              while True:
+                  un = gen_username(random.randint(6, 12))
+                  if un not in used:
+                      used.add(un)
+                      users.append((un, gen_password(random.randint(10, 16))))
+                      break
+          
+          cursor.executemany("INSERT INTO user (username, password) VALUES (%s, %s)", users)
+          db.commit()
+          print(f"插入 {len(users)} 个用户")
+          cursor.close()
+          db.close()
+          EOF
+
       - name: 启动本地登录服务
         run: |
-          # 在后台启动本地登录服务
           nohup python local_web_login/backend_server.py > login_server.log 2>&1 &
-          # 给服务一些时间来启动
-          sleep 5
-          # 检查服务是否启动成功
-          curl -s http://127.0.0.1:8080/ || echo "服务启动失败，继续执行测试"
+          sleep 8
+          curl -s http://127.0.0.1:8080/ || echo "服务启动失败"
 
       - name: 运行性能监控测试
         run: |
