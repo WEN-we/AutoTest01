@@ -35,7 +35,7 @@ class AITestEngine:
         """
         try:
             # 使用路径管理工具获取提示词文件路径
-            prompt_path = get_test_data_path("test_ai", "prompt.yaml")
+            prompt_path = get_test_data_path("ai", "prompt.yaml")
             prompt_config = ConfigReader.read_yaml(prompt_path)
             return prompt_config.get("system_prompt", "")
         except Exception as e:
@@ -130,13 +130,46 @@ class AITestEngine:
             temperature=self.test_params.get("temperature", 0.7)
         )
         
+        # 清理响应内容，去除markdown代码块标记
+        cleaned_response = self._clean_response(response)
+        
         try:
-            result = json.loads(response)
+            result = json.loads(cleaned_response)
             logger.info(f"页面分析完成: {result.get('page_analysis', {}).get('business', '未知业务')}")
             return result
         except json.JSONDecodeError:
             logger.error(f"AI响应格式错误: {response}")
             return {"page_analysis": {}, "test_steps": []}
+    
+    def _clean_response(self, response):
+        """
+        清理AI响应内容，去除markdown代码块标记
+        
+        Args:
+            response: AI返回的原始响应
+            
+        Returns:
+            str: 清理后的响应内容
+        """
+        if not response:
+            return response
+        
+        # 去除markdown代码块标记
+        cleaned = response.strip()
+        
+        # 去除 ```json 和 ```
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        elif cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        
+        # 去除其他可能的markdown标记
+        cleaned = cleaned.strip()
+        
+        return cleaned
     
     def execute_test(self, page, test_steps):
         """

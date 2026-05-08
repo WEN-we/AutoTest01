@@ -123,24 +123,31 @@ class AIClient:
                     logger.info(f"API 密钥前5位: {api_key[:5]}...")
                 
                 if model_type == "mock":
-                    return self._mock_response(prompt, system_prompt)
+                    response = self._mock_response(prompt, system_prompt)
                 elif model_type == "doubao":
-                    return self._call_doubao(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_doubao(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 elif model_type == "openai":
-                    return self._call_openai(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_openai(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 elif model_type == "claude":
-                    return self._call_claude(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_claude(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 elif model_type == "deepseek":
-                    return self._call_deepseek(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_deepseek(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 elif model_type == "qwen":
-                    return self._call_qwen(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_qwen(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 elif model_type == "yuanbao":
-                    return self._call_yuanbao(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
-                elif model_type == "zhiPu":
-                    return self._call_zhiPu(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                    response = self._call_yuanbao(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                elif model_type == "zhipu" or model_type == "zhiPu":
+                    response = self._call_zhipu(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                elif model_type == "yuan":
+                    response = self._call_yuan(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
+                elif model_type == "mimo":
+                    response = self._call_mimo(prompt, system_prompt, max_tokens, temperature, api_key, base_url)
                 else:
                     logger.warning(f"不支持的模型类型: {model_type}")
                     continue
+                
+                # 清理响应内容，去除markdown代码块标记（适用于所有模型）
+                return self._clean_response(response)
             except Exception as e:
                 logger.error(f"调用模型 {model_type} 失败: {e}")
                 continue
@@ -149,6 +156,36 @@ class AIClient:
         logger.warning("所有模型调用失败，返回模拟响应")
         return self._mock_response(prompt, system_prompt)
 
+    def _clean_response(self, response):
+        """
+        清理AI响应内容，去除markdown代码块标记（适用于所有模型）
+        
+        Args:
+            response: AI返回的原始响应
+            
+        Returns:
+            str: 清理后的响应内容
+        """
+        if not response:
+            return response
+        
+        # 去除markdown代码块标记
+        cleaned = response.strip()
+        
+        # 去除 ```json 和 ```
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        elif cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        
+        # 去除其他可能的markdown标记
+        cleaned = cleaned.strip()
+        
+        return cleaned
+    
     def _mock_response(self, prompt, system_prompt):
         """模拟AI响应，用于本地演示"""
         logger.info("使用模拟AI响应")
@@ -177,6 +214,7 @@ class AIClient:
         # 模拟执行结果分析
         if "执行结果" in prompt or "测试结果" in prompt:
             return json.dumps({
+                "status": "success",
                 "result_analysis": {
                     "status": "success",
                     "message": "测试通过，登录成功并跳转到首页",
@@ -241,7 +279,13 @@ class AIClient:
             response.raise_for_status()  # 检查 HTTP 状态码
             result = response.json()
             logger.info(f"豆包 API 响应成功")
-            logger.info(f"响应内容: {result}")  # 打印完整响应
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"豆包 API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
             return result["choices"][0]["message"]["content"]
         except requests.exceptions.RequestException as e:
             logger.error(f"豆包 API 请求失败: {e}")
@@ -273,6 +317,13 @@ class AIClient:
         }
         response = requests.post(url, headers=headers, json=data, timeout=30)
         result = response.json()
+        # 记录token消耗
+        if "usage" in result:
+            usage = result["usage"]
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+            logger.info(f"OpenAI API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
         return result["choices"][0]["message"]["content"]
 
     def _call_claude(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
@@ -295,11 +346,24 @@ class AIClient:
         }
         response = requests.post(url, headers=headers, json=data, timeout=30)
         result = response.json()
+        # 记录token消耗（Claude使用input_tokens和output_tokens）
+        if "usage" in result:
+            usage = result["usage"]
+            prompt_tokens = usage.get("input_tokens", usage.get("prompt_tokens", 0))
+            completion_tokens = usage.get("output_tokens", usage.get("completion_tokens", 0))
+            total_tokens = usage.get("total_tokens", prompt_tokens + completion_tokens)
+            logger.info(f"Claude API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
         return result["content"][0]["text"]
 
     def _call_deepseek(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
         """调用DeepSeek API"""
         logger.info("调用DeepSeek API")
+        
+        # 检查 API 密钥
+        if not api_key:
+            logger.error("DeepSeek API 密钥未设置，无法调用")
+            raise ValueError("DeepSeek API 密钥未设置")
+        
         try:
             ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
             # 从配置文件读取模型配置
@@ -322,21 +386,54 @@ class AIClient:
         data = {
             "model": model_id,
             "messages": [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": system_prompt or ""},
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": max_tokens,
             "temperature": temperature
         }
+        
+        logger.info(f"DeepSeek 请求 URL: {url}")
+        logger.info(f"DeepSeek 使用模型: {model_id}")
+        
         try:
             ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
             timeout = ai_config.get("ai_test_params", {}).get("timeout", 30)
         except Exception:
             timeout = 30
         
-        response = requests.post(url, headers=headers, json=data, timeout=timeout)
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=timeout)
+            logger.info(f"DeepSeek 响应状态码: {response.status_code}")
+            
+            # 检查 HTTP 状态码
+            if response.status_code != 200:
+                logger.error(f"DeepSeek API 调用失败，状态码: {response.status_code}")
+                logger.error(f"响应内容: {response.text}")
+                raise Exception(f"DeepSeek API 返回错误状态码: {response.status_code}")
+            
+            result = response.json()
+            
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"DeepSeek API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
+            
+            # 检查响应格式
+            if "choices" not in result:
+                logger.error(f"DeepSeek API 响应格式不正确: {result}")
+                raise Exception(f"DeepSeek API 响应中缺少 choices 字段")
+            
+            return result["choices"][0]["message"]["content"]
+        except requests.exceptions.RequestException as e:
+            logger.error(f"DeepSeek API 请求异常: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"DeepSeek API 调用失败: {e}")
+            raise
 
     def _call_qwen(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
         """调用Qwen API"""
@@ -419,6 +516,13 @@ class AIClient:
             response.raise_for_status()  # 检查 HTTP 状态码
             result = response.json()
             logger.info(f"Qwen API 响应成功")
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"Qwen API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
             return result["choices"][0]["message"]["content"]
         except requests.exceptions.RequestException as e:
             logger.error(f"Qwen API 请求失败: {e}")
@@ -451,11 +555,18 @@ class AIClient:
         }
         response = requests.post(url, headers=headers, json=data, timeout=30)
         result = response.json()
+        # 记录token消耗
+        if "usage" in result:
+            usage = result["usage"]
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+            logger.info(f"元宝 API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
         return result["choices"][0]["message"]["content"]
 
     def _call_zhiPu(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
-        """调用智谱AI API"""
-        logger.info("调用智谱AI API")
+        """调用智谱AI API（旧版本）"""
+        logger.info("调用智谱AI API（旧版本）")
         url = base_url or "https://open.bigmodel.cn/api/mt/text2text"
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -470,4 +581,205 @@ class AIClient:
         }
         response = requests.post(url, headers=headers, json=data, timeout=30)
         result = response.json()
+        # 记录token消耗
+        if "usage" in result:
+            usage = result["usage"]
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+            total_tokens = usage.get("total_tokens", 0)
+            logger.info(f"智谱AI API（旧版）token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
         return result["data"]["text"]
+
+    def _call_zhipu(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
+        """调用智谱AI API（新版Chat Completions格式）"""
+        logger.info("调用智谱AI API（新版）")
+        
+        if not api_key:
+            logger.error("智谱AI API 密钥未设置")
+            raise ValueError("智谱AI API 密钥未设置")
+        
+        url = base_url or "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        
+        try:
+            ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
+            for model in ai_config.get("ai_models", []):
+                if model["type"] == "zhipu":
+                    model_id = model.get("model_id", "glm-4-flash")
+                    break
+            else:
+                model_id = "glm-4-flash"
+        except Exception:
+            model_id = "glm-4-flash"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": system_prompt or ""},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+        
+        logger.info(f"智谱AI 请求 URL: {url}")
+        logger.info(f"智谱AI 使用模型: {model_id}")
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            logger.info(f"智谱AI 响应状态码: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"智谱AI API 调用失败，状态码: {response.status_code}")
+                logger.error(f"响应内容: {response.text}")
+                raise Exception(f"智谱AI API 返回错误状态码: {response.status_code}")
+            
+            result = response.json()
+            
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"智谱AI API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
+            
+            if "choices" not in result:
+                logger.error(f"智谱AI API 响应格式不正确: {result}")
+                raise Exception("智谱AI API 响应中缺少 choices 字段")
+            
+            logger.info("智谱AI API 响应成功")
+            return result["choices"][0]["message"]["content"]
+        except requests.exceptions.RequestException as e:
+            logger.error(f"智谱AI API 请求异常: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"智谱AI API 调用失败: {e}")
+            raise
+
+    def _call_yuan(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
+        """调用元语大模型 API"""
+        logger.info("调用元语大模型 API")
+        
+        if not api_key:
+            logger.error("元语大模型 API 密钥未设置")
+            raise ValueError("元语大模型 API 密钥未设置")
+        
+        url = base_url or "https://api.moonshot.cn/v1/chat/completions"
+        
+        try:
+            ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
+            for model in ai_config.get("ai_models", []):
+                if model["type"] == "yuan":
+                    model_id = model.get("model_id", "moonshot-v1-8k")
+                    break
+            else:
+                model_id = "moonshot-v1-8k"
+        except Exception:
+            model_id = "moonshot-v1-8k"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": system_prompt or ""},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            if response.status_code != 200:
+                logger.error(f"元语大模型 API 调用失败，状态码: {response.status_code}")
+                raise Exception(f"元语大模型 API 返回错误状态码: {response.status_code}")
+            
+            result = response.json()
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"元语大模型 API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
+            return result["choices"][0]["message"]["content"]
+        except Exception as e:
+            logger.error(f"元语大模型 API 调用失败: {e}")
+            raise
+
+    def _call_mimo(self, prompt, system_prompt, max_tokens, temperature, api_key, base_url):
+        """调用 Mimo AI API"""
+        logger.info("调用 Mimo AI API")
+        
+        if not api_key:
+            logger.error("Mimo AI API 密钥未设置")
+            raise ValueError("Mimo AI API 密钥未设置")
+        
+        url = base_url or "https://api.mimo.ai/v1/chat/completions"
+        
+        try:
+            ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
+            for model in ai_config.get("ai_models", []):
+                if model["type"] == "mimo":
+                    model_id = model.get("model_id", "mimo-7b-chat")
+                    break
+            else:
+                model_id = "mimo-7b-chat"
+        except Exception:
+            model_id = "mimo-7b-chat"
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": system_prompt or ""},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
+        
+        logger.info(f"Mimo AI 请求 URL: {url}")
+        logger.info(f"Mimo AI 使用模型: {model_id}")
+        
+        try:
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            logger.info(f"Mimo AI 响应状态码: {response.status_code}")
+            
+            if response.status_code != 200:
+                logger.error(f"Mimo AI API 调用失败，状态码: {response.status_code}")
+                logger.error(f"响应内容: {response.text}")
+                raise Exception(f"Mimo AI API 返回错误状态码: {response.status_code}")
+            
+            result = response.json()
+            
+            # 记录token消耗
+            if "usage" in result:
+                usage = result["usage"]
+                prompt_tokens = usage.get("prompt_tokens", 0)
+                completion_tokens = usage.get("completion_tokens", 0)
+                total_tokens = usage.get("total_tokens", 0)
+                logger.info(f"Mimo AI API token消耗 - 提示词: {prompt_tokens}, 响应: {completion_tokens}, 总计: {total_tokens}")
+            
+            if "choices" not in result:
+                logger.error(f"Mimo AI API 响应格式不正确: {result}")
+                raise Exception("Mimo AI API 响应中缺少 choices 字段")
+            
+            logger.info("Mimo AI API 响应成功")
+            return result["choices"][0]["message"]["content"]
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Mimo AI API 请求异常: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Mimo AI API 调用失败: {e}")
+            raise

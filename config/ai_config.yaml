@@ -1,31 +1,62 @@
 # AI测试配置文件
 
 # AI模型配置
+# 模型优先级从高到低
 ai_models:
-  # 模型优先级从高到低
-  - type: "qwen"
+  - type: "qwen"  # Qwen放第一，用于测试token消耗
     name: "通义千问"
-    api_key: "${QWEN_API_KEY}"  # 从环境变量读取
+    api_key: "${QWEN_API_KEY}"
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-    model_id: "qwen-turbo"
+    model_id: "deepseek-v3"
   
-  - type: "doubao"
-    name: "豆包"
-    api_key: "${DOUBAO_API_KEY}"  # 从环境变量读取
-    base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
-    model_id: "ep-20240417172235-49v4x"
+  - type: "zhipu"  # 智谱AI放第二
+    name: "智谱AI"
+    api_key: "${ZHIPU_API_KEY}"
+    base_url: "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+    model_id: "glm-4-flash"
   
-  - type: "deepseek"
-    name: "DeepSeek"
-    api_key: "${DEEPSEEK_API_KEY}"  # 从环境变量读取
-    base_url: "https://api.deepseek.com/v1/chat/completions"
-    model_id: "deepseek-chat"
-  
-  - type: "mock"  # 移到最后一位
+  - type: "mock"  # 模拟模式放第三
     name: "模拟模式"
     api_key: null
     base_url: null
     model_id: null
+  
+  - type: "doubao"  # 豆包放第四
+    name: "豆包"
+    api_key: "${DOUBAO_API_KEY}"
+    base_url: "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+    model_id: "doubao-seed-2-0-mini-260428"
+  
+  - type: "mimo"  # Mimo无免费版本，不测试
+    name: "Mimo"
+    api_key: "${MIMO_API_KEY}"
+    base_url: "https://api.mimo.chat/v1/chat/completions"
+    model_id: "mimo-v2.5-tts"
+  
+  - type: "deepseek"  # DeepSeek无免费版本，不测试
+    name: "DeepSeek"
+    api_key: "${DEEPSEEK_API_KEY}"  # 从环境变量读取
+    base_url: "https://api.deepseek.com/v1/chat/completions"
+    model_id: "deepseek-r1.5b-chat"
+
+  - type: "openai"  # OpenAI网络环境问题，不测试
+    name: "OpenAI"
+    api_key: "${OPENAI_API_KEY}"  # 从环境变量读取
+    base_url: "${OPENAI_BASE_URL:-https://api.openai.com/v1}"  # 支持自定义 API 地址
+    model_id: "gpt-3.5-turbo"
+  
+  - type: "claude"  # Claude无免费版本，不测试
+    name: "Claude"
+    api_key: "${ANTHROPIC_API_KEY}"  # 从环境变量读取
+    base_url: "https://api.anthropic.com/v1/messages"
+    model_id: "claude-3-sonnet-20240229"
+  
+  - type: "yuan"  # 元语大模型未获取密钥，不测试
+    name: "元语大模型"
+    api_key: "${YUAN_API_KEY}"  # 从环境变量读取
+    base_url: "https://api.moonshot.cn/v1/chat/completions"
+    model_id: "moonshot-v1-8k"
+
 
 # AI测试参数
 ai_test_params:
