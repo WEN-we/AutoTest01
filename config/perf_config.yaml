@@ -1,17 +1,17 @@
 # 性能测试数据配置文件
 # 此文件用于存储压测过程中使用的测试数据，包括账号信息和接口参数
 
-# 测试账号信息
-# 注意：实际测试时需要确保这些账号在系统中存在
+# 测试用户列表（用户名和明文密码）
+# 密码会通过bcrypt与数据库中的加密密码进行验证匹配
 users:
-#  - username: "admin"  # 测试账号1
-#    password: "123456"  # 测试账号1的密码
-#  - username: "user"  # 测试账号2
-#    password: "123456"  # 测试账号2的密码
-#  - username: "student"  # 测试账号3
-#    password: "123456"  # 测试账号3的密码
-#  - username: "teacher"  # 测试账号4
-#    password: "123456"  # 测试账号4的密码
+  - username: "admin"
+    password: "123456"
+  - username: "user"
+    password: "123456"
+  - username: "student"
+    password: "123456"
+  - username: "teacher"
+    password: "123456"
 
 # 接口参数配置
 # 包含各个模块的接口端点和参数
@@ -19,7 +19,7 @@ api_params:
   # 用户模块参数
   user:
     login:
-      endpoint: "/login"  # 本地登录接口路径
+      endpoint: "/api/login"  # 本地登录接口路径
     user_info:
       endpoint: "/user/info"  # 假设的用户信息接口路径（当前本地服务可能未实现）
     user_list:

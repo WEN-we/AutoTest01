@@ -1,6 +1,6 @@
 # 浏览器配置
 browser: chromium  # 可选：chromium/firefox/webkit
-headless: true   # 是否无头模式（CI/CD时设为true）
+headless: false   # 是否无头模式（CI/CD时设为true）
 timeout: 10        # 元素定位超时时间（秒）
 window_size: "1920x1080"  # 浏览器窗口大小
 

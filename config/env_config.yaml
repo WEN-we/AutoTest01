@@ -22,7 +22,7 @@ dev:
 test:
   base_api_url: https://coreapi.mosoteach.cn/passports
   base_ui_url: https://jw.syzyedu.com/jsxsd/
-
+  #base_ui_url: http://127.0.0.1:8080
   android_api_url: https://www.mindskip.net:7003/api/app
   ios_api_url: https://www.mindskip.net:7003/api/ios
   harmony_api_url: https://www.mindskip.net:7003/api/harmony  # 鸿蒙
