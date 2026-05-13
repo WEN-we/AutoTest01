@@ -1,8 +1,0 @@
-🎯 feat(zentao): 新增禅道项目管理集成
-
-- zentao_api.py: 禅道API封装
-  - 获取任务列表 get_tasks()
-  - 获取任务详情 get_task()
-  - 更新任务状态 update_status()
-  - 获取bug列表 get_bugs()
-  - 获取产品列表 get_products()

@@ -1,4 +1,0 @@
-🤖 feat(agents): 新增AI智能体模块
-
-- agents/base_agent.py: 基础智能体基类
-- agents/test_agent.py: 测试智能体实现

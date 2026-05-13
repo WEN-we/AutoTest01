@@ -1,4 +1,0 @@
-⚡ perf(test): 性能测试脚本增强
-
-- test_config.py: 测试配置模块化
-- test_quick.py: 快速性能测试脚本
