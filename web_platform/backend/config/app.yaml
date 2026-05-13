@@ -1,0 +1,24 @@
+# 应用配置
+development:
+  name: "测试平台Web"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8081
+  debug: true
+  log_level: "INFO"
+
+testing:
+  name: "测试平台Web"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8081
+  debug: true
+  log_level: "DEBUG"
+
+production:
+  name: "测试平台Web"
+  version: "1.0.0"
+  host: "0.0.0.0"
+  port: 8081
+  debug: false
+  log_level: "WARNING"

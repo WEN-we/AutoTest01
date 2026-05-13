@@ -1,0 +1,21 @@
+# 安全配置
+development:
+  jwt_secret: "dev-secret-key-change-in-production"
+  jwt_expiration_hours: 24
+  bcrypt_rounds: 12
+  max_login_attempts: 5
+  lockout_minutes: 30
+
+testing:
+  jwt_secret: "test-secret-key"
+  jwt_expiration_hours: 24
+  bcrypt_rounds: 4
+  max_login_attempts: 5
+  lockout_minutes: 30
+
+production:
+  jwt_secret: "${JWT_SECRET}"
+  jwt_expiration_hours: 24
+  bcrypt_rounds: 12
+  max_login_attempts: 5
+  lockout_minutes: 30

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行记录 - 测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="bi bi-shield-check"></i> 测试平台
+            </a>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">任务管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/execution-list">执行记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/jenkins">Jenkins</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/zentao">禅道</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4><i class="bi bi-list-check"></i> 执行记录</h4>
+            <div class="btn-group">
+                <button class="btn btn-outline-danger btn-sm" onclick="batchDeleteExecutions()" id="batchDeleteBtn" data-tooltip="批量删除选中的执行记录" style="display: none;">
+                    <i class="bi bi-trash"></i> 批量删除 (<span id="selectedCount">0</span>)
+                </button>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadExecutions()" data-tooltip="手动刷新执行记录列表">
+                    <i class="bi bi-arrow-clockwise"></i> 刷新
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" data-tooltip="选择所有执行记录进行批量操作">
+                            </th>
+                            <th data-tooltip="执行的唯一标识符">执行ID</th>
+                            <th data-tooltip="执行对应的任务名称">任务名称</th>
+                            <th data-tooltip="执行时使用的测试类型">测试类型</th>
+                            <th data-tooltip="执行结果：待执行、执行中、成功、失败、已停止">状态</th>
+                            <th data-tooltip="执行开始的时间">开始时间</th>
+                            <th data-tooltip="执行消耗的时间（秒）">时长</th>
+                            <th data-tooltip="触发来源：手动、API、定时任务、Jenkins">触发方式</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="executionsTable">
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="static/js/app.js"></script>
+    <script src="static/js/tooltips.js"></script>
+    <script>
+        let currentPage = 1;
+        const pageSize = 20;
+
+        async function loadExecutions() {
+            try {
+                const response = await fetch(`/api/executions?page=${currentPage}&page_size=${pageSize}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    renderExecutions(data.data.items);
+                } else {
+                    showToast('获取执行记录失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        function renderExecutions(executions) {
+            const tbody = document.getElementById('executionsTable');
+
+            if (!executions || executions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">暂无执行记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = executions.map(exec => `
+                <tr data-execution-id="${exec.execution_id}">
+                    <td>
+                        <input type="checkbox" class="execution-checkbox" value="${exec.execution_id}" onchange="updateBatchDeleteButton()">
+                    </td>
+                    <td><code>${exec.execution_id.substring(0, 8)}...</code></td>
+                    <td>${exec.task_name || exec.task_id}</td>
+                    <td><span class="badge bg-info">${exec.test_type || '-'}</span></td>
+                    <td>${getStatusBadge(exec.status)}</td>
+                    <td>${formatDateTime(exec.start_time)}</td>
+                    <td>${exec.duration ? exec.duration + 's' : '-'}</td>
+                    <td>${getTriggerBadge(exec.trigger_type)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewExecution('${exec.execution_id}')" data-tooltip="查看此执行的详细监控和日志">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSingleExecution('${exec.execution_id}')" data-tooltip="删除此执行记录及其日志">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': '<span class="badge bg-secondary">待执行</span>',
+                'running': '<span class="badge bg-warning">执行中</span>',
+                'success': '<span class="badge bg-success">成功</span>',
+                'failed': '<span class="badge bg-danger">失败</span>',
+                'stopped': '<span class="badge bg-dark">已停止</span>'
+            };
+            return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+        }
+
+        function getTriggerBadge(trigger) {
+            const badges = {
+                'manual': '<span class="badge bg-primary">手动</span>',
+                'scheduled': '<span class="badge bg-info">定时</span>',
+                'api': '<span class="badge bg-warning">API</span>',
+                'jenkins': '<span class="badge bg-success">Jenkins</span>'
+            };
+            return badges[trigger] || `<span class="badge bg-secondary">${trigger}</span>`;
+        }
+
+        function viewExecution(executionId) {
+            window.location.href = `/execution/${executionId}`;
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('.execution-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBatchDeleteButton();
+        }
+
+        function updateBatchDeleteButton() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            const batchBtn = document.getElementById('batchDeleteBtn');
+            const selectedCount = document.getElementById('selectedCount');
+
+            if (selected.length > 0) {
+                batchBtn.style.display = 'inline-block';
+                selectedCount.textContent = selected.length;
+            } else {
+                batchBtn.style.display = 'none';
+                selectedCount.textContent = '0';
+            }
+        }
+
+        async function batchDeleteExecutions() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            if (selected.length === 0) {
+                showToast('请先选择要删除的执行记录', 'warning');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selected.length} 条执行记录吗？此操作不可恢复。`)) {
+                return;
+            }
+
+            const executionIds = Array.from(selected).map(cb => cb.value);
+
+            try {
+                const res = await fetch('/api/executions/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({ execution_ids: executionIds })
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast(data.message || '删除成功', 'success');
+                    loadExecutions();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteSingleExecution(executionId) {
+            if (!confirm('确定要删除这条执行记录吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/executions/batch-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                    },
+                    body: JSON.stringify({ execution_ids: [executionId] })
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('删除成功', 'success');
+                    loadExecutions();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'danger');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        loadExecutions();
+
+        setInterval(() => {
+            if (!document.hidden) {
+                loadExecutions();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

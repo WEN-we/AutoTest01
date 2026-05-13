@@ -1,0 +1,32 @@
+# 数据库配置
+# 与 local_web_login 共用 test_auto 数据库
+
+development:
+  host: "localhost"
+  port: 3306
+  database: "test_auto"
+  username: "root"
+  password: "${DB_PASSWORD}"
+  charset: "utf8mb4"
+  pool_size: 5
+  pool_recycle: 3600
+
+testing:
+  host: "localhost"
+  port: 3306
+  database: "test_auto"
+  username: "root"
+  password: "${DB_PASSWORD}"
+  charset: "utf8mb4"
+  pool_size: 2
+  pool_recycle: 3600
+
+production:
+  host: "${PROD_DB_HOST}"
+  port: 3306
+  database: "test_auto"
+  username: "${PROD_DB_USER}"
+  password: "${PROD_DB_PASSWORD}"
+  charset: "utf8mb4"
+  pool_size: 10
+  pool_recycle: 3600

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>执行监控 - 自动化测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+        body {
+            background: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+        }
+        .execution-info {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .log-container {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #d4d4d4;
+        }
+        .log-line {
+            margin-bottom: 4px;
+            line-height: 1.6;
+        }
+        .log-timestamp {
+            color: #6a9955;
+        }
+        .log-success {
+            color: #4ec9b0;
+        }
+        .log-error {
+            color: #f48771;
+        }
+        .log-info {
+            color: #dcdcaa;
+        }
+        .progress-wrapper {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        .status-running {
+            background: var(--warning-color);
+        }
+        .status-success {
+            background: var(--success-color);
+            animation: none;
+        }
+        .status-failed {
+            background: var(--danger-color);
+            animation: none;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="bi bi-robot me-2"></i>自动化测试平台
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="/dashboard" class="text-white text-decoration-none">
+                    <i class="bi bi-arrow-left me-2"></i>返回首页
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <div class="execution-info">
+            <div class="row">
+                <div class="col-md-8">
+                    <h4><i class="bi bi-terminal me-2"></i>执行监控</h4>
+                    <p class="text-muted mb-0">Execution ID: <code id="executionId">-</code></p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="mb-2">
+                        <span class="status-indicator status-running" id="statusIndicator" data-bs-toggle="tooltip" data-bs-placement="left" title="状态指示器"></span>
+                        <strong id="statusText">准备中...</strong>
+                    </div>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopExecution()" style="display: none;">
+                        <i class="bi bi-stop-circle me-2"></i>停止执行
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-wrapper">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span data-bs-toggle="tooltip" data-bs-placement="top" title="通过率 = 通过数 / (通过数 + 失败数) × 100%">执行进度</span>
+                <span id="progressPercent" data-bs-toggle="tooltip" data-bs-placement="right" title="通过率 = 通过数 / (通过数 + 失败数) × 100%">0%</span>
+            </div>
+            <div class="progress" style="height: 25px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar"
+                     role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="fs-4 fw-bold text-success" id="passedCount" data-bs-toggle="tooltip" data-bs-placement="top" title="成功通过的测试用例数量">0</div>
+                        <small class="text-muted">通过</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="fs-4 fw-bold text-danger" id="failedCount" data-bs-toggle="tooltip" data-bs-placement="top" title="执行失败的测试用例数量">0</div>
+                        <small class="text-muted">失败</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="fs-4 fw-bold text-warning" id="skippedCount" data-bs-toggle="tooltip" data-bs-placement="top" title="被跳过的测试用例数量（未执行）">0</div>
+                        <small class="text-muted">跳过</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="fs-4 fw-bold text-info" id="duration" data-bs-toggle="tooltip" data-bs-placement="top" title="从开始到结束的总执行时间">0s</div>
+                        <small class="text-muted">耗时</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span data-bs-toggle="tooltip" data-bs-placement="top" title="显示执行过程中的实时输出和结果"><i class="bi bi-terminal me-2"></i>实时日志</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()" data-bs-toggle="tooltip" data-bs-placement="left" title="清空日志显示区域（不影响实际日志内容）">
+                    <i class="bi bi-trash me-1"></i>清空
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="log-container" id="logContainer">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-hourglass-split fs-1 d-block mb-3"></i>
+                        等待执行开始...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="static/js/tooltips.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+        let executionId = null;
+        let pollInterval = null;
+        let lastLogIndex = 0;
+
+        function getExecutionIdFromUrl() {
+            const pathSegments = window.location.pathname.split('/');
+            return pathSegments[pathSegments.length - 1];
+        }
+
+        function init() {
+            executionId = getExecutionIdFromUrl();
+            if (!executionId) {
+                showToast('缺少执行ID参数', 'danger');
+                return;
+            }
+
+            document.getElementById('executionId').textContent = executionId;
+            loadExecutionStatus();
+            loadNewLogs();
+            startPolling();
+        }
+
+        function startPolling() {
+            if (pollInterval) clearInterval(pollInterval);
+            pollInterval = setInterval(() => {
+                loadExecutionStatus();
+                loadNewLogs();
+            }, 2000);
+        }
+
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        async function loadExecutionStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/execution/${executionId}/status`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    updateStatus(data.data);
+                }
+            } catch (error) {
+                console.error('获取状态失败:', error);
+            }
+        }
+
+        function updateStatus(status) {
+            const statusText = document.getElementById('statusText');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const stopBtn = document.getElementById('stopBtn');
+
+            const statusTooltips = {
+                pending: '等待中...',
+                running: '任务正在执行中，请耐心等待...',
+                success: '任务执行完成，所有测试用例通过',
+                failed: '任务执行完成，存在失败的测试用例',
+                stopped: '任务被人为停止，未完成执行'
+            };
+
+            statusIndicator.setAttribute('title', statusTooltips[status.status] || '状态指示器');
+            if (statusIndicator.dataset.bsTooltip) {
+                bootstrap.Tooltip.getInstance(statusIndicator).dispose();
+                new bootstrap.Tooltip(statusIndicator, {
+                    trigger: 'hover',
+                    delay: { show: 200, hide: 100 }
+                });
+            }
+
+            statusText.textContent = getStatusText(status.status);
+            statusIndicator.className = 'status-indicator status-' + status.status;
+
+            if (status.status === 'running') {
+                stopBtn.style.display = 'inline-block';
+            } else {
+                stopBtn.style.display = 'none';
+                stopPolling();
+            }
+
+            if (status.result_summary) {
+                const summary = status.result_summary;
+                document.getElementById('passedCount').textContent = summary.passed || 0;
+                document.getElementById('failedCount').textContent = summary.failed || 0;
+                document.getElementById('skippedCount').textContent = summary.skipped || 0;
+
+                if (summary.duration) {
+                    document.getElementById('duration').textContent = summary.duration + 's';
+                }
+
+                const total = summary.passed + summary.failed + summary.skipped;
+                if (total > 0) {
+                    const percent = Math.round((summary.passed / total) * 100);
+                    document.getElementById('progressPercent').textContent = percent + '%';
+                    document.getElementById('progressBar').style.width = percent + '%';
+
+                    if (status.status === 'success') {
+                        document.getElementById('progressBar').className = 'progress-bar bg-success';
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('progressPercent').textContent = '100% (完成)';
+                    } else if (status.status === 'failed') {
+                        document.getElementById('progressBar').className = 'progress-bar bg-danger';
+                    }
+                }
+            }
+        }
+
+        async function loadNewLogs() {
+            try {
+                const res = await fetch(`${API_BASE}/execution/${executionId}/logs?offset=${lastLogIndex}&limit=50`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200 && data.data.logs.length > 0) {
+                    appendLogs(data.data.logs);
+                    lastLogIndex += data.data.logs.length;
+                }
+            } catch (error) {
+                console.error('获取日志失败:', error);
+            }
+        }
+
+        function appendLogs(logs) {
+            const container = document.getElementById('logContainer');
+
+            if (container.querySelector('.text-muted')) {
+                container.innerHTML = '';
+            }
+
+            logs.forEach(log => {
+                const line = document.createElement('div');
+                line.className = 'log-line';
+
+                const timestamp = new Date(log.timestamp).toLocaleTimeString('zh-CN');
+                const message = log.message;
+
+                let messageClass = 'log-info';
+                if (message.includes('PASSED') || message.includes('✅') || message.includes('passed')) {
+                    messageClass = 'log-success';
+                } else if (message.includes('FAILED') || message.includes('❌') || message.includes('ERROR') || message.includes('错误')) {
+                    messageClass = 'log-error';
+                }
+
+                line.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> ${formatLogMessage(message, messageClass)}`;
+                container.appendChild(line);
+            });
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function formatLogMessage(message, messageClass) {
+            message = escapeHtml(message);
+            message = message.replace(/PASSED/g, '<span class="log-success">PASSED</span>');
+            message = message.replace(/FAILED/g, '<span class="log-error">FAILED</span>');
+            message = message.replace(/ERROR/g, '<span class="log-error">ERROR</span>');
+            message = message.replace(/✅/g, '<span class="log-success">✅</span>');
+            message = message.replace(/❌/g, '<span class="log-error">❌</span>');
+            return message;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearLogs() {
+            const container = document.getElementById('logContainer');
+            container.innerHTML = `
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-check-circle fs-1 d-block mb-3 text-success"></i>
+                    日志已清空
+                </div>
+            `;
+        }
+
+        async function stopExecution() {
+            if (!confirm('确定要停止当前执行吗？')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/execution/${executionId}/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('执行已停止', 'warning');
+                    stopPolling();
+                    loadExecutionStatus();
+                } else {
+                    showToast(data.message || '停止失败', 'danger');
+                }
+            } catch (error) {
+                showToast('停止失败: ' + error.message, 'danger');
+            }
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                pending: '等待中',
+                running: '执行中',
+                success: '执行成功',
+                failed: '执行失败',
+                stopped: '已停止'
+            };
+            return texts[status] || status;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

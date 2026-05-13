@@ -1,0 +1,18 @@
+# 集成配置模板
+development:
+  jenkins:
+    default_url: "http://localhost:8080"
+    default_username: "admin"
+    # API Token通过环境变量或数据库配置，不硬编码
+  zentao:
+    default_url: "http://localhost/zentao"
+    default_account: "admin"
+    # 密码通过环境变量或数据库配置，不硬编码
+
+production:
+  jenkins:
+    default_url: "${JENKINS_URL}"
+    default_username: "${JENKINS_USER}"
+  zentao:
+    default_url: "${ZENTAO_URL}"
+    default_account: "${ZENTAO_USER}"

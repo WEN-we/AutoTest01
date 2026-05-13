@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务列表 - 自动化测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+        }
+        body {
+            background: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 2rem;
+        }
+        .card {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table thead th {
+            border-bottom: 2px solid #e5e7eb;
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        .badge-success { background-color: #10b981; }
+        .badge-danger { background-color: #ef4444; }
+        .badge-warning { background-color: #f59e0b; }
+        .badge-info { background-color: #3b82f6; }
+        .badge-api { background-color: #8b5cf6; }
+        .badge-ui { background-color: #06b6d4; }
+        .badge-platform { background-color: #ec4899; }
+        .badge-external { background-color: #06b6d4; }
+        .badge-local { background-color: #10b981; }
+        .badge-other { background-color: #6b7280; }
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">
+                <i class="bi bi-robot me-2"></i>自动化测试平台
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="dashboard.html" class="text-white text-decoration-none me-3">
+                    <i class="bi bi-house me-2"></i>首页
+                </a>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()">
+                    <i class="bi bi-box-arrow-right me-1"></i>退出
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h4 class="mb-0">任务管理</h4>
+                <p class="text-muted">管理所有测试任务</p>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" onclick="location.href='tasks-create.html'" data-bs-toggle="tooltip" data-bs-placement="top" title="创建新的测试任务">
+                    <i class="bi bi-plus-circle me-2"></i>创建任务
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="searchInput" placeholder="搜索任务名称..." onkeyup="filterTasks()" data-bs-toggle="tooltip" data-bs-placement="top" title="输入任务名称进行搜索">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="filterScene" onchange="filterTasks()" data-bs-toggle="tooltip" data-bs-placement="top" title="按测试场景筛选：平台、本地、外部、其他">
+                            <option value="">全部场景</option>
+                            <option value="platform">测试平台本身</option>
+                            <option value="local">测试本地服务</option>
+                            <option value="external">测试外部网站</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="filterType" onchange="filterTasks()" data-bs-toggle="tooltip" data-bs-placement="top" title="按测试类型筛选：API、UI、冒烟等">
+                            <option value="">全部类型</option>
+                            <option value="api">API测试</option>
+                            <option value="ui">UI测试</option>
+                            <option value="smoke">冒烟测试</option>
+                            <option value="performance">性能测试</option>
+                            <option value="android">Android</option>
+                            <option value="ios">iOS</option>
+                            <option value="windows">Windows</option>
+                            <option value="linux">Linux</option>
+                            <option value="harmony">鸿蒙</option>
+                            <option value="service">服务测试</option>
+                            <option value="ai">AI测试</option>
+                            <option value="whitebox">白盒测试</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="filterStatus" onchange="filterTasks()" data-bs-toggle="tooltip" data-bs-placement="top" title="按任务状态筛选：空闲、执行中、成功、失败">
+                            <option value="">全部状态</option>
+                            <option value="idle">空闲</option>
+                            <option value="running">执行中</option>
+                            <option value="success">成功</option>
+                            <option value="failed">失败</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" onclick="resetFilters()" data-bs-toggle="tooltip" data-bs-placement="top" title="清空所有筛选条件">
+                            <i class="bi bi-arrow-clockwise me-1"></i>重置
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>任务名称</th>
+                                <th>场景</th>
+                                <th>类型</th>
+                                <th>状态</th>
+                                <th>执行次数</th>
+                                <th>最近执行</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskTable">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                    暂无任务
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div class="text-muted">
+                        共 <span id="totalCount">0</span> 个任务
+                    </div>
+                    <div id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>确定要删除任务 "<span id="deleteTaskName"></span>" 吗？</p>
+                    <p class="text-danger small">此操作不可恢复！</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+                        <i class="bi bi-trash me-1"></i>确认删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+        let allTasks = [];
+        let deleteTaskId = null;
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        async function loadTasks() {
+            try {
+                const res = await fetch(`${API_BASE}/tasks?page=1&page_size=100`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    allTasks = data.data.items || [];
+                    document.getElementById('totalCount').textContent = allTasks.length;
+                    filterTasks();
+                }
+            } catch (error) {
+                showToast('加载任务失败: ' + error.message, 'danger');
+            }
+        }
+
+        function filterTasks() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const scene = document.getElementById('filterScene').value;
+            const type = document.getElementById('filterType').value;
+            const status = document.getElementById('filterStatus').value;
+
+            let filtered = allTasks;
+
+            if (search) {
+                filtered = filtered.filter(t => t.name.toLowerCase().includes(search));
+            }
+
+            if (scene) {
+                filtered = filtered.filter(t => t.scene === scene);
+            }
+
+            if (type) {
+                filtered = filtered.filter(t => t.test_type === type);
+            }
+
+            if (status) {
+                filtered = filtered.filter(t => t.status === status);
+            }
+
+            renderTasks(filtered);
+        }
+
+        function renderTasks(tasks) {
+            const tbody = document.getElementById('taskTable');
+
+            if (tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            暂无匹配的任务
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = tasks.map(task => `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${task.name}</div>
+                        <small class="text-muted">${task.description || '无描述'}</small>
+                    </td>
+                    <td><span class="badge badge-${getSceneBadge(task.scene)}">${getSceneName(task.scene)}</span></td>
+                    <td><span class="badge badge-${getTypeBadge(task.test_type)}">${getTestTypeName(task.test_type)}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(task.status)}">${getStatusText(task.status)}</span></td>
+                    <td>${task.run_count || 0}</td>
+                    <td>${formatTime(task.last_run_at)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary" onclick="executeTask(${task.id})" data-bs-toggle="tooltip" data-bs-placement="top" title="立即执行此任务，跳转到监控页面查看实时日志">
+                                <i class="bi bi-play"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="viewTask(${task.id})" data-bs-toggle="tooltip" data-bs-placement="top" title="查看任务详情和配置信息">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="showDeleteModal(${task.id}, '${task.name}')" data-bs-toggle="tooltip" data-bs-placement="top" title="删除任务及其所有执行记录（不可恢复）">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterScene').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterStatus').value = '';
+            filterTasks();
+        }
+
+        async function executeTask(taskId) {
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('任务已启动', 'success');
+                    setTimeout(() => {
+                        location.href = `/execution/${data.data.execution_id}`;
+                    }, 1000);
+                } else {
+                    showToast(data.message || '启动失败', 'danger');
+                }
+            } catch (error) {
+                showToast('启动失败: ' + error.message, 'danger');
+            }
+        }
+
+        function viewTask(taskId) {
+            location.href = `/tasks/${taskId}`;
+        }
+
+        function showDeleteModal(taskId, taskName) {
+            deleteTaskId = taskId;
+            document.getElementById('deleteTaskName').textContent = taskName;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        async function confirmDelete() {
+            if (!deleteTaskId) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${deleteTaskId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('token')
+                    }
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('任务已删除', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                    loadTasks();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'danger');
+            }
+        }
+
+        function getSceneBadge(scene) {
+            const badges = {
+                platform: 'platform',
+                local: 'local',
+                external: 'external',
+                other: 'other'
+            };
+            return badges[scene] || 'other';
+        }
+
+        function getSceneName(scene) {
+            const names = {
+                platform: '测试平台',
+                local: '本地服务',
+                external: '外部网站',
+                other: '其他'
+            };
+            return names[scene] || scene;
+        }
+
+        function getTypeBadge(type) {
+            const badges = {
+                api: 'api',
+                ui: 'ui',
+                smoke: 'warning',
+                android: 'success',
+                ios: 'info',
+                windows: 'primary',
+                linux: 'primary',
+                harmony: 'info',
+                service: 'warning',
+                performance: 'danger',
+                ai: 'danger',
+                whitebox: 'secondary'
+            };
+            return badges[type] || 'secondary';
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                idle: 'secondary',
+                running: 'warning',
+                success: 'success',
+                failed: 'danger',
+                stopped: 'secondary'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                idle: '空闲',
+                running: '执行中',
+                success: '成功',
+                failed: '失败',
+                stopped: '已停止'
+            };
+            return texts[status] || status;
+        }
+
+        function getTestTypeName(type) {
+            const names = {
+                api: 'API测试',
+                ui: 'UI测试',
+                smoke: '冒烟测试',
+                android: 'Android',
+                ios: 'iOS',
+                windows: 'Windows',
+                linux: 'Linux',
+                harmony: '鸿蒙',
+                service: '服务测试',
+                performance: '性能测试',
+                ai: 'AI测试',
+                whitebox: '白盒测试'
+            };
+            return names[type] || type;
+        }
+
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        if (checkAuth()) {
+            loadTasks();
+        }
+    </script>
+    <script src="static/js/tooltips.js"></script>
+</body>
+</html>

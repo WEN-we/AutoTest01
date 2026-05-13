@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务详情 - 测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">
+                <i class="bi bi-shield-check"></i> 测试平台
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">任务管理</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/execution-list">执行记录</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/jenkins">Jenkins</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/zentao">禅道</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i> <span id="username">Admin</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="logout()"><i class="bi bi-box-arrow-right"></i> 退出</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-info-circle"></i> 任务详情</h5>
+                        <div>
+                            <button class="btn btn-success btn-sm" onclick="executeTask()" id="executeBtn">
+                                <i class="bi bi-play-fill"></i> 执行
+                            </button>
+                            <a href="/tasks" class="btn btn-secondary btn-sm">
+                                <i class="bi bi-arrow-left"></i> 返回
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">任务名称</label>
+                                <h4 id="taskName">-</h4>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">状态</label>
+                                <div id="taskStatus"></div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">测试类型</label>
+                                <div id="taskType">-</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">测试场景</label>
+                                <div id="taskScene">-</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted">测试路径</label>
+                            <code id="taskPath">-</code>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted">任务描述</label>
+                            <p id="taskDescription" class="text-break">-</p>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label text-muted">环境配置</label>
+                            <pre id="taskEnvConfig" class="bg-light p-3 rounded">-</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history"></i> 执行历史</h6>
+                    </div>
+                    <div class="card-body" id="executionHistory">
+                        <p class="text-muted">暂无执行记录</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-info-circle"></i> 任务信息</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2">
+                            <small class="text-muted">创建时间：</small>
+                            <span id="createdAt">-</span>
+                        </p>
+                        <p class="mb-2">
+                            <small class="text-muted">更新时间：</small>
+                            <span id="updatedAt">-</span>
+                        </p>
+                        <p class="mb-0">
+                            <small class="text-muted">创建者：</small>
+                            <span id="createdBy">-</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="static/js/app.js"></script>
+    <script src="static/js/tooltips.js"></script>
+    <script>
+        function getTaskIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idFromParams = urlParams.get('id');
+            if (idFromParams) return idFromParams;
+            
+            const pathSegments = window.location.pathname.split('/');
+            return pathSegments[pathSegments.length - 1];
+        }
+        
+        const taskId = getTaskIdFromUrl();
+
+        if (!taskId) {
+            showToast('缺少任务ID', 'error');
+            setTimeout(() => window.location.href = '/tasks', 1000);
+        }
+
+        async function loadTaskDetail() {
+            try {
+                const response = await fetch(`/api/tasks/${taskId}`, {
+                    headers: { 'Authorization': `Bearer ${getToken()}` }
+                });
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    const task = data.data;
+                    document.getElementById('taskName').textContent = task.name;
+                    document.getElementById('taskType').textContent = task.test_type_name || task.test_type;
+                    document.getElementById('taskScene').textContent = task.scene_name || task.scene;
+                    document.getElementById('taskPath').textContent = task.test_path || '-';
+                    document.getElementById('taskDescription').textContent = task.description || '无';
+                    document.getElementById('taskEnvConfig').textContent = JSON.stringify(task.env_config || {}, null, 2);
+
+                    const statusBadge = getStatusBadge(task.status);
+                    document.getElementById('taskStatus').innerHTML = statusBadge;
+
+                    document.getElementById('createdAt').textContent = formatDateTime(task.created_at);
+                    document.getElementById('updatedAt').textContent = formatDateTime(task.updated_at);
+                    document.getElementById('createdBy').textContent = task.created_by || '系统';
+
+                    if (task.status === 'running') {
+                        document.getElementById('executeBtn').disabled = true;
+                        document.getElementById('executeBtn').innerHTML = '<i class="bi bi-hourglass-split"></i> 执行中';
+                    }
+                } else {
+                    showToast(data.message || '获取任务详情失败', 'error');
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+            }
+        }
+
+        async function executeTask() {
+            try {
+                const btn = document.getElementById('executeBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 执行中...';
+
+                const response = await fetch(`/api/tasks/${taskId}/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${getToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    showToast('执行已启动', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/execution/${data.data.execution_id}`;
+                    }, 1000);
+                } else {
+                    showToast(data.message || '执行失败', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-play-fill"></i> 执行';
+                }
+            } catch (error) {
+                showToast('网络错误', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-play-fill"></i> 执行';
+            }
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'idle': '<span class="badge bg-secondary">空闲</span>',
+                'running': '<span class="badge bg-warning">执行中</span>',
+                'success': '<span class="badge bg-success">成功</span>',
+                'failed': '<span class="badge bg-danger">失败</span>',
+                'stopped': '<span class="badge bg-dark">已停止</span>'
+            };
+            return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+        }
+
+        loadTaskDetail();
+    </script>
+</body>
+</html>

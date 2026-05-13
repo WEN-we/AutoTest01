@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - 自动化测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        body {
+            background: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .navbar {
+            background: var(--bg-gradient);
+            padding: 1rem 2rem;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+        .card {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .card-header {
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table thead th {
+            border-bottom: 2px solid #e5e7eb;
+            color: #6b7280;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        .badge-success { background-color: var(--success-color); }
+        .badge-danger { background-color: var(--danger-color); }
+        .badge-warning { background-color: var(--warning-color); }
+        .badge-info { background-color: #3b82f6; }
+        .badge-api { background-color: #8b5cf6; }
+        .badge-ui { background-color: #06b6d4; }
+        .badge-platform { background-color: #ec4899; }
+        .badge-external { background-color: #06b6d4; }
+        .badge-local { background-color: #10b981; }
+        .badge-other { background-color: #6b7280; }
+        .btn-primary {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        .btn-primary:hover {
+            background: #4338ca;
+            border-color: #4338ca;
+        }
+        .quick-action {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        .quick-action:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-3px);
+        }
+        .quick-action i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        .table-responsive::-webkit-scrollbar {
+            width: 8px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="dashboard.html">
+                <i class="bi bi-robot me-2"></i>自动化测试平台
+            </a>
+            <div class="d-flex align-items-center">
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()" data-bs-toggle="tooltip" title="查看最近执行的监控记录">
+                        <i class="bi bi-clock-history me-1"></i>最近监控
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="recentMonitorsDropdown" style="min-width: 250px;">
+                        <li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>
+                    </ul>
+                </div>
+                <span class="text-white me-3" data-bs-toggle="tooltip" title="当前登录用户">
+                    <i class="bi bi-person-circle me-1"></i>
+                    <span id="currentUser">管理员</span>
+                </span>
+                <button class="btn btn-outline-light btn-sm" onclick="logout()" data-bs-toggle="tooltip" title="退出登录，清除认证信息">
+                    <i class="bi bi-box-arrow-right me-1"></i>退出
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h4 class="mb-0">测试概览</h4>
+                <p class="text-muted">实时监控测试执行状态和数据统计</p>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary" onclick="location.href='tasks-create.html'">
+                    <i class="bi bi-plus-circle me-2"></i>创建任务
+                </button>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card" data-bs-toggle="tooltip" title="平台中创建的所有测试任务总数">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-number" id="totalTasks">0</div>
+                            <div class="stat-label">总任务数</div>
+                        </div>
+                        <div style="width: 60px; height: 60px; background: #ede9fe; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-list-task" style="font-size: 1.5rem; color: var(--primary-color);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" data-bs-toggle="tooltip" title="历史执行中测试用例的通过率，成功数/(成功数+失败数)">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-number text-success" id="passRate">0%</div>
+                            <div class="stat-label">通过率</div>
+                        </div>
+                        <div style="width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-check-circle" style="font-size: 1.5rem; color: var(--success-color);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" data-bs-toggle="tooltip" title="历史执行中出现失败的测试用例总数">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-number text-danger" id="failCount">0</div>
+                            <div class="stat-label">失败用例</div>
+                        </div>
+                        <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-x-circle" style="font-size: 1.5rem; color: var(--danger-color);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" data-bs-toggle="tooltip" title="当前正在执行的测试任务数量">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-number text-warning" id="runningTasks">0</div>
+                            <div class="stat-label">执行中</div>
+                        </div>
+                        <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <i class="bi bi-play-circle" style="font-size: 1.5rem; color: var(--warning-color);"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-lightning me-2"></i>快速操作</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=platform'" data-bs-toggle="tooltip" title="快速创建测试 web_platform 自身功能的任务">
+                                    <i class="bi bi-display"></i>
+                                    <div class="fw-bold">测试平台本身</div>
+                                    <small class="text-muted">本地测试平台</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=local'" data-bs-toggle="tooltip" title="快速创建测试 local_web_login 服务的任务">
+                                    <i class="bi bi-hdd-network"></i>
+                                    <div class="fw-bold">测试本地服务</div>
+                                    <small class="text-muted">local_web_login</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=external'" data-bs-toggle="tooltip" title="快速创建测试互联网网站或API的任务">
+                                    <i class="bi bi-globe"></i>
+                                    <div class="fw-bold">测试外部网站</div>
+                                    <small class="text-muted">互联网网站</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='tasks-create.html?type=api'" data-bs-toggle="tooltip" title="快速创建接口自动化测试任务">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                    <div class="fw-bold">API测试</div>
+                                    <small class="text-muted">接口自动化</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='tasks-create.html?type=ui'" data-bs-toggle="tooltip" title="快速创建Web界面自动化测试任务">
+                                    <i class="bi bi-browser-chrome"></i>
+                                    <div class="fw-bold">UI测试</div>
+                                    <small class="text-muted">Web界面测试</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="quick-action" onclick="location.href='integrations.html'" data-bs-toggle="tooltip" title="配置Jenkins、禅道等第三方集成">
+                                    <i class="bi bi-gear"></i>
+                                    <div class="fw-bold">集成配置</div>
+                                    <small class="text-muted">Jenkins/禅道</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-clock-history me-2"></i>最近执行记录</span>
+                        <a href="execution-list.html" class="btn btn-sm btn-outline-primary">查看全部</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="recent-executions-container" style="max-height: 350px; overflow-y: scroll; display: block;">
+                            <table class="table table-hover mb-0">
+                                <thead class="sticky-top bg-white">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAllExecutions" onchange="toggleAllExecutions()">
+                                        </th>
+                                        <th>任务名称</th>
+                                        <th>场景</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>执行时间</th>
+                                        <th>
+                                            <button class="btn btn-sm btn-danger" onclick="batchDeleteExecutions()" id="batchDeleteBtn" style="display: none;">
+                                                <i class="bi bi-trash"></i> 批量删除
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentExecutions">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                            暂无执行记录
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart me-2"></i>测试场景分布
+                    </div>
+                    <div class="card-body">
+                        <div id="sceneChart" style="height: 250px;">
+                            <div class="text-center text-muted py-5">
+                                <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
+                                暂无数据
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-list-check me-2"></i>任务列表</span>
+                        <div class="d-flex gap-2">
+                            <select class="form-select form-select-sm" style="width: auto;" id="filterScene" onchange="loadTasks()">
+                                <option value="">全部场景</option>
+                                <option value="platform">测试平台本身</option>
+                                <option value="local">测试本地服务</option>
+                                <option value="external">测试外部网站</option>
+                                <option value="other">其他</option>
+                            </select>
+                            <select class="form-select form-select-sm" style="width: auto;" id="filterType" onchange="loadTasks()">
+                                <option value="">全部类型</option>
+                                <option value="api">API测试</option>
+                                <option value="ui">UI测试</option>
+                                <option value="smoke">冒烟测试</option>
+                                <option value="performance">性能测试</option>
+                            </select>
+                            <a href="tasks.html" class="btn btn-sm btn-outline-primary">管理任务</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>任务名称</th>
+                                        <th>场景</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>执行次数</th>
+                                        <th>最近执行</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="taskList">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                            暂无任务，<a href="tasks-create.html">创建第一个任务</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="static/js/app.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        async function loadDashboard() {
+            try {
+                const [tasksRes, executionsRes] = await Promise.all([
+                    fetch(`${API_BASE}/tasks?page_size=100`, getAuthHeaders()),
+                    fetch(`${API_BASE}/executions`, getAuthHeaders())
+                ]);
+
+                const tasksData = await tasksRes.json();
+                const executionsData = await executionsRes.json();
+
+                updateStats(tasksData.data?.items || [], executionsData.data?.items || []);
+                loadRecentExecutions(executionsData.data?.items || []);
+                loadTaskList(tasksData.data?.items || []);
+                updateSceneChart(tasksData.data?.items || []);
+
+            } catch (error) {
+                console.error('加载仪表盘失败:', error);
+                showToast('加载数据失败，请检查服务是否启动', 'danger');
+            }
+        }
+
+        function updateStats(tasks, executions) {
+            document.getElementById('totalTasks').textContent = tasks.length;
+
+            const runningTasks = tasks.filter(t => t.status === 'running').length;
+            document.getElementById('runningTasks').textContent = runningTasks;
+
+            const failedCount = executions.filter(e => e.status === 'failed').length;
+            document.getElementById('failCount').textContent = failedCount;
+
+            const successful = executions.filter(e => e.status === 'success').length;
+            const total = executions.length;
+            const passRate = total > 0 ? ((successful / total) * 100).toFixed(1) : 0;
+            document.getElementById('passRate').textContent = passRate + '%';
+        }
+
+        function loadRecentExecutions(executions) {
+            const tbody = document.getElementById('recentExecutions');
+            if (executions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            暂无执行记录
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = executions.map(exec => `
+                <tr>
+                    <td>
+                        <input type="checkbox" class="execution-checkbox" value="${exec.execution_id}" onchange="updateBatchDeleteButton()">
+                    </td>
+                    <td>任务 #${exec.task_id}</td>
+                    <td><span class="badge badge-${getSceneBadge(exec.scene)}">${getSceneName(exec.scene)}</span></td>
+                    <td><span class="badge badge-${getTypeBadge(exec.test_type)}">${exec.test_type}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(exec.status)}">${getStatusText(exec.status)}</span></td>
+                    <td>${formatTime(exec.start_time)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewExecution('${exec.execution_id}')">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSingleExecution('${exec.execution_id}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadTaskList(tasks) {
+            const tbody = document.getElementById('taskList');
+            const filterScene = document.getElementById('filterScene').value;
+            const filterType = document.getElementById('filterType').value;
+
+            let filteredTasks = tasks;
+            if (filterScene) {
+                filteredTasks = filteredTasks.filter(t => t.scene === filterScene);
+            }
+            if (filterType) {
+                filteredTasks = filteredTasks.filter(t => t.test_type === filterType);
+            }
+
+            if (filteredTasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                            暂无任务
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredTasks.slice(0, 10).map(task => `
+                <tr>
+                    <td>${task.name}</td>
+                    <td><span class="badge badge-${getSceneBadge(task.scene)}">${getSceneName(task.scene)}</span></td>
+                    <td><span class="badge badge-${getTypeBadge(task.test_type)}">${getTestTypeName(task.test_type)}</span></td>
+                    <td><span class="badge badge-${getStatusBadge(task.status)}">${getStatusText(task.status)}</span></td>
+                    <td>${task.run_count || 0}</td>
+                    <td>${formatTime(task.last_run_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="executeTask(${task.id})">
+                            <i class="bi bi-play"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="location.href='/tasks/${task.id}'">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function loadData() {
+            loadDashboard();
+        }
+
+        function updateSceneChart(tasks) {
+            const counts = {};
+            tasks.forEach(t => {
+                counts[t.scene] = (counts[t.scene] || 0) + 1;
+            });
+
+            const chartDiv = document.getElementById('sceneChart');
+            if (Object.keys(counts).length === 0) {
+                chartDiv.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
+                        暂无数据
+                    </div>
+                `;
+                return;
+            }
+
+            const colors = {
+                platform: '#ec4899',
+                local: '#10b981',
+                external: '#06b6d4',
+                other: '#6b7280'
+            };
+
+            let html = '<div class="row g-3">';
+            for (const [scene, count] of Object.entries(counts)) {
+                html += `
+                    <div class="col-6">
+                        <div class="d-flex align-items-center">
+                            <div style="width: 12px; height: 12px; background: ${colors[scene] || '#6b7280'}; border-radius: 2px; margin-right: 8px;"></div>
+                            <span>${getSceneName(scene)}</span>
+                            <span class="ms-auto fw-bold">${count}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            chartDiv.innerHTML = html;
+        }
+
+        async function executeTask(taskId) {
+            try {
+                const res = await fetch(`${API_BASE}/tasks/${taskId}/execute`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    const executionId = data.data.execution_id;
+                    showToast('任务已启动执行，正在跳转到监控页面...', 'success');
+                    addToRecentMonitors(executionId, taskId);
+                    setTimeout(() => {
+                        window.location.href = `/execution/${executionId}`;
+                    }, 500);
+                } else {
+                    showToast(data.message || '启动失败', 'danger');
+                }
+            } catch (error) {
+                showToast('启动失败: ' + error.message, 'danger');
+            }
+        }
+
+        function addToRecentMonitors(executionId, taskId) {
+            let recentMonitors = JSON.parse(localStorage.getItem('recentMonitors') || '[]');
+            recentMonitors = recentMonitors.filter(m => m.executionId !== executionId);
+            recentMonitors.unshift({
+                executionId: executionId,
+                taskId: taskId,
+                timestamp: new Date().toISOString()
+            });
+            recentMonitors = recentMonitors.slice(0, 5);
+            localStorage.setItem('recentMonitors', JSON.stringify(recentMonitors));
+        }
+
+        function getRecentMonitors() {
+            return JSON.parse(localStorage.getItem('recentMonitors') || '[]');
+        }
+
+        function clearRecentMonitors() {
+            localStorage.removeItem('recentMonitors');
+        }
+
+        function updateRecentMonitorsDropdown() {
+            const recentMonitors = getRecentMonitors();
+            const dropdown = document.getElementById('recentMonitorsDropdown');
+
+            if (recentMonitors.length === 0) {
+                dropdown.innerHTML = '<li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>';
+                return;
+            }
+
+            dropdown.innerHTML = recentMonitors.map(monitor => `
+                <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/execution/${monitor.executionId}">
+                        <div>
+                            <div class="fw-normal">任务 #${monitor.taskId}</div>
+                            <small class="text-muted">${formatTime(monitor.timestamp)}</small>
+                        </div>
+                        <i class="bi bi-arrow-right text-muted"></i>
+                    </a>
+                </li>
+            `).join('');
+        }
+
+        function viewExecution(executionId) {
+            location.href = `/execution/${executionId}`;
+        }
+
+        function toggleAllExecutions() {
+            const selectAll = document.getElementById('selectAllExecutions');
+            const checkboxes = document.querySelectorAll('.execution-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBatchDeleteButton();
+        }
+
+        function updateBatchDeleteButton() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            const batchBtn = document.getElementById('batchDeleteBtn');
+            if (selected.length > 0) {
+                batchBtn.style.display = 'inline-block';
+                batchBtn.innerHTML = `<i class="bi bi-trash"></i> 批量删除 (${selected.length})`;
+            } else {
+                batchBtn.style.display = 'none';
+            }
+        }
+
+        async function batchDeleteExecutions() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            if (selected.length === 0) {
+                showToast('请先选择要删除的执行记录', 'warning');
+                return;
+            }
+
+            if (!confirm(`确定要删除选中的 ${selected.length} 条执行记录吗？此操作不可恢复。`)) {
+                return;
+            }
+
+            const executionIds = Array.from(selected).map(cb => cb.value);
+
+            try {
+                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ execution_ids: executionIds })
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast(data.message, 'success');
+                    loadData();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteSingleExecution(executionId) {
+            if (!confirm('确定要删除这条执行记录吗？此操作不可恢复。')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ execution_ids: [executionId] })
+                });
+
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('删除成功', 'success');
+                    loadData();
+                } else {
+                    showToast(data.message || '删除失败', 'danger');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'danger');
+            }
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            };
+        }
+
+        function getSceneBadge(scene) {
+            const badges = {
+                platform: 'platform',
+                local: 'local',
+                external: 'external',
+                other: 'other'
+            };
+            return badges[scene] || 'other';
+        }
+
+        function getSceneName(scene) {
+            const names = {
+                platform: '测试平台',
+                local: '本地服务',
+                external: '外部网站',
+                other: '其他'
+            };
+            return names[scene] || scene;
+        }
+
+        function getTypeBadge(type) {
+            const badges = {
+                api: 'api',
+                ui: 'ui',
+                smoke: 'warning',
+                android: 'success',
+                ios: 'info',
+                windows: 'primary',
+                linux: 'primary',
+                harmony: 'info',
+                service: 'warning',
+                performance: 'danger',
+                ai: 'danger',
+                whitebox: 'secondary'
+            };
+            return badges[type] || 'secondary';
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                idle: 'secondary',
+                running: 'warning',
+                success: 'success',
+                failed: 'danger',
+                stopped: 'secondary'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                idle: '空闲',
+                running: '执行中',
+                success: '成功',
+                failed: '失败',
+                stopped: '已停止'
+            };
+            return texts[status] || status;
+        }
+
+        function getTestTypeName(type) {
+            const names = {
+                api: 'API测试',
+                ui: 'UI测试',
+                smoke: '冒烟测试',
+                android: 'Android',
+                ios: 'iOS',
+                windows: 'Windows',
+                linux: 'Linux',
+                harmony: '鸿蒙',
+                service: '服务测试',
+                performance: '性能测试',
+                ai: 'AI测试',
+                whitebox: '白盒测试'
+            };
+            return names[type] || type;
+        }
+
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+            const date = new Date(timeStr);
+            return date.toLocaleString('zh-CN');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        if (checkAuth()) {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            document.getElementById('currentUser').textContent = user.username || '管理员';
+            loadDashboard();
+            setInterval(() => {
+                if (!document.hidden) {
+                    loadDashboard();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试平台 - 界面预览</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+        .sidebar {
+            background: #001529;
+            height: 100vh;
+            width: 240px;
+            position: fixed;
+            left: 0;
+            top: 0;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-nav { padding: 20px 0; }
+
+        .nav-item {
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+        .nav-item.active { background: var(--primary-color); color: white; }
+
+        .main-content {
+            margin-left: 240px;
+            padding: 24px;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 24px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+
+        .stat-content { display: flex; align-items: center; gap: 20px; }
+
+        .stat-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+        }
+
+        .stat-icon.total { background: var(--bg-gradient); }
+        .stat-icon.success { background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%); }
+        .stat-icon.failed { background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%); }
+        .stat-icon.pending { background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%); }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #909399;
+            margin-top: 4px;
+        }
+
+        .card {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: white;
+            padding: 20px 24px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0; }
+
+        .table { margin-bottom: 0; }
+        .table th { background: #fafafa; border-bottom: 2px solid #f0f0f0; font-weight: 600; color: #303133; padding: 16px; }
+        .table td { padding: 16px; vertical-align: middle; }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        .btn-sm { padding: 6px 12px; border-radius: 6px; }
+
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+        .btn { transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .badge.bg-success { background: #52c41a !important; }
+        .badge.bg-danger { background: #ff4d4f !important; }
+        .badge.bg-warning { background: #faad14 !important; }
+        .badge.bg-info { background: #1890ff !important; }
+        .badge.bg-secondary { background: #909399 !important; }
+
+        .text-muted { color: #909399 !important; }
+
+        .spinner-border-sm { width: 1rem; height: 1rem; border-width: 2px; }
+
+        .preview-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            font-size: 14px;
+            position: fixed;
+            bottom: 0;
+            left: 240px;
+            right: 0;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- 侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-shield-check" style="font-size: 28px;"></i>
+            <span style="font-size: 18px; font-weight: 600;">测试平台</span>
+        </div>
+
+        <div class="sidebar-nav">
+            <a href="#" class="nav-item active" onclick="showPage('dashboard')">
+                <i class="bi bi-house"></i>
+                <span>首页</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showPage('tasks')">
+                <i class="bi bi-list-task"></i>
+                <span>测试任务</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showPage('ai-models')">
+                <i class="bi bi-cpu"></i>
+                <span>AI模型</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showPage('reports')">
+                <i class="bi bi-file-earmark-text"></i>
+                <span>测试报告</span>
+            </a>
+            <div style="padding: 12px 20px; color: rgba(255,255,255,0.4); font-size: 12px;">第三方集成</div>
+            <a href="#" class="nav-item" onclick="showPage('integrations')">
+                <i class="bi bi-plug"></i>
+                <span>集成配置</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showPage('jenkins')">
+                <i class="bi bi-hdd"></i>
+                <span>Jenkins</span>
+            </a>
+            <a href="#" class="nav-item" onclick="showPage('zentao')">
+                <i class="bi bi-kanban"></i>
+                <span>禅道</span>
+            </a>
+        </div>
+
+        <div style="position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 20px;">
+            <div class="nav-item" style="color: rgba(255,255,255,0.7);">
+                <i class="bi bi-person-circle"></i>
+                <span>admin</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content" id="mainContent">
+        <!-- Dashboard页面 -->
+        <div id="page-dashboard">
+            <h1 class="page-title">控制台</h1>
+
+            <!-- 统计卡片 -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="stat-content">
+                            <div class="stat-icon total"><i class="bi bi-list-task"></i></div>
+                            <div>
+                                <div class="stat-number">128</div>
+                                <div class="stat-label">总任务数</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="stat-content">
+                            <div class="stat-icon success"><i class="bi bi-check-circle"></i></div>
+                            <div>
+                                <div class="stat-number" style="color: #52c41a;">98</div>
+                                <div class="stat-label">成功</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="stat-content">
+                            <div class="stat-icon failed"><i class="bi bi-x-circle"></i></div>
+                            <div>
+                                <div class="stat-number" style="color: #ff4d4f;">15</div>
+                                <div class="stat-label">失败</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="card stat-card">
+                        <div class="stat-content">
+                            <div class="stat-icon pending"><i class="bi bi-clock"></i></div>
+                            <div>
+                                <div class="stat-number" style="color: #faad14;">15</div>
+                                <div class="stat-label">待执行</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近任务 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">最近任务</h5>
+                    <button class="btn btn-sm btn-primary">查看全部</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>任务名称</th>
+                                <th>类型</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td><a href="#" style="color: #4f46e5; text-decoration: none;">登录功能测试</a></td>
+                                <td>Web测试</td>
+                                <td><span class="badge bg-success">成功</span></td>
+                                <td>2024-01-15 10:30:00</td>
+                                <td><button class="btn btn-sm btn-outline-primary">详情</button></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td><a href="#" style="color: #4f46e5; text-decoration: none;">首页UI测试</a></td>
+                                <td>Web测试</td>
+                                <td><span class="badge bg-success">成功</span></td>
+                                <td>2024-01-15 09:20:00</td>
+                                <td><button class="btn btn-sm btn-outline-primary">详情</button></td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td><a href="#" style="color: #4f46e5; text-decoration: none;">API接口压测</a></td>
+                                <td>性能测试</td>
+                                <td><span class="badge bg-danger">失败</span></td>
+                                <td>2024-01-14 16:45:00</td>
+                                <td><button class="btn btn-sm btn-outline-primary">详情</button></td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td><a href="#" style="color: #4f46e5; text-decoration: none;">AI自动化测试</a></td>
+                                <td>AI测试</td>
+                                <td><span class="badge bg-warning">待执行</span></td>
+                                <td>2024-01-14 14:30:00</td>
+                                <td><button class="btn btn-sm btn-outline-primary">详情</button></td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td><a href="#" style="color: #4f46e5; text-decoration: none;">移动端兼容性测试</a></td>
+                                <td>移动端</td>
+                                <td><span class="badge bg-info">进行中</span></td>
+                                <td>2024-01-14 11:00:00</td>
+                                <td><button class="btn btn-sm btn-outline-primary">详情</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">快速操作</h5>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions">
+                        <button class="btn btn-primary"><i class="bi bi-plus-circle me-2"></i>创建任务</button>
+                        <button class="btn btn-success"><i class="bi bi-cpu me-2"></i>AI模型配置</button>
+                        <button class="btn btn-info"><i class="bi bi-plug me-2"></i>集成配置</button>
+                        <button class="btn btn-warning"><i class="bi bi-file-earmark-text me-2"></i>查看报告</button>
+                        <button class="btn btn-secondary"><i class="bi bi-arrow-repeat me-2"></i>同步禅道</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览提示 -->
+    <div class="preview-banner">
+        🎨 <strong>界面预览版本</strong> - 这是完整的功能界面展示，实际使用请启动后端服务
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showPage(page) {
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            event.target.closest('.nav-item').classList.add('active');
+        }
+    </script>
+</body>
+</html>
