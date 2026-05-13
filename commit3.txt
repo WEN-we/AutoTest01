@@ -1,0 +1,7 @@
+🌐 feat(local_web_login): 本地服务增强
+
+- backend_server.py: 使用path_manager统一路径管理
+- init_database.py: 数据库初始化脚本
+- ai_models_api.py: AI模型调用API
+- migrate_passwords.py: 密码迁移脚本（bcrypt加密）
+- integrations_api.py: 集成API统一入口

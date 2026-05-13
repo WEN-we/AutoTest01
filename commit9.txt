@@ -1,0 +1,6 @@
+📚 docs: 新增项目文档
+
+- README_GRAPHICAL.md: 图形化界面说明
+- README_WEB.md: Web平台使用手册
+- docs/: 设计文档与规范
+- 系统启动手册.txt: 快速启动指南

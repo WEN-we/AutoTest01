@@ -1,0 +1,5 @@
+📝 chore(config): 配置文件更新
+
+- env_config.yaml: 环境配置
+- ui_config.yaml: UI测试配置
+- perf_config.yaml: 性能测试配置

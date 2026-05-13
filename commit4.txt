@@ -1,0 +1,7 @@
+Jenkins feat(jenkins): 新增Jenkins CI集成
+
+- jenkins_api.py: Jenkins API封装
+  - 构建触发 build()
+  - 构建状态 build_info()
+  - 获取控制台输出 console_output()
+  - 构建历史 build_history()
