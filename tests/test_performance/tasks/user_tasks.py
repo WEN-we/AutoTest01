@@ -4,91 +4,94 @@
 import sys
 import os
 import yaml
-import pymysql
+import random
 from locust import TaskSet, task
 
-# 添加项目根目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils.tools.logger import log as logger
 from utils.tools.path_manager import get_config_path
 
-# 从数据库获取用户数据
-def get_users_from_db():
-    """从数据库获取用户数据"""
-    users = []
-    try:
-        db = pymysql.connect(
-            host="localhost",
-            user="root",
-            password=os.getenv("MYSQL_ROOT_PASSWORD", ""),  # 改成你本地MySQL密码
-            database="test_auto",
-            charset="utf8mb4"
-        )
-        cursor = db.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT username, password FROM user")
-        users = cursor.fetchall()
-        cursor.close()
-        db.close()
-        logger.info(f"从数据库成功获取 {len(users)} 个用户数据")
-    except Exception as e:
-        logger.error(f"从数据库获取用户数据失败: {e}")
-    return users
-
-# 加载压测数据
-# 使用路径管理工具获取配置文件路径
+# 从配置文件获取测试用户名列表
 perf_data_path = get_config_path('perf_config.yaml')
+logger.info(f"加载配置文件: {perf_data_path}")
 
-# 优先从数据库获取用户数据
-users_from_db = get_users_from_db()
-if users_from_db:
-    # 使用数据库中的用户数据
-    perf_data = {'users': users_from_db}
-    # 加载API参数配置
-    with open(perf_data_path, 'r', encoding='utf-8') as f:
-        yaml_data = yaml.safe_load(f)
-        perf_data['api_params'] = yaml_data.get('api_params', {})
-else:
-    # 如果数据库获取失败，使用yaml中的默认数据
-    logger.warning("从数据库获取用户数据失败，使用yaml中的默认数据")
-    with open(perf_data_path, 'r', encoding='utf-8') as f:
-        perf_data = yaml.safe_load(f)
+with open(perf_data_path, 'r', encoding='utf-8') as f:
+    perf_data = yaml.safe_load(f)
+
+# 生成随机用户数据用于性能测试
+perf_users = []
+for i in range(1, 1001):
+    perf_users.append({
+        'username': f'perf_test_{i:04d}',
+        'password': 'test123'
+    })
+
+logger.info(f"生成 {len(perf_users)} 个测试用户用于性能测试")
+
+# 调试：显示前5个测试用户
+if perf_users:
+    logger.info(f"前5个测试用户:")
+    for i, u in enumerate(perf_users[:5]):
+        logger.info(f"  {i+1}. username={u['username']}, password={u['password']}")
+
+# 输出配置信息
+login_endpoint = perf_data['api_params']['user']['login']['endpoint']
+logger.info(f"登录接口配置: {login_endpoint}")
 
 class UserTasks(TaskSet):
     """用户模块压测任务"""
-    
-    # 类变量，用于跟踪账号索引
+
     user_index = 0
-    
+
     def on_start(self):
         """每个用户开始时执行的操作"""
-        self.login()  # 用户启动时自动执行登录
-    
+        self.login()
+
     @task(3)
     def login(self):
         """登录任务"""
-        # 轮询使用不同的账号
-        user = perf_data['users'][self.__class__.user_index]
-        # 更新账号索引，确保下一个用户使用不同账号
-        self.__class__.user_index = (self.__class__.user_index + 1) % len(perf_data['users'])
-        
+        user = perf_users[self.__class__.user_index]
+        self.__class__.user_index = (self.__class__.user_index + 1) % len(perf_users)
+
         payload = {
             "username": user['username'],
-            "password": user['password']
+            "password": user['password'],
+            "test_mode": True
         }
-        logger.info(f"用户 {user['username']} 开始登录")
-        # 发送登录请求
-        response = self.client.post(
-            perf_data['api_params']['user']['login']['endpoint'],
-            json=payload,
-            headers={"Content-Type": "application/json"}
-        )
-        if response.status_code == 200:
-            # 本地登录接口返回code=200表示成功
-            logger.info(f"用户 {user['username']} 登录成功")
-        else:
-            logger.error(f"用户 {user['username']} 登录失败，状态码: {response.status_code}")
-    
+        logger.info(f"用户 {user['username']} 开始登录，密码: {user['password']}")
+
+        max_retries = 3
+        retry_delay = 1
+
+        for attempt in range(max_retries):
+            try:
+                response = self.client.post(
+                    login_endpoint,
+                    json=payload,
+                    timeout=10
+                )
+                logger.info(f"响应状态码: {response.status_code}, 响应内容: {response.text[:200] if response.text else '无'}")
+
+                if response.status_code == 200:
+                    logger.info(f"用户 {user['username']} 登录成功")
+                    return
+                elif response.status_code == 0:
+                    logger.warning(f"用户 {user['username']} 登录失败，状态码: 0，第 {attempt + 1}/{max_retries} 次尝试")
+                    if attempt < max_retries - 1:
+                        import time
+                        time.sleep(retry_delay * (attempt + 1))
+                else:
+                    logger.error(f"用户 {user['username']} 登录失败，状态码: {response.status_code}")
+                    return
+            except Exception as e:
+                logger.warning(f"用户 {user['username']} 登录异常: {str(e)}，第 {attempt + 1}/{max_retries} 次尝试")
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(retry_delay * (attempt + 1))
+
+        logger.error(f"用户 {user['username']} 登录失败，已重试 {max_retries} 次")
+
     # @task(2)
     # def get_user_info(self):
     #     """获取用户信息任务"""
