@@ -3,13 +3,12 @@
 # from email.header import Header
 #
 # def send_test_report():
-#     # 139邮箱配置
-#     smtpserver = 'smtp.139.com'
-#     user = '13800138000@139.com'
-#     password = '**********'  # 不是登录密码
-# #qq授权码：**********
-#     sender = 'xxxxxxxxxx@139.com'
-#     receive = 'xxxxxxxx@qq.com'
+#     # 邮箱配置（请通过环境变量配置实际邮箱信息）
+#     smtpserver = os.getenv('SMTP_SERVER', 'smtp.example.com')
+#     user = os.getenv('SMTP_USER', 'sender@example.com')
+#     password = os.getenv('SMTP_PASSWORD', '')
+#     sender = os.getenv('SMTP_SENDER', 'sender@example.com')
+#     receive = os.getenv('SMTP_RECEIVER', 'receiver@example.com')
 #
 #     subject = '自动化测试报告通知'
 #     content = '''
@@ -29,7 +28,6 @@
 #     msg['From'] = sender
 #     msg['To'] = receive
 #     try:
-#         # 139 用 465 端口 SSL
 #         smtp = smtplib.SMTP_SSL(smtpserver, 465)
 #         smtp.login(user, password)
 #         smtp.sendmail(sender, receive, msg.as_string())

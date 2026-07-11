@@ -4,7 +4,7 @@
 ec_user_register_api:
   - case_name: 正常注册普通用户
     method: POST
-    url: "/api/register"
+    url: "/register"
     json:
       username: 'newuser001'
       email: 'newuser001@test.com'
@@ -16,7 +16,7 @@ ec_user_register_api:
 
   - case_name: 注册商家用户
     method: POST
-    url: "/api/register"
+    url: "/register"
     json:
       username: 'newmerchant001'
       email: 'newmerchant001@test.com'
@@ -28,7 +28,7 @@ ec_user_register_api:
 
   - case_name: 注册用户名已存在
     method: POST
-    url: "/api/register"
+    url: "/register"
     json:
       username: 'testuser'
       email: 'duplicate@test.com'
@@ -40,7 +40,7 @@ ec_user_register_api:
 
   - case_name: 注册两次密码不一致
     method: POST
-    url: "/api/register"
+    url: "/register"
     json:
       username: 'newuser002'
       email: 'newuser002@test.com'
@@ -52,7 +52,7 @@ ec_user_register_api:
 
   - case_name: 注册邮箱为空
     method: POST
-    url: "/api/register"
+    url: "/register"
     json:
       username: 'newuser003'
       email: ''
@@ -66,7 +66,7 @@ ec_user_register_api:
 ec_user_login_api:
   - case_name: 正确用户名密码登录
     method: POST
-    url: "/api/login"
+    url: "/login"
     json:
       username: 'testuser'
       password: 'Test@1234'
@@ -75,7 +75,7 @@ ec_user_login_api:
 
   - case_name: 错误密码登录
     method: POST
-    url: "/api/login"
+    url: "/login"
     json:
       username: 'testuser'
       password: 'wrong_password'
@@ -84,7 +84,7 @@ ec_user_login_api:
 
   - case_name: 空用户名登录
     method: POST
-    url: "/api/login"
+    url: "/login"
     json:
       username: ''
       password: 'Test@1234'
@@ -93,7 +93,7 @@ ec_user_login_api:
 
   - case_name: 空密码登录
     method: POST
-    url: "/api/login"
+    url: "/login"
     json:
       username: 'testuser'
       password: ''
@@ -104,7 +104,7 @@ ec_user_login_api:
 ec_product_list_api:
   - case_name: 获取商品列表
     method: GET
-    url: "/api/products"
+    url: "/products"
     params:
       page: 1
       page_size: 20
@@ -113,7 +113,7 @@ ec_product_list_api:
 
   - case_name: 获取第二页商品列表
     method: GET
-    url: "/api/products"
+    url: "/products"
     params:
       page: 2
       page_size: 20
@@ -122,7 +122,7 @@ ec_product_list_api:
 
   - case_name: 按分类获取商品列表
     method: GET
-    url: "/api/products"
+    url: "/products"
     params:
       category: '电子数码'
       page: 1
@@ -134,7 +134,7 @@ ec_product_list_api:
 ec_product_search_api:
   - case_name: 搜索手机
     method: GET
-    url: "/api/products/search"
+    url: "/products/search"
     params:
       keyword: '手机'
     expected_code: 200
@@ -142,7 +142,7 @@ ec_product_search_api:
 
   - case_name: 搜索耳机
     method: GET
-    url: "/api/products/search"
+    url: "/products/search"
     params:
       keyword: '耳机'
     expected_code: 200
@@ -150,7 +150,7 @@ ec_product_search_api:
 
   - case_name: 搜索不存在的商品
     method: GET
-    url: "/api/products/search"
+    url: "/products/search"
     params:
       keyword: '不存在的商品xyz123'
     expected_code: 200
@@ -158,7 +158,7 @@ ec_product_search_api:
 
   - case_name: 按价格区间搜索商品
     method: GET
-    url: "/api/products/search"
+    url: "/products/search"
     params:
       keyword: '手机'
       min_price: 100
@@ -170,7 +170,7 @@ ec_product_search_api:
 ec_cart_api:
   - case_name: 添加商品到购物车
     method: POST
-    url: "/api/cart/add"
+    url: "/cart/add"
     json:
       product_id: 1
       quantity: 1
@@ -179,7 +179,7 @@ ec_cart_api:
 
   - case_name: 修改购物车商品数量
     method: PUT
-    url: "/api/cart/update"
+    url: "/cart/update"
     json:
       product_id: 1
       quantity: 2
@@ -188,13 +188,13 @@ ec_cart_api:
 
   - case_name: 获取购物车列表
     method: GET
-    url: "/api/cart"
+    url: "/cart"
     expected_code: 200
     expected_msg: '成功'
 
   - case_name: 删除购物车商品
     method: DELETE
-    url: "/api/cart/remove"
+    url: "/cart/remove"
     json:
       product_id: 1
     expected_code: 200
@@ -202,7 +202,7 @@ ec_cart_api:
 
   - case_name: 清空购物车
     method: DELETE
-    url: "/api/cart/clear"
+    url: "/cart/clear"
     expected_code: 200
     expected_msg: '清空成功'
 
@@ -210,7 +210,7 @@ ec_cart_api:
 ec_order_api:
   - case_name: 创建订单
     method: POST
-    url: "/api/orders"
+    url: "/orders"
     json:
       recipient: '张三'
       phone: '13800138000'
@@ -224,7 +224,7 @@ ec_order_api:
 
   - case_name: 获取订单列表
     method: GET
-    url: "/api/orders"
+    url: "/orders"
     params:
       page: 1
       page_size: 20
@@ -233,19 +233,19 @@ ec_order_api:
 
   - case_name: 获取订单详情
     method: GET
-    url: "/api/orders/1"
+    url: "/orders/1"
     expected_code: 200
     expected_msg: '成功'
 
   - case_name: 取消订单
     method: PUT
-    url: "/api/orders/1/cancel"
+    url: "/orders/1/cancel"
     expected_code: 200
     expected_msg: '取消成功'
 
   - case_name: 立即支付订单
     method: POST
-    url: "/api/orders/1/pay"
+    url: "/orders/1/pay"
     json:
       payment_method: 'alipay'
     expected_code: 200
@@ -253,6 +253,6 @@ ec_order_api:
 
   - case_name: 确认收货
     method: PUT
-    url: "/api/orders/1/confirm"
+    url: "/orders/1/confirm"
     expected_code: 200
     expected_msg: '确认成功'

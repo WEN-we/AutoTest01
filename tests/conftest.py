@@ -100,6 +100,16 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(pytest.mark.service)
         elif "/tests/test_harmony/" in path:
             item.add_marker(pytest.mark.harmony)
+        elif "/tests/test_ecommerce/" in path:
+            item.add_marker(pytest.mark.ecommerce)
+        elif "/tests/test_ai/" in path:
+            item.add_marker(pytest.mark.ai)
+        elif "/tests/test_performance/" in path:
+            item.add_marker(pytest.mark.performance)
+        elif "/tests/test_selenium/" in path:
+            item.add_marker(pytest.mark.selenium)
+        elif "/tests/test_whitebox/" in path:
+            item.add_marker(pytest.mark.whitebox)
 
 # ==============================
 # 1. Web 自动化驱动

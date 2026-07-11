@@ -7,7 +7,7 @@ ai_models:
     name: "通义千问"
     api_key: "${QWEN_API_KEY}"
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-    model_id: "deepseek-v3"
+    model_id: "qwen-turbo"
   
   - type: "zhipu"  # 智谱AI放第二
     name: "智谱AI"
@@ -51,9 +51,9 @@ ai_models:
     base_url: "https://api.anthropic.com/v1/messages"
     model_id: "claude-3-sonnet-20240229"
   
-  - type: "yuan"  # 元语大模型未获取密钥，不测试
-    name: "元语大模型"
-    api_key: "${YUAN_API_KEY}"  # 从环境变量读取
+  - type: "moonshot"  # Moonshot（月之暗面Kimi）未获取密钥，不测试
+    name: "Moonshot"
+    api_key: "${MOONSHOT_API_KEY}"  # 从环境变量读取
     base_url: "https://api.moonshot.cn/v1/chat/completions"
     model_id: "moonshot-v1-8k"
 

@@ -1,17 +1,18 @@
 # 性能测试数据配置文件
 # 此文件用于存储压测过程中使用的测试数据，包括账号信息和接口参数
+# 测试账号密码从环境变量读取，禁止硬编码
 
-# 测试用户列表（用户名和明文密码）
+# 测试用户列表（用户名和密码）
 # 密码会通过bcrypt与数据库中的加密密码进行验证匹配
 users:
-  - username: "admin"
-    password: "123456"
-  - username: "user"
-    password: "123456"
-  - username: "student"
-    password: "123456"
-  - username: "teacher"
-    password: "123456"
+  - username: "${PERF_USER_ADMIN:-admin}"
+    password: "${PERF_PWD_ADMIN}"
+  - username: "${PERF_USER_1:-user}"
+    password: "${PERF_PWD_1}"
+  - username: "${PERF_USER_2:-student}"
+    password: "${PERF_PWD_2}"
+  - username: "${PERF_USER_3:-teacher}"
+    password: "${PERF_PWD_3}"
 
 # 接口参数配置
 # 包含各个模块的接口端点和参数

@@ -1,4 +1,5 @@
 # Web 端登录用例（本地）
+# 测试账号已脱敏，使用 mock 账号替代真实账号
 login_web:
   - case_name: 正确用户名密码登录
     username: 'admin'
@@ -26,6 +27,7 @@ login_web:
     expected_result: '用户名或密码错误'
 
 # Web 端登录用例（学生教务系统）
+# 测试学号已脱敏，使用 mock 学号替代真实学号
 login_syzy_web:
 
 #  - case_name: 空用户名密码登录
@@ -35,13 +37,13 @@ login_syzy_web:
 #    expected_alert: "不能为空！"  # 弹窗文字提示校验
 
 #  - case_name: 空密码登录
-#    username: '13800138000'
+#    username: '20240000001'
 #    password: ""
 #    expected_result: '参数不能为空'
 #
   - case_name: 用户名错误登录
     username: '20240000001'
-    password: "wen12346"
+    password: "Mock@1234"
     expected_result: '用户名或密码错误'
 
   - case_name: 密码错误登录

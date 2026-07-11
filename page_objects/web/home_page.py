@@ -16,5 +16,6 @@ class HomePage(BasePage):
         return self.get_text(self.HOME_TITLE, "导航栏标签").strip()
 
     def get_desktop_text(self):
-        """获取“我的桌面”文字，用于断言登录成功"""
-        return self.page.text_content(self.MY_DESKTOP).strip()
+        """获取"我的桌面"文字，用于断言登录成功"""
+        text = self.page.text_content(self.MY_DESKTOP)
+        return text.strip() if text else ""

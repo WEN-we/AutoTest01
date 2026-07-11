@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements-ci.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -256,6 +256,7 @@ jobs:
         with:
           name: ai-test-results
           path: allure-results-ai
+          if-no-files-found: ignore
 
       - name: 上传 AI 测试日志
         if: always()

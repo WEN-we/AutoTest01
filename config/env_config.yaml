@@ -17,6 +17,7 @@ dev:
     port: 3306                           # 数据库端口（MySQL默认3306）
     user: "${DB_USER:-root}"             # 数据库登录用户名
     pwd: "${DB_PASSWORD}"                # 数据库登录密码（从环境变量读取，禁止硬编码）
+    database: "${DB_NAME:-test_auto}"    # 数据库名称
 
 # 测试环境（电商平台）
 test:
@@ -52,3 +53,4 @@ prod:
     port: 3306                           # 数据库端口（MySQL默认3306）
     user: "${PROD_DB_USER:-root}"        # 数据库登录用户名
     pwd: "${PROD_DB_PASSWORD}"           # 数据库登录密码（从环境变量读取，禁止硬编码）
+    database: "${PROD_DB_NAME:-test_auto}" # 数据库名称

@@ -3,8 +3,8 @@ from page_objects.web.base_page import BasePage
 class ProductsPage(BasePage):
     """商品列表页面对象"""
     # 搜索框
-    SEARCH_INPUT = "input[placeholder*='']"  # 使用通配符匹配
-    SEARCH_BUTTON = "button[type='submit']"
+    SEARCH_INPUT = "input[placeholder*='搜索'], input[type='search'], input.search-input"
+    SEARCH_BUTTON = "button[type='submit'], button:has-text('搜索')"
 
     # 商品分类
     CATEGORY_ELECTRONICS = "text='电子数码'"
