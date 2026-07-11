@@ -208,8 +208,21 @@
                 <div class="card stat-card">
                     <div class="card-body d-flex align-items-center justify-content-between">
                         <div>
+                            <h2 class="mb-1" id="totalExecutions">0</h2>
+                            <p class="text-muted mb-0">总执行次数</p>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #5B86E5 0%, #36D1DC 100%);">
+                            <i class="bi bi-lightning-charge"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
                             <h2 class="mb-1" id="passRate">0%</h2>
-                            <p class="text-muted mb-0">通过率</p>
+                            <p class="text-muted mb-0">用例通过率</p>
                         </div>
                         <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
                             <i class="bi bi-check-circle"></i>
@@ -230,16 +243,51 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- 二级统计卡片：执行概览 -->
+        <div class="row g-3 mt-1">
             <div class="col-md-3">
-                <div class="card stat-card">
-                    <div class="card-body d-flex align-items-center justify-content-between">
+                <div class="card stat-card-small">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
                         <div>
-                            <h2 class="mb-1" id="runningTasks">0</h2>
-                            <p class="text-muted mb-0">执行中</p>
+                            <h5 class="mb-0 text-success" id="successExecutions">0</h5>
+                            <small class="text-muted">成功执行</small>
                         </div>
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                            <i class="bi bi-play-circle"></i>
+                        <i class="bi bi-check2-circle text-success fs-4"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-small">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
+                        <div>
+                            <h5 class="mb-0 text-danger" id="failedExecutions">0</h5>
+                            <small class="text-muted">失败执行</small>
                         </div>
+                        <i class="bi bi-x-octagon text-danger fs-4"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-small">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
+                        <div>
+                            <h5 class="mb-0 text-primary" id="runningTasks">0</h5>
+                            <small class="text-muted">执行中</small>
+                        </div>
+                        <i class="bi bi-play-circle text-primary fs-4"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card-small">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
+                        <div>
+                            <h5 class="mb-0 text-warning" id="execPassRate">0%</h5>
+                            <small class="text-muted">执行通过率</small>
+                        </div>
+                        <i class="bi bi-graph-up-arrow text-warning fs-4"></i>
                     </div>
                 </div>
             </div>
@@ -563,7 +611,7 @@
                 const executionsData = await executionsRes.json();
                 const statsData = await statsRes.json();
 
-                // 更新统计卡片
+                // 更新统计卡片 - 任务数
                 if (tasksData.code === 200) {
                     const tasks = tasksData.data.items || [];
                     const runningCount = tasks.filter(t => t.status === 'running').length;
@@ -571,14 +619,34 @@
                     document.getElementById('runningTasks').textContent = runningCount;
                 }
 
+                // 更新统计卡片 - 执行统计
                 if (statsData.code === 200) {
                     const stats = statsData.data || {};
-                    const total = stats.total_cases || 0;
-                    const passed = stats.passed_cases || 0;
-                    const failed = stats.failed_cases || 0;
-                    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-                    document.getElementById('passRate').textContent = passRate + '%';
-                    document.getElementById('failedCases').textContent = failed;
+                    const totalCases = stats.total_cases || 0;
+                    const passedCases = stats.passed_cases || 0;
+                    const failedCases = stats.failed_cases || 0;
+                    const totalExecutions = stats.total_executions || 0;
+                    const successCount = stats.success_count || 0;
+                    const failedCount = stats.failed_count || 0;
+                    const runningCount = stats.running_count || 0;
+                    const casePassRate = stats.case_pass_rate || 0;
+                    const execPassRate = stats.exec_pass_rate || 0;
+
+                    // 一级卡片
+                    document.getElementById('totalExecutions').textContent = totalExecutions;
+                    document.getElementById('passRate').textContent = casePassRate + '%';
+                    document.getElementById('failedCases').textContent = failedCases;
+
+                    // 二级卡片
+                    document.getElementById('successExecutions').textContent = successCount;
+                    document.getElementById('failedExecutions').textContent = failedCount;
+                    document.getElementById('execPassRate').textContent = execPassRate + '%';
+
+                    // 执行中数量：优先用 stats，其次从任务列表推断
+                    const runningEl = document.getElementById('runningTasks');
+                    if (runningCount > 0) {
+                        runningEl.textContent = runningCount;
+                    }
                 }
 
                 // 更新最近执行记录
@@ -591,6 +659,21 @@
                 }
             } catch (error) {
                 console.error('加载仪表盘数据失败:', error);
+            }
+        }
+
+        // 加载7天趋势数据（从后端获取更完整的数据）
+        async function loadTrendData() {
+            try {
+                // 获取更多执行记录用于趋势分析
+                const res = await fetch(`${API_BASE}/executions?page_size=200`, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.code === 200) {
+                    const executions = data.data.items || [];
+                    updateTrendChart(executions);
+                }
+            } catch (error) {
+                console.error('加载趋势数据失败:', error);
             }
         }
 
@@ -778,8 +861,8 @@
         let sceneChartInstance = null;
 
         function updateCharts(executions) {
-            updateTrendChart(executions);
             updateSceneChart(executions);
+            // 趋势图由 loadTrendData 独立加载更完整的数据
         }
 
         function updateTrendChart(executions) {
@@ -1339,8 +1422,10 @@
             if (avatarLargePlaceholder) avatarLargePlaceholder.textContent = firstLetter;
 
             loadDashboard();
+            loadTrendData();
             setInterval(() => {
                 loadDashboard();
+                loadTrendData();
                 loadDashboardReports();
             }, 30000);
             loadDashboardReports();

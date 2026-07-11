@@ -340,19 +340,6 @@ allure serve allure-results
 
 ---
 
-## 支持与打赏
-
-如果您觉得这个项目对您有帮助，欢迎通过以下方式支持我：
-
-### 海外用户
-
-| PayPal | Buy Me a Coffee |
-| :--- | :--- |
-| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/wenwen158) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/您的用户名) |
-
-
----
-
 ## 结束语
 
 感谢您对本项目的关注与支持！如果您有任何问题或建议，欢迎在 GitHub 上提交 Issue 或 Pull Request。

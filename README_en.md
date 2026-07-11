@@ -340,21 +340,6 @@ The project has provided workflow: `.github/workflows/ci_allure.yml`, which will
 
 ---
 
-## Support & Donation
-
-If you find this project helpful, you can support me through the following methods:
-
-### Global Payment
-
-| PayPal | Buy Me a Coffee |
-| :--- | :--- |
-| [![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/wenwen158) | [![Buy Me a Coffee](https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png)](https://www.buymeacoffee.com/YOUR_USERNAME) |
-
-> To complete the donation links:
-> - Replace `YOUR_USERNAME` in the Buy Me a Coffee link with your actual username
-
----
-
 ## Conclusion
 
 Thank you for your attention and support! If you have any questions or suggestions, please feel free to submit issues or pull requests on GitHub.
