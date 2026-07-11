@@ -113,6 +113,7 @@ AutoTest01/                     # Repository root (default branch: master)
 │  ├─ test_ai/
 │  ├─ test_android/
 │  ├─ test_api/
+│  ├─ test_ecommerce/            # E-commerce platform test cases (UI + API)
 │  ├─ test_harmony/
 │  ├─ test_ios/
 │  ├─ test_linux/
@@ -261,10 +262,10 @@ allure serve allure-results
 ### GitHub Actions Configuration
 
 - **Push the project to GitHub repository**
-- **Configuration file path**: `.github/workflows/test_workflow.yml` (preset, can be used directly)
+- **Workflow files**: `.github/workflows/pre-release-test.yml` (pre-release validation) and `.github/workflows/post-release-validation.yml` (post-release validation)
 - **Enable GitHub Pages**: Settings → Pages → Source select gh-pages branch
-- **Trigger condition**: Every time you push to the master branch or submit a PR, it will automatically execute full-platform tests, generate Allure reports and upload
-- **Report address**: https://github.com/WEN-we/AutoTest01/actions/runs/23890788190/artifacts/6237423778
+- **Trigger condition**: Every time you push to the master branch or submit a PR, it will automatically execute tests, generate Allure reports and upload
+- **Test content**: Web UI tests, API tests, AI autonomous tests, performance monitoring
 
 ### Jenkins Configuration (Optional)
 
@@ -272,21 +273,27 @@ Execution script: `Run_CI.bat` (Windows), can configure scheduled tasks, automat
 
 ---
 
-## GitHub Actions (Full-Platform Allure Unified Report)
+## GitHub Actions (Allure Unified Report)
 
-The project has provided workflow: `.github/workflows/ci_allure.yml`, which will be split into 4 jobs:
+The project provides two workflows:
 
-- **Linux**: API + UI + Service(SSH)
-- **Windows**: Desktop automation
-- **macOS**: iOS (requires you to have Appium/Xcode/app package etc. on the Runner)
-- **Summary**: Download `allure-results` from each job, merge and generate `allure-report` as artifact
+- **`pre-release-test.yml`** (Pre-release validation):
+  - Web UI tests (Playwright + local login service)
+  - Web API tests
+  - AI autonomous tests (requires API key, auto-skipped if not configured)
+  - Merge and generate Allure report, publish to GitHub Pages
+
+- **`post-release-validation.yml`** (Post-release validation):
+  - Web production environment validation
+  - API production environment validation
+  - Service availability check
+  - Performance monitoring (Locust stress test)
+  - Generate post-release validation report
 
 ### About iOS/Android/Real Device Instructions
 
 - GitHub Hosted Runner **cannot directly access your real devices**. If you want to run real devices/intranet environments, please use **self-hosted runner** instead.
-- The current iOS job serves as a "runnable framework skeleton", you need to complete:
-  - Appium Server startup method (and `APPIUM_URL`, udid, app path and other configurations)
-  - Certificate/signature/app package path (or use simulator app)
+- iOS/Android/Windows/Linux tests require corresponding environments (Appium/Xcode/ADB, etc.), not collected by default, enabled via `ENABLE_XXX=1` environment variables
 
 ---
 

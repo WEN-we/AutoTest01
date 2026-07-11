@@ -18,22 +18,21 @@ dev:
     user: root             # 数据库登录用户名
     pwd: "${DB_PASSWORD}"            # 数据库登录密码
 
-# 测试环境
+# 测试环境（电商平台）
 test:
-  base_api_url: https://coreapi.mosoteach.cn/passports
-  #base_ui_url: https://jw.syzyedu.com/jsxsd/
-  base_ui_url: http://127.0.0.1:8090
-  android_api_url: https://www.mindskip.net:7003/api/app
-  ios_api_url: https://www.mindskip.net:7003/api/ios
-  harmony_api_url: https://www.mindskip.net:7003/api/harmony  # 鸿蒙
-  windows_api_url: https://www.mindskip.net:7003/api/pc
+  base_api_url: https://rica-names-tucson-story.trycloudflare.com/api
+  base_ui_url: https://rica-names-tucson-story.trycloudflare.com
+  android_api_url: https://rica-names-tucson-story.trycloudflare.com/api/app
+  ios_api_url: https://rica-names-tucson-story.trycloudflare.com/api/ios
+  harmony_api_url: https://rica-names-tucson-story.trycloudflare.com/api/harmony
+  windows_api_url: https://rica-names-tucson-story.trycloudflare.com/api/pc
   linux_server_url: 192.168.138.129
 
   db:
-    host: localhost  # 数据库地址/主机名
-    port: 3306              # 数据库端口（MySQL默认3306）
-    user: root             # 数据库登录用户名
-    pwd: "${DB_PASSWORD}"            # 数据库登录密码
+    host: localhost
+    port: 3306
+    user: root
+    pwd: "${DB_PASSWORD}"
     database: test_auto
 
 # 生产环境

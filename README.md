@@ -113,6 +113,7 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ test_ai/
 │  ├─ test_android/
 │  ├─ test_api/
+│  ├─ test_ecommerce/            # 电商平台测试用例（UI + API）
 │  ├─ test_harmony/
 │  ├─ test_ios/
 │  ├─ test_linux/
@@ -261,10 +262,10 @@ allure serve allure-results
 ### GitHub Actions 配置
 
 - **将项目推送到 GitHub 仓库**
-- **配置文件路径**：`.github/workflows/test_workflow.yml`（已预设，可直接复用）
+- **工作流文件**：`.github/workflows/pre-release-test.yml`（发布前验证）和 `.github/workflows/post-release-validation.yml`（发布后验证）
 - **开启 GitHub Pages**：设置 → Pages → 源选择 gh-pages 分支
-- **触发条件**：每次 push 到 master 分支或提交 PR 时，自动执行全平台测试、生成 Allure 报告并上传
-- **报告地址**：https://github.com/WEN-we/AutoTest01/actions/runs/23890788190/artifacts/6237423778
+- **触发条件**：每次 push 到 master 分支或提交 PR 时，自动执行测试、生成 Allure 报告并上传
+- **测试内容**：Web UI 测试、API 测试、AI 自主测试、性能监控
 
 ### Jenkins 配置（可选）
 
@@ -272,21 +273,27 @@ allure serve allure-results
 
 ---
 
-## GitHub Actions（全平台 Allure 统一报告）
+## GitHub Actions（Allure 统一报告）
 
-项目已提供工作流：`.github/workflows/ci_allure.yml`，会拆分为 4 个 job：
+项目提供两个工作流：
 
-- **Linux**：API + UI + Service(SSH)
-- **Windows**：桌面自动化
-- **macOS**：iOS（需要你在 Runner 上具备 Appium/Xcode/应用包等条件）
-- **汇总**：下载各 job 的 `allure-results`，合并并生成 `allure-report` 作为 artifact
+- **`pre-release-test.yml`**（发布前验证）：
+  - Web 端 UI 测试（Playwright + 本地登录服务）
+  - Web 端 API 测试
+  - AI 自主测试（需配置 API 密钥，无密钥自动跳过）
+  - 合并生成 Allure 报告并发布到 GitHub Pages
+
+- **`post-release-validation.yml`**（发布后验证）：
+  - Web 端生产环境验证
+  - API 生产环境验证
+  - 服务可用性检查
+  - 性能监控（Locust 压测）
+  - 生成发布后验证报告
 
 ### 关于 iOS/Android/真实设备说明
 
 - GitHub Hosted Runner **无法直接访问你的真机**。如果你要跑真机/内网环境，请改用 **self-hosted runner**。
-- 当前 iOS job 作为“可跑框架骨架”，你需要补齐：
-  - Appium Server 启动方式（以及 `APPIUM_URL`、udid、app 路径等配置）
-  - 证书/签名/应用包路径（或使用模拟器 app）
+- iOS/Android/Windows/Linux 端测试需要对应环境（Appium/Xcode/ADB 等），默认不收集，通过 `ENABLE_XXX=1` 环境变量启用
 
 ---
 

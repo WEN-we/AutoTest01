@@ -1,8 +1,8 @@
 linux_server:
-  host: "192.168.138.129"
+  host: "${LINUX_HOST:-192.168.138.129}"
   port: 22
-  username: "root1"
-  password: "${DB_PASSWORD}"
+  username: "${LINUX_USER:-root}"
+  password: "${LINUX_PASSWORD}"  # 从环境变量读取，禁止硬编码
 
 linux_service_check:
   check_commands:

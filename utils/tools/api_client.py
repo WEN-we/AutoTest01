@@ -1,39 +1,38 @@
+import os
 import requests
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
 
 
 class APIClient:
-    """接口请求封装类（云班课专用，不自动登录）"""
+    """通用接口请求封装类
+
+    默认从 env_config.yaml 读取 base_url。
+    支持通过环境变量覆盖默认 headers（如特定业务需要自定义 Origin/Referer）。
+    """
 
     def __init__(self, base_url: str | None = None):
         # 读取配置文件接口地址
         self.base_url = base_url or ConfigReader.get_env_config()["base_api_url"]
 
-        # 你抓包的完整请求头（原样保留）
+        # 通用请求头（可通过环境变量 ECOMMERCE_ORIGIN / ECOMMERCE_REFERER 覆盖）
+        origin = os.getenv("ECOMMERCE_ORIGIN", "")
+        referer = os.getenv("ECOMMERCE_REFERER", "")
         self.headers = {
             "Accept": "application/json, text/plain, */*",
             "Accept-Encoding": "gzip, deflate, br, zstd",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
             "Content-Type": "application/json;charset=UTF-8",
-            "Origin": "https://www.mosoteach.cn",
-            "Referer": "https://www.mosoteach.cn/",
-            "Sec-Ch-Ua": '"Chromium";v="146", "Not.A.Brand";v="24", "Microsoft Edge";v="146"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-site",
-            "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 Edg/108.0.0.0",
-            "X-Client-App-Id": "MTWEB",
-            "X-Client-Version": "6.0.0",
-            "X-Security-Type": "SECURITY_TYPE_TOKEN"
         }
+        if origin:
+            self.headers["Origin"] = origin
+        if referer:
+            self.headers["Referer"] = referer
 
         # 初始化 session
         self.session = requests.Session()
         self.session.headers.update(self.headers)
-        self.session.trust_env = False  # 关闭代理，必加
+        self.session.trust_env = False  # 关闭代理
 
     def get(self, url, params=None, headers=None, timeout=10):
         # 自动处理斜杠
