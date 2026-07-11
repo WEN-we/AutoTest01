@@ -83,10 +83,14 @@ class Config:
             if value is None:
                 return default
 
-        # 处理环境变量占位符
+        # 处理环境变量占位符：支持 ${VAR} 和 ${VAR:-default} 两种格式
         if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
-            env_var = value[2:-1]
-            return os.environ.get(env_var, default)
+            inner = value[2:-1]
+            if ':-' in inner:
+                env_var, default_val = inner.split(':-', 1)
+                return os.environ.get(env_var, default_val)
+            else:
+                return os.environ.get(inner, default)
 
         return value
 

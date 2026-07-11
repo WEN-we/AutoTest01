@@ -2,6 +2,7 @@
 数据库初始化脚本
 创建所有必需的数据库表
 """
+import os
 import pymysql
 from backend.config.settings import config
 
@@ -178,7 +179,8 @@ def create_admin_user():
             admin = cursor.fetchone()
 
             if not admin:
-                hashed = bcrypt.hashpw("change_me_in_production".encode('utf-8'), bcrypt.gensalt())
+                admin_pwd = os.getenv("ADMIN_DEFAULT_PASSWORD", "change_me_in_production")
+                hashed = bcrypt.hashpw(admin_pwd.encode('utf-8'), bcrypt.gensalt())
                 cursor.execute(
                     """INSERT INTO user (username, password, email, role, created_at, login_attempts)
                        VALUES (%s, %s, %s, %s, NOW(), 0)""",
@@ -187,7 +189,7 @@ def create_admin_user():
                 conn.commit()
                 print("\n✓ 默认管理员账户创建成功")
                 print("  用户名: admin")
-                print("  密码: change_me_in_production")
+                print("  密码: (从环境变量 ADMIN_DEFAULT_PASSWORD 读取)")
             else:
                 print("\n✓ 管理员账户已存在")
 

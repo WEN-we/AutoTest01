@@ -79,6 +79,8 @@ jobs:
             fi
             sleep 2
           done
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化测试数据库
         run: |
@@ -89,6 +91,8 @@ jobs:
             password VARCHAR(100) NOT NULL
           );
           EOF
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 启动本地登录服务
         run: |
@@ -202,6 +206,8 @@ jobs:
             fi
             sleep 2
           done
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化测试数据库
         run: |
@@ -212,6 +218,8 @@ jobs:
             password VARCHAR(100) NOT NULL
           );
           EOF
+        env:
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 启动本地登录服务
         run: |

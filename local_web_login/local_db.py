@@ -14,7 +14,7 @@ DB_CONFIG = {
     "host": os.getenv("LOCAL_DB_HOST", "localhost"),
     "port": int(os.getenv("LOCAL_DB_PORT", 3306)),
     "user": os.getenv("LOCAL_DB_USER", "root"),
-    "password": os.getenv("LOCAL_DB_PASSWORD", "root"),
+    "password": os.getenv("LOCAL_DB_PASSWORD", ""),
     "database": os.getenv("LOCAL_DB_NAME", "local_web_login"),
     "charset": "utf8mb4",
 }

@@ -13,10 +13,10 @@ dev:
   linux_server_url: 192.168.1.100
 
   db:
-    host: localhost  # 数据库地址/主机名
-    port: 3306              # 数据库端口（MySQL默认3306）
-    user: root             # 数据库登录用户名
-    pwd: "${DB_PASSWORD}"            # 数据库登录密码
+    host: "${DB_HOST:-localhost}"        # 数据库地址/主机名
+    port: 3306                           # 数据库端口（MySQL默认3306）
+    user: "${DB_USER:-root}"             # 数据库登录用户名
+    pwd: "${DB_PASSWORD}"                # 数据库登录密码（从环境变量读取，禁止硬编码）
 
 # 测试环境（电商平台）
 test:
@@ -29,9 +29,9 @@ test:
   linux_server_url: 192.168.138.129
 
   db:
-    host: localhost
+    host: "${DB_HOST:-localhost}"
     port: 3306
-    user: root
+    user: "${DB_USER:-root}"
     pwd: "${DB_PASSWORD}"
     database: test_auto
 
@@ -48,7 +48,7 @@ prod:
 
   # 数据库配置
   db:
-    host: localhost  # 数据库地址/主机名
-    port: 3306              # 数据库端口（MySQL默认3306）
-    user: root             # 数据库登录用户名
-    pwd: "${DB_PASSWORD}"            # 数据库登录密码
+    host: "${PROD_DB_HOST:-localhost}"   # 数据库地址/主机名
+    port: 3306                           # 数据库端口（MySQL默认3306）
+    user: "${PROD_DB_USER:-root}"        # 数据库登录用户名
+    pwd: "${PROD_DB_PASSWORD}"           # 数据库登录密码（从环境变量读取，禁止硬编码）

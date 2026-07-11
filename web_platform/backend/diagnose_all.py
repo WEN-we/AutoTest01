@@ -23,7 +23,7 @@ print("\n【测试1】用户登录")
 print("-"*70)
 login_data = {
     "username": "admin",
-    "password": "change_me_in_production"
+    "password": os.getenv("ADMIN_DEFAULT_PASSWORD", "")
 }
 try:
     resp = requests.post(f"{API_BASE}/auth/login", json=login_data)

@@ -4,11 +4,12 @@
 """
 import pymysql
 import sys
+import os
 
 DB_CONFIG = {
-    "host": "localhost",
+    "host": os.getenv("DB_HOST", "localhost"),
     "port": 3306,
-    "user": "root",
+    "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
     "charset": "utf8mb4"
 }

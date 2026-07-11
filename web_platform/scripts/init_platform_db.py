@@ -5,12 +5,13 @@
 import pymysql
 import bcrypt
 import sys
+import os
 
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": "test_auto",
+    "database": os.getenv("DB_NAME", "test_auto"),
     "charset": "utf8mb4"
 }
 
@@ -50,7 +51,8 @@ def create_platform_user_table():
 
             if result[0] == 0:
                 # 创建默认管理员账户
-                hashed = bcrypt.hashpw('change_me_in_production'.encode('utf-8'), bcrypt.gensalt())
+                admin_pwd = os.getenv("ADMIN_DEFAULT_PASSWORD", "change_me_in_production")
+                hashed = bcrypt.hashpw(admin_pwd.encode('utf-8'), bcrypt.gensalt())
 
                 sql = """
                 INSERT INTO `platform_user` (username, password, email, role, status, remark)
@@ -67,7 +69,7 @@ def create_platform_user_table():
                 conn.commit()
                 print("✓ 默认管理员账户创建成功")
                 print("  用户名: admin")
-                print("  密码: change_me_in_production")
+                print("  密码: (从环境变量 ADMIN_DEFAULT_PASSWORD 读取)")
             else:
                 print("✓ 管理员账户已存在")
 

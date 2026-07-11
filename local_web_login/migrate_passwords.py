@@ -4,13 +4,14 @@
 """
 import pymysql
 import bcrypt
+import os
 
-# 数据库配置（改成你的实际配置）
+# 数据库配置（从环境变量读取）
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": os.getenv("DB_PASSWORD", ""),  # ← 改成你的MySQL密码
-    "database": "test_auto",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "test_auto"),
     "charset": "utf8mb4"
 }
 

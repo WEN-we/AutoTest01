@@ -12,20 +12,20 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 SOURCE_DB_CONFIG = {
-    "host": "localhost",
+    "host": os.getenv("DB_HOST", "localhost"),
     "port": 3306,
-    "user": "root",
+    "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": "test_auto",
+    "database": os.getenv("DB_NAME", "test_auto"),
     "charset": "utf8mb4",
 }
 
 TARGET_DB_CONFIG = {
-    "host": "localhost",
+    "host": os.getenv("DB_HOST", "localhost"),
     "port": 3306,
-    "user": "root",
+    "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": "local_web_login",
+    "database": os.getenv("LOCAL_DB_NAME", "local_web_login"),
     "charset": "utf8mb4",
 }
 
@@ -289,7 +289,8 @@ def ensure_default_admin():
             admin = cursor.fetchone()
 
             if not admin:
-                hashed = bcrypt.hashpw("change_me_in_production".encode('utf-8'), bcrypt.gensalt())
+                admin_pwd = os.getenv("ADMIN_DEFAULT_PASSWORD", "change_me_in_production")
+                hashed = bcrypt.hashpw(admin_pwd.encode('utf-8'), bcrypt.gensalt())
                 hashed_str = hashed.decode('utf-8')
                 cursor.execute(
                     """INSERT INTO `user` (username, password, email, role, created_at)
@@ -297,7 +298,7 @@ def ensure_default_admin():
                     ("admin", hashed_str, "admin@example.com", "admin")
                 )
                 conn.commit()
-                print("[OK] 默认管理员账户创建成功 (admin / change_me_in_production)")
+                print("[OK] 默认管理员账户创建成功 (密码从环境变量 ADMIN_DEFAULT_PASSWORD 读取)")
             else:
                 print("[OK] 管理员账户已存在")
     except Exception as e:

@@ -5,12 +5,13 @@
 import pymysql
 import json
 import bcrypt
+import os
 
 DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": "local_web_login",
+    "database": os.getenv("LOCAL_DB_NAME", "local_web_login"),
     "charset": "utf8mb4"
 }
 
@@ -183,7 +184,8 @@ def create_default_admin():
             admin = cursor.fetchone()
 
             if not admin:
-                hashed = bcrypt.hashpw("change_me_in_production".encode('utf-8'), bcrypt.gensalt())
+                admin_pwd = os.getenv("ADMIN_DEFAULT_PASSWORD", "change_me_in_production")
+                hashed = bcrypt.hashpw(admin_pwd.encode('utf-8'), bcrypt.gensalt())
                 hashed_str = hashed.decode('utf-8')
 
                 cursor.execute(
@@ -195,7 +197,7 @@ def create_default_admin():
                 conn.commit()
                 print("默认管理员账户创建成功")
                 print("用户名: admin")
-                print("密码: change_me_in_production")
+                print("密码: (从环境变量 ADMIN_DEFAULT_PASSWORD 读取)")
             else:
                 print("管理员账户已存在")
 
@@ -266,7 +268,7 @@ def init_database():
     print("\n数据库初始化完成!")
     print("\n请使用以下凭据登录:")
     print("  用户名: admin")
-    print("  密码: change_me_in_production")
+    print("  密码: (请查看环境变量 ADMIN_DEFAULT_PASSWORD 的值)")
 
 
 if __name__ == '__main__':

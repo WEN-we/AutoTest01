@@ -1,11 +1,12 @@
 """检查数据库中的测试任务"""
+import os
 import pymysql
 
 conn = pymysql.connect(
-    host='localhost',
-    user='root',
+    host=os.getenv("DB_HOST", "localhost"),
+    user=os.getenv("DB_USER", "root"),
     password=os.getenv("DB_PASSWORD", ""),
-    database='test_auto'
+    database=os.getenv("DB_NAME", "test_auto")
 )
 
 cursor = conn.cursor()
