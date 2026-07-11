@@ -4,7 +4,7 @@ from utils.tools.config_reader import ConfigReader
 
 def test_windows_login():
     # 读取测试数据（YAML）
-    data = ConfigReader().read_yaml("test_data/ui_test_data.yaml")
+    data = ConfigReader().read_yaml("test_data/ui/ui_test_data.yaml")
     user = data["windows"]["username"]
     pwd = data["windows"]["password"]
 

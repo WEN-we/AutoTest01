@@ -11,9 +11,6 @@ env/
 # 日志目录
 logs/
 
-# 测试报告
-report/
-
 # 环境变量
 .env
 *.env
@@ -67,6 +64,21 @@ test_agent_example.py
 check_login.png
 deep_check_login.png
 final_check.png
+screenshots/
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 证书/密钥文件（散落各处的单文件）
+*.pem
+*.key
+*.crt
+*.p12
+
+# Node.js
+node_modules/
 
 # 开发过程笔记
 docs/superpowers/

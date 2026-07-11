@@ -105,7 +105,7 @@ class AITestEngine:
         prompt += "{\n"
         prompt += "  \"page_analysis\": {\n"
         prompt += "    \"title\": \"本地测试\",\n"
-        prompt += "    \"url\": \"http://127.0.0.1:8080\",\n"
+        prompt += "    \"url\": \"http://127.0.0.1:8090\",\n"
         prompt += "    \"elements\": [\n"
         prompt += "      {\"type\": \"input\", \"id\": \"username\", \"name\": null},\n"
         prompt += "      {\"type\": \"input\", \"id\": \"password\", \"name\": null},\n"

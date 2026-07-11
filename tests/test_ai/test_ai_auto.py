@@ -36,7 +36,7 @@ class TestAIAuto:
             ai_config = ConfigReader.read_yaml("config/ai_config.yaml")
             login_url = ai_config.get("test_scenarios", {}).get("login_page", {}).get("url", "https://example.com/login")
         except Exception:
-            login_url = " http://127.0.0.1:8080"
+            login_url = " http://127.0.0.1:8090"
         page.open(login_url)
         logger.info(f"导航到登录页面: {login_url}")
 

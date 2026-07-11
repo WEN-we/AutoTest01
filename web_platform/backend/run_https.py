@@ -124,7 +124,7 @@ def run_https_server():
         host='0.0.0.0',
         port=8443,
         ssl_context=(cert_path, key_path),
-        debug=True,
+        debug=os.getenv('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes'),
         use_reloader=False
     )
 

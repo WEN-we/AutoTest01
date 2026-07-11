@@ -225,7 +225,7 @@ def create_sample_data():
                     user_id = user['id']
 
                     sample_tasks = [
-                        ("登录功能测试", "测试用户登录流程", "web", "http://127.0.0.1:8080",
+                        ("登录功能测试", "测试用户登录流程", "web", "http://127.0.0.1:8090",
                          json.dumps({"username": "test", "password": "test123"}), "success"),
                         ("首页功能测试", "测试首页加载和展示", "web", "http://example.com",
                          json.dumps({}), "success"),

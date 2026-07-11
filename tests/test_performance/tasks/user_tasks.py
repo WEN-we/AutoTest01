@@ -20,11 +20,12 @@ with open(perf_data_path, 'r', encoding='utf-8') as f:
     perf_data = yaml.safe_load(f)
 
 # 生成随机用户数据用于性能测试
+# 用户名/密码必须与 CI 工作流（post-release-validation.yml）中插入数据库的凭据完全匹配
 perf_users = []
 for i in range(1, 1001):
     perf_users.append({
         'username': f'perf_test_{i:04d}',
-        'password': 'test123'
+        'password': 'Test@1234'
     })
 
 logger.info(f"生成 {len(perf_users)} 个测试用户用于性能测试")

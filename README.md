@@ -66,14 +66,17 @@ AutoTest01/                     # repo 根（默认分支: master）
 ├─ .github/
 │  └─ workflows/                # GitHub Actions 工作流（CI/CD 配置）
 ├─ .gitignore
+├─ .env.example                 # 环境变量配置示例（复制为 .env 后填写实际值）
 ├─ README.md
 ├─ README_en.md
 ├─ Run_CI.bat                   # 一键运行 CI（Windows batch）
 ├─ pytest.ini                   # pytest 配置
 ├─ requirements.txt
 ├─ requirements-ci.txt
+├─ run_all_smoke.py             # 全平台冒烟测试一键运行脚本
 ├─ bat/
 │  └─ run_allure.bat            # Allure 报告相关 batch 脚本
+├─ docs/                        # 项目文档
 ├─ agents/                      # AI Agent 智能体模块
 ├─ ai_agents/                   # AI Agent 核心模块
 ├─ ai_page_objects/
@@ -132,7 +135,8 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  └─ tools/                    # 工具集合
 └─ web_platform/                # 图形化测试管理平台（Flask 后端 + 前端）
    ├─ backend/
-   └─ frontend/
+   ├─ frontend/
+   └─ scripts/                  # 平台运维脚本（重置密码等）
 ```
 
 ---
@@ -248,12 +252,12 @@ pytest -m android
 
 ### 5. 执行指定模块用例（如订单模块接口用例）
 ```bash
-pytest tests/test_api/test_order_api.py -v
+pytest tests/test_api/test_user_api.py -v
 ```
 
 ### 6. 查看 Allure 可视化报告
 ```bash
-allure serve allure-results
+allure serve reports/allure-results
 ```
 
 ---
@@ -266,6 +270,14 @@ allure serve allure-results
 - **开启 GitHub Pages**：设置 → Pages → 源选择 gh-pages 分支
 - **触发条件**：每次 push 到 master 分支或提交 PR 时，自动执行测试、生成 Allure 报告并上传
 - **测试内容**：Web UI 测试、API 测试、AI 自主测试、性能监控
+
+#### 必需的 GitHub Secrets
+
+工作流运行前需在仓库「设置 → Secrets and variables → Actions」中配置以下 Secret：
+
+| Secret 名称 | 用途 | 说明 |
+| --- | --- | --- |
+| `MYSQL_CI_PASSWORD` | MySQL 服务容器 root 密码 | CI 中 MySQL service container 与数据库初始化脚本（init_database.py、测试用户插入脚本）均通过此 Secret 获取密码，必须配置否则 CI 数据库相关步骤将失败 |
 
 ### Jenkins 配置（可选）
 
@@ -339,7 +351,7 @@ allure serve allure-results
 1. **全平台覆盖**：明确覆盖所有测试端，突出项目竞争力
 2. **核心特性模块**：清晰展示全平台优势，适配面试/毕设场景
 3. **技术栈表格化**：各端测试对应技术一目了然，更规范
-4. **目录结构完整**：补充全平台相关文件，与项目实际完全匹配
+4. **目录结构完整**：补充全平台相关文件，与项目实际基本匹配
 5. **执行命令详细**：补充各端单独执行命令，方便本地调试
 6. **适配说明全面**：环境准备、业务适配、注意事项均补充全平台相关说明
 7. **排版统一规范**：使用 `---` 分隔模块，代码块高亮，关键路径用反引号标注

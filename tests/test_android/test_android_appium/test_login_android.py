@@ -1,3 +1,4 @@
+"""Android登录测试（待实现）"""
 # import pytest
 # from utils.android_driver import AndroidDriver
 #
@@ -10,3 +11,11 @@
 #
 #     def teardown_class(self):
 #         AndroidDriver().quit_driver()
+
+import pytest
+
+
+@pytest.mark.android
+def test_android_login_placeholder():
+    """占位测试，待Android环境就绪后实现"""
+    pytest.skip("Android登录测试待实现")

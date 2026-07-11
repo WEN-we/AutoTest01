@@ -2186,4 +2186,4 @@ if __name__ == '__main__':
     register_blueprints()
     PORT = 8090
     logger.info(f"服务启动: http://127.0.0.1:{PORT}")
-    app.run(debug=True, port=PORT)
+    app.run(debug=os.getenv('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes'), port=PORT)

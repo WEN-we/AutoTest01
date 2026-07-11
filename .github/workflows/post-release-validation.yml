@@ -43,7 +43,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -99,7 +99,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
 
       - name: 初始化测试数据库
         run: |
@@ -111,7 +111,16 @@ jobs:
           );
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+
+      - name: 初始化数据库（建库建表）
+        run: |
+          python local_web_login/init_database.py
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          LOCAL_DB_NAME: local_web_login
 
       - name: 启动本地登录服务
         run: |
@@ -255,7 +264,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -293,7 +302,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
 
       - name: 初始化测试数据库
         run: |
@@ -305,35 +314,17 @@ jobs:
             password VARCHAR(100) NOT NULL
           );
           EOF
-          # 生成测试用户
+          # 生成测试用户（用户名/密码需与 tests/test_performance/tasks/user_tasks.py 保持一致）
           python3 << 'EOF'
           import os
-          import random
-          import string
           import pymysql
-
-          chinese_chars = ''.join(chr(i) for i in range(0x4e00, 0x4e00 + 200))
-          username_chars = chinese_chars + string.ascii_letters + string.digits
-          password_chars = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
-
-          def gen_username(length=8):
-              return ''.join(random.choice(username_chars) for _ in range(length))
-
-          def gen_password(length=12):
-              return ''.join(random.choice(password_chars) for _ in range(length))
 
           db = pymysql.connect(host="127.0.0.1", port=3306, user="root", password=os.getenv("MYSQL_ROOT_PASSWORD", ""), database="test_auto", charset="utf8mb4")
           cursor = db.cursor()
 
-          users = []
-          used = set()
-          for _ in range(1000):
-              while True:
-                  un = gen_username(random.randint(6, 12))
-                  if un not in used:
-                      used.add(un)
-                      users.append((un, gen_password(random.randint(10, 16))))
-                      break
+          # 用户名 perf_test_0001 ~ perf_test_1000，密码统一 Test@1234
+          # 与 locust user_tasks.py 中生成的凭据完全匹配
+          users = [(f"perf_test_{i:04d}", "Test@1234") for i in range(1, 1001)]
 
           cursor.executemany("INSERT INTO user (username, password) VALUES (%s, %s)", users)
           db.commit()
@@ -342,7 +333,16 @@ jobs:
           db.close()
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+
+      - name: 初始化数据库（建库建表）
+        run: |
+          python local_web_login/init_database.py
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          LOCAL_DB_NAME: local_web_login
 
       - name: 启动本地登录服务
         run: |

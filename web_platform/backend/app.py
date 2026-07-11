@@ -153,4 +153,4 @@ def _register_dynamic_route(app, path, filename, frontend_dir):
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=8081, debug=True)
+    app.run(host='0.0.0.0', port=8081, debug=os.getenv('FLASK_DEBUG', '0').lower() in ('1', 'true', 'yes'))

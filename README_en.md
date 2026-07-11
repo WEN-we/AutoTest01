@@ -66,14 +66,17 @@ AutoTest01/                     # Repository root (default branch: master)
 ├─ .github/
 │  └─ workflows/                # GitHub Actions workflows (CI/CD configuration)
 ├─ .gitignore
+├─ .env.example                 # Environment variable configuration example (copy to .env and fill in actual values)
 ├─ README.md
 ├─ README_en.md
 ├─ Run_CI.bat                   # One-click CI runner (Windows batch)
 ├─ pytest.ini                   # pytest configuration
 ├─ requirements.txt
 ├─ requirements-ci.txt
+├─ run_all_smoke.py             # One-click smoke test runner for all platforms
 ├─ bat/
 │  └─ run_allure.bat            # Allure report related batch scripts
+├─ docs/                        # Project documentation
 ├─ agents/                      # AI Agent module
 ├─ ai_agents/                   # AI Agent core module
 ├─ ai_page_objects/
@@ -132,7 +135,8 @@ AutoTest01/                     # Repository root (default branch: master)
 │  └─ tools/                    # Tool collection
 └─ web_platform/                # Graphical test management platform (Flask backend + frontend)
    ├─ backend/
-   └─ frontend/
+   ├─ frontend/
+   └─ scripts/                  # Platform maintenance scripts (password reset, etc.)
 ```
 
 ---
@@ -248,12 +252,12 @@ pytest -m android
 
 ### 5. Execute Specified Module Cases (e.g., Order Module API Cases)
 ```bash
-pytest tests/test_api/test_order_api.py -v
+pytest tests/test_api/test_user_api.py -v
 ```
 
 ### 6. View Allure Visual Report
 ```bash
-allure serve allure-results
+allure serve reports/allure-results
 ```
 
 ---
@@ -339,7 +343,7 @@ The project provides two workflows:
 1. **Full platform coverage**: Clearly cover all test ends, highlighting project competitiveness
 2. **Core features module**: Clearly display full platform advantages, suitable for interview/graduation project scenarios
 3. **Technology stack tabulation**: Each end test corresponding technology is clear at a glance, more standardized
-4. **Complete directory structure**: Supplement full platform related files, completely match the actual project
+4. **Complete directory structure**: Supplement full platform related files, basically match the actual project
 5. **Detailed execution commands**: Supplement separate execution commands for each end, convenient for local debugging
 6. **Comprehensive adaptation instructions**: Environment preparation, business adaptation, and notes all supplement full platform related instructions
 7. **Unified typesetting specifications**: Use `---` to separate modules, code block highlighting, key paths marked with backticks

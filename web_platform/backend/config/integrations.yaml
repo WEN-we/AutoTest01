@@ -9,6 +9,14 @@ development:
     default_account: "admin"
     # 密码通过环境变量或数据库配置，不硬编码
 
+testing:
+  jenkins:
+    default_url: "http://localhost:8080"
+    default_username: "admin"
+  zentao:
+    default_url: "http://localhost/zentao"
+    default_account: "admin"
+
 production:
   jenkins:
     default_url: "${JENKINS_URL}"

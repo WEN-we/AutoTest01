@@ -28,7 +28,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -80,7 +80,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
 
       - name: 初始化测试数据库
         run: |
@@ -92,7 +92,16 @@ jobs:
           );
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+
+      - name: 初始化数据库（建库建表）
+        run: |
+          python local_web_login/init_database.py
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          LOCAL_DB_NAME: local_web_login
 
       - name: 启动本地登录服务
         run: |
@@ -168,7 +177,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -207,7 +216,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
 
       - name: 初始化测试数据库
         run: |
@@ -219,7 +228,16 @@ jobs:
           );
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+
+      - name: 初始化数据库（建库建表）
+        run: |
+          python local_web_login/init_database.py
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          LOCAL_DB_NAME: local_web_login
 
       - name: 启动本地登录服务
         run: |
