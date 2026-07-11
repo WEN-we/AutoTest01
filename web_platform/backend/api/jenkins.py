@@ -4,6 +4,7 @@ Jenkins集成API接口
 from flask import Blueprint, request, jsonify
 from backend.models.integration import Integration
 from backend.utils.decorators import login_required
+from backend.utils.response import success_response, error_response
 import requests
 import base64
 from urllib.parse import quote
@@ -11,36 +12,24 @@ from urllib.parse import quote
 jenkins_bp = Blueprint('jenkins', __name__)
 
 
-def success_response(data=None, message="操作成功"):
-    response = {"code": 200, "message": message}
-    if data:
-        response["data"] = data
-    return jsonify(response)
-
-
-def error_response(message, code=400):
-    return jsonify({"code": code, "message": message}), code
-
-
 def get_jenkins_config():
-    """获取Jenkins配置"""
-    return Integration.find_by_type('jenkins')
+    """获取Jenkins配置（优先返回默认配置）"""
+    # 先查找默认配置
+    config = Integration.find_default_by_type('jenkins')
+    if config:
+        return config
+    # 没有默认配置，则返回第一条有凭证的配置
+    return Integration.find_by_type_with_credentials('jenkins')
 
 
-def jenkins_request(method, path, data=None):
-    """Jenkins API请求"""
-    config = get_jenkins_config()
-
+def jenkins_request_for_config(config, method, path, data=None):
+    """Jenkins API请求 - 使用指定配置"""
     if not config:
         return None, "Jenkins未配置"
 
-    credentials = config.get('credentials', {})
-    if isinstance(credentials, str):
-        import json
-        credentials = json.loads(credentials)
-
-    username = credentials.get('username', '')
-    api_token = credentials.get('api_token', '')
+    # 兼容两种存储格式：credentials嵌套字典 或 直接字段
+    username = config.get('username', '')
+    api_token = config.get('api_token', '')
 
     if not username or not api_token:
         return None, "Jenkins凭证未配置"
@@ -48,10 +37,8 @@ def jenkins_request(method, path, data=None):
     base_url = config['base_url'].rstrip('/')
     url = f"{base_url}/{path}"
 
-    # Base64认证
     auth_str = f"{username}:{api_token}"
     auth = base64.b64encode(auth_str.encode()).decode()
-
     headers = {
         "Authorization": f"Basic {auth}",
         "Content-Type": "application/json"
@@ -64,13 +51,66 @@ def jenkins_request(method, path, data=None):
             response = requests.post(url, headers=headers, json=data, timeout=30)
         else:
             return None, f"不支持的方法: {method}"
-
         return response, None
-
     except requests.exceptions.Timeout:
         return None, "请求超时"
     except Exception as e:
         return None, f"请求失败: {str(e)}"
+
+
+def check_status_for_config(config):
+    """检查指定配置的连接状态"""
+    try:
+        if not config:
+            return success_response(data={"connected": False, "message": "Jenkins未配置"})
+
+        base_url = config.get('base_url', '').strip().rstrip('/')
+        if not base_url:
+            return success_response(data={"connected": False, "message": "服务地址未配置"})
+
+        if not base_url.startswith('http://') and not base_url.startswith('https://'):
+            return success_response(data={"connected": False, "message": "服务地址必须以http://或https://开头"})
+
+        if len(base_url.split('://')[1]) < 3:
+            return success_response(data={"connected": False, "message": "服务地址格式不正确"})
+
+        username = config.get('username') or ''
+        api_token = config.get('api_token') or ''
+
+        if not username:
+            return success_response(data={"connected": False, "message": "用户名未配置"})
+
+        if not api_token:
+            return success_response(data={"connected": False, "message": "API Token未配置"})
+
+        response, error = jenkins_request_for_config(config, 'GET', 'api/json')
+
+        if error:
+            return success_response(data={"connected": False, "message": error})
+
+        if response and response.status_code == 200:
+            data = response.json()
+            return success_response(data={
+                "connected": True,
+                "message": "连接成功",
+                "jenkins_url": config['base_url'],
+                "version": data.get('version', 'Unknown'),
+                "jobs_count": len(data.get('jobs', []))
+            })
+        else:
+            return success_response(data={
+                "connected": False,
+                "message": f"Jenkins返回错误: {response.status_code if response else 'None'}"
+            })
+    except Exception as e:
+        print(f"检查Jenkins状态失败: {e}")
+        return error_response("检查Jenkins状态失败", 500)
+
+
+def jenkins_request(method, path, data=None):
+    """Jenkins API请求"""
+    config = get_jenkins_config()
+    return jenkins_request_for_config(config, method, path, data)
 
 
 @jenkins_bp.route('/status', methods=['GET'])

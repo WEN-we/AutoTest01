@@ -1,304 +1,309 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme) {
+                const theme = savedTheme === 'system'
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : savedTheme;
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - 自动化测试平台</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary-color: #4f46e5;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --warning-color: #f59e0b;
-            --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        body {
-            background: #f3f4f6;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .navbar {
-            background: var(--bg-gradient);
-            padding: 1rem 2rem;
-        }
-        .navbar-brand {
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-        .stat-label {
-            color: #6b7280;
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-        .card {
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 1.25rem 1.5rem;
-            font-weight: 600;
-        }
-        .table {
-            margin-bottom: 0;
-        }
-        .table thead th {
-            border-bottom: 2px solid #e5e7eb;
-            color: #6b7280;
-            font-weight: 500;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-        }
-        .badge-success { background-color: var(--success-color); }
-        .badge-danger { background-color: var(--danger-color); }
-        .badge-warning { background-color: var(--warning-color); }
-        .badge-info { background-color: #3b82f6; }
-        .badge-api { background-color: #8b5cf6; }
-        .badge-ui { background-color: #06b6d4; }
-        .badge-platform { background-color: #ec4899; }
-        .badge-external { background-color: #06b6d4; }
-        .badge-local { background-color: #10b981; }
-        .badge-other { background-color: #6b7280; }
-        .btn-primary {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        .btn-primary:hover {
-            background: #4338ca;
-            border-color: #4338ca;
-        }
-        .quick-action {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-        .quick-action:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-3px);
-        }
-        .quick-action i {
-            font-size: 2rem;
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        .table-responsive::-webkit-scrollbar {
-            width: 8px;
-        }
-        .table-responsive::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        .table-responsive::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 4px;
-        }
-        .table-responsive::-webkit-scrollbar-thumb:hover {
-            background: #a1a1a1;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.html">
-                <i class="bi bi-robot me-2"></i>自动化测试平台
+            <a class="navbar-brand" href="/dashboard.html">
+                <div class="brand-logo">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <span class="brand-text">自动化测试平台</span>
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/dashboard.html"><i class="bi bi-house me-1"></i>首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks.html"><i class="bi bi-list-task me-1"></i>测试任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-models.html"><i class="bi bi-cpu me-1"></i>AI模型</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-agents.html"><i class="bi bi-robot me-1"></i>AI智能体</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html"><i class="bi bi-file-earmark-text me-1"></i>测试报告</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="integrationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plug me-1"></i>第三方集成
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/integrations.html"><i class="bi bi-gear me-2"></i>集成配置</a></li>
+                            <li><a class="dropdown-item" href="/jenkins.html"><i class="bi bi-hdd me-2"></i>Jenkins</a></li>
+                            <li><a class="dropdown-item" href="/zentao.html"><i class="bi bi-kanban me-2"></i>禅道</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
             <div class="d-flex align-items-center">
                 <div class="dropdown me-3">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()" data-bs-toggle="tooltip" title="查看最近执行的监控记录">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()" title="查看最近执行的监控记录">
                         <i class="bi bi-clock-history me-1"></i>最近监控
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" id="recentMonitorsDropdown" style="min-width: 250px;">
                         <li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>
                     </ul>
                 </div>
-                <span class="text-white me-3" data-bs-toggle="tooltip" title="当前登录用户">
-                    <i class="bi bi-person-circle me-1"></i>
-                    <span id="currentUser">管理员</span>
-                </span>
-                <button class="btn btn-outline-light btn-sm" onclick="logout()" data-bs-toggle="tooltip" title="退出登录，清除认证信息">
-                    <i class="bi bi-box-arrow-right me-1"></i>退出
-                </button>
+                <div class="theme-dropdown-wrapper me-3">
+                    <button class="theme-toggle-btn">
+                        <span class="theme-icon"></span>
+                        <span class="theme-label"></span>
+                        <i class="bi bi-chevron-down ms-2" style="font-size: 12px;"></i>
+                    </button>
+                    <div class="theme-dropdown-menu">
+                        <div class="theme-dropdown-header">主题模式</div>
+
+                        <div class="theme-option" data-theme="light">
+                            <div class="theme-option-icon">☀️</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">日间模式</div>
+                                <div class="theme-option-desc">明亮清爽的浅色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-option-icon">🌙</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">夜间模式</div>
+                                <div class="theme-option-desc">护眼舒适的深色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="theme-option" data-theme="system">
+                            <div class="theme-option-icon">🖥️</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">跟随系统</div>
+                                <div class="theme-option-desc">自动跟随系统设置切换</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-menu-wrapper">
+                    <button class="user-menu-btn">
+                        <img class="user-avatar" src="" alt="头像" style="display: none;">
+                        <div class="user-avatar-placeholder">A</div>
+                        <span class="user-name" id="currentUser">管理员</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <div class="user-menu-header">
+                            <div class="user-info">
+                                <img class="user-avatar-large" src="" alt="头像" style="display: none;">
+                                <div class="user-avatar-large-placeholder">A</div>
+                                <div class="user-details">
+                                    <div class="user-fullname" id="userFullname">管理员</div>
+                                    <div class="user-email" id="userEmail">-</div>
+                                </div>
+                            </div>
+                            <button class="edit-profile-btn" id="editProfileBtn">编辑个人资料</button>
+                        </div>
+
+                        <button class="user-menu-item" id="uploadAvatarBtn">
+                            <i class="bi bi-camera menu-icon"></i>
+                            <span class="menu-text">上传头像</span>
+                        </button>
+
+                        <button class="user-menu-item" id="changeUsernameBtn">
+                            <i class="bi bi-pencil menu-icon"></i>
+                            <span class="menu-text">修改用户名</span>
+                        </button>
+
+                        <button class="user-menu-item" id="changePasswordBtn">
+                            <i class="bi bi-lock menu-icon"></i>
+                            <span class="menu-text">修改密码</span>
+                        </button>
+
+                        <div class="user-menu-divider"></div>
+
+                        <button class="user-menu-item user-menu-item-danger" id="deleteAccountBtn">
+                            <i class="bi bi-trash menu-icon"></i>
+                            <span class="menu-text">注销账号</span>
+                        </button>
+
+                        <div class="user-menu-footer">
+                            <button class="user-menu-item" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right menu-icon"></i>
+                                <span class="menu-text">退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid py-4 px-4">
-        <div class="row mb-4">
-            <div class="col">
-                <h4 class="mb-0">测试概览</h4>
-                <p class="text-muted">实时监控测试执行状态和数据统计</p>
-            </div>
-            <div class="col-auto">
-                <button class="btn btn-primary" onclick="location.href='tasks-create.html'">
-                    <i class="bi bi-plus-circle me-2"></i>创建任务
-                </button>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="stat-card" data-bs-toggle="tooltip" title="平台中创建的所有测试任务总数">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number" id="totalTasks">0</div>
-                            <div class="stat-label">总任务数</div>
-                        </div>
-                        <div style="width: 60px; height: 60px; background: #ede9fe; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-list-task" style="font-size: 1.5rem; color: var(--primary-color);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" data-bs-toggle="tooltip" title="历史执行中测试用例的通过率，成功数/(成功数+失败数)">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number text-success" id="passRate">0%</div>
-                            <div class="stat-label">通过率</div>
-                        </div>
-                        <div style="width: 60px; height: 60px; background: #d1fae5; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-check-circle" style="font-size: 1.5rem; color: var(--success-color);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" data-bs-toggle="tooltip" title="历史执行中出现失败的测试用例总数">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number text-danger" id="failCount">0</div>
-                            <div class="stat-label">失败用例</div>
-                        </div>
-                        <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-x-circle" style="font-size: 1.5rem; color: var(--danger-color);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" data-bs-toggle="tooltip" title="当前正在执行的测试任务数量">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="stat-number text-warning" id="runningTasks">0</div>
-                            <div class="stat-label">执行中</div>
-                        </div>
-                        <div style="width: 60px; height: 60px; background: #fef3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi bi-play-circle" style="font-size: 1.5rem; color: var(--warning-color);"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+    <div class="container-fluid py-4">
+        <!-- 页面标题 -->
         <div class="row mb-4">
             <div class="col-md-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-lightning me-2"></i>快速操作</span>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-1">测试概览</h4>
+                        <p class="text-muted mb-0">实时监控测试执行状态和数据统计</p>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=platform'" data-bs-toggle="tooltip" title="快速创建测试 web_platform 自身功能的任务">
-                                    <i class="bi bi-display"></i>
-                                    <div class="fw-bold">测试平台本身</div>
-                                    <small class="text-muted">本地测试平台</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=local'" data-bs-toggle="tooltip" title="快速创建测试 local_web_login 服务的任务">
-                                    <i class="bi bi-hdd-network"></i>
-                                    <div class="fw-bold">测试本地服务</div>
-                                    <small class="text-muted">local_web_login</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='tasks-create.html?scene=external'" data-bs-toggle="tooltip" title="快速创建测试互联网网站或API的任务">
-                                    <i class="bi bi-globe"></i>
-                                    <div class="fw-bold">测试外部网站</div>
-                                    <small class="text-muted">互联网网站</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='tasks-create.html?type=api'" data-bs-toggle="tooltip" title="快速创建接口自动化测试任务">
-                                    <i class="bi bi-cloud-arrow-up"></i>
-                                    <div class="fw-bold">API测试</div>
-                                    <small class="text-muted">接口自动化</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='tasks-create.html?type=ui'" data-bs-toggle="tooltip" title="快速创建Web界面自动化测试任务">
-                                    <i class="bi bi-browser-chrome"></i>
-                                    <div class="fw-bold">UI测试</div>
-                                    <small class="text-muted">Web界面测试</small>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="quick-action" onclick="location.href='integrations.html'" data-bs-toggle="tooltip" title="配置Jenkins、禅道等第三方集成">
-                                    <i class="bi bi-gear"></i>
-                                    <div class="fw-bold">集成配置</div>
-                                    <small class="text-muted">Jenkins/禅道</small>
-                                </div>
-                            </div>
+                    <a href="/tasks-create.html" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>创建任务
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 -->
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h2 class="mb-1" id="totalTasks">0</h2>
+                            <p class="text-muted mb-0">总任务数</p>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <i class="bi bi-list-task"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h2 class="mb-1" id="passRate">0%</h2>
+                            <p class="text-muted mb-0">通过率</p>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h2 class="mb-1" id="failedCases">0</h2>
+                            <p class="text-muted mb-0">失败用例</p>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #fc4a1a 0%, #f7b733 100%);">
+                            <i class="bi bi-x-circle"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center justify-content-between">
+                        <div>
+                            <h2 class="mb-1" id="runningTasks">0</h2>
+                            <p class="text-muted mb-0">执行中</p>
+                        </div>
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <i class="bi bi-play-circle"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
+        <!-- 图表区域：7天趋势 + 测试类型分布 -->
+        <div class="row mt-4">
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-graph-up me-2"></i>最近7天测试趋势</span>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="trendChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-pie-chart me-2"></i>测试场景分布</span>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="sceneChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近执行记录 -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <span><i class="bi bi-clock-history me-2"></i>最近执行记录</span>
-                        <a href="execution-list.html" class="btn btn-sm btn-outline-primary">查看全部</a>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-sm btn-danger" onclick="batchDeleteExecutions()" id="batchDeleteExecutionsBtn" style="display: none;">
+                                <i class="bi bi-trash"></i> 批量删除 (<span id="selectedExecutionCount">0</span>)
+                            </button>
+                            <a href="/execution-list.html" class="btn btn-sm btn-outline-primary">查看全部</a>
+                        </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="recent-executions-container" style="max-height: 350px; overflow-y: scroll; display: block;">
+                        <div class="table-responsive">
                             <table class="table table-hover mb-0">
-                                <thead class="sticky-top bg-white">
+                                <thead>
                                     <tr>
                                         <th width="40">
                                             <input type="checkbox" id="selectAllExecutions" onchange="toggleAllExecutions()">
                                         </th>
+                                        <th>ID</th>
                                         <th>任务名称</th>
                                         <th>场景</th>
                                         <th>类型</th>
                                         <th>状态</th>
-                                        <th>执行时间</th>
-                                        <th>
-                                            <button class="btn btn-sm btn-danger" onclick="batchDeleteExecutions()" id="batchDeleteBtn" style="display: none;">
-                                                <i class="bi bi-trash"></i> 批量删除
-                                            </button>
-                                        </th>
+                                        <th>触发方式</th>
+                                        <th>开始时间</th>
+                                        <th>耗时</th>
+                                        <th>操作</th>
                                     </tr>
                                 </thead>
-                                <tbody id="recentExecutions">
+                                <tbody id="recentExecutionsTable">
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
+                                        <td colspan="10" class="text-center text-muted py-4">
                                             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                             暂无执行记录
                                         </td>
@@ -309,23 +314,56 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+        </div>
+
+        <!-- 最近测试报告 -->
+        <div class="row mt-4">
+            <div class="col-md-12">
                 <div class="card">
-                    <div class="card-header">
-                        <i class="bi bi-pie-chart me-2"></i>测试场景分布
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <span><i class="bi bi-file-earmark-text me-2"></i>最近测试报告</span>
+                            <span class="badge bg-secondary ms-2" style="font-weight: normal; font-size: 0.75rem;">最近的10条测试报告</span>
+                        </div>
+                        <a href="/reports.html" class="btn btn-sm btn-outline-primary">查看全部</a>
                     </div>
-                    <div class="card-body">
-                        <div id="sceneChart" style="height: 250px;">
-                            <div class="text-center text-muted py-5">
-                                <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
-                                暂无数据
-                            </div>
+                    <div class="card-body p-0">
+                        <div class="recent-executions-container" style="max-height: 350px; overflow-y: auto; display: block;">
+                            <table class="table table-hover mb-0">
+                                <thead class="sticky-top">
+                                    <tr>
+                                        <th width="40">
+                                            <input type="checkbox" id="selectAllReports" onchange="toggleAllReports()">
+                                        </th>
+                                        <th width="60">ID</th>
+                                        <th>任务名称</th>
+                                        <th>通过/失败</th>
+                                        <th>通过率</th>
+                                        <th>耗时</th>
+                                        <th>创建时间</th>
+                                        <th>
+                                            <button class="btn btn-sm btn-danger" onclick="batchDeleteDashboardReports()" id="batchDeleteReportsBtn" style="display: none;">
+                                                <i class="bi bi-trash"></i> 批量删除 (<span id="selectedReportCount">0</span>)
+                                            </button>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentReports">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted py-4">
+                                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                            暂无测试报告
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- 任务列表 -->
         <div class="row mt-4">
             <div class="col-md-12">
                 <div class="card">
@@ -346,7 +384,7 @@
                                 <option value="smoke">冒烟测试</option>
                                 <option value="performance">性能测试</option>
                             </select>
-                            <a href="tasks.html" class="btn btn-sm btn-outline-primary">管理任务</a>
+                            <a href="/tasks.html" class="btn btn-sm btn-outline-primary">管理任务</a>
                         </div>
                     </div>
                     <div class="card-body">
@@ -380,184 +418,866 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="static/js/app.js"></script>
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/crypto.js"></script>
+<script src="/static/js/user-menu.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const API_BASE = 'http://localhost:8081/api';
-
+        // ==================== 工具函数 ====================
         function checkAuth() {
             const token = localStorage.getItem('token');
             if (!token) {
-                window.location.href = 'index.html';
+                window.location.href = '/index.html';
                 return false;
             }
             return true;
         }
 
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = 'index.html';
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info'} alert-dismissible fade show`;
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
         }
 
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '9999';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            };
+        }
+
+        function getSceneBadge(scene) {
+            const badges = { platform: 'platform', local: 'local', external: 'external', other: 'other' };
+            return badges[scene] || 'other';
+        }
+
+        function getSceneName(scene) {
+            const names = { platform: '测试平台本身', local: '测试本地服务', external: '测试外部网站', other: '其他' };
+            return names[scene] || '其他';
+        }
+
+        function getTypeBadge(type) {
+            const badges = { api: 'api', ui: 'ui', smoke: 'smoke', performance: 'performance' };
+            return badges[type] || 'other';
+        }
+
+        function getTypeName(type) {
+            const names = { api: 'API测试', ui: 'UI测试', smoke: '冒烟测试', performance: '性能测试' };
+            return names[type] || type;
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                idle: '<span class="badge bg-secondary">空闲</span>',
+                running: '<span class="badge bg-primary">执行中</span>',
+                success: '<span class="badge bg-success">成功</span>',
+                failed: '<span class="badge bg-danger">失败</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">未知</span>';
+        }
+
+        function getExecutionStatusBadge(status) {
+            const badges = {
+                success: '<span class="badge bg-success">成功</span>',
+                failed: '<span class="badge bg-danger">失败</span>',
+                running: '<span class="badge bg-primary">执行中</span>',
+                pending: '<span class="badge bg-warning">等待中</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">未知</span>';
+        }
+
+        function getTriggerBadge(trigger) {
+            const badges = {
+                manual: '<span class="badge bg-info">手动</span>',
+                scheduled: '<span class="badge bg-warning">定时</span>',
+                api: '<span class="badge bg-secondary">API</span>'
+            };
+            return badges[trigger] || '<span class="badge bg-secondary">手动</span>';
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds || seconds <= 0) return '-';
+            if (seconds < 60) return `${seconds}秒`;
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            if (secs === 0) return `${mins}分`;
+            return `${mins}分${secs}秒`;
+        }
+
+        function formatTime(timeStr) {
+            if (!timeStr) return '-';
+
+            const timeValue = String(timeStr).trim();
+            let date = new Date(timeValue);
+
+            // 如果解析失败，尝试替换空格为T（MySQL格式: 2026-05-21 16:12:28）
+            if (isNaN(date.getTime()) && timeValue.includes(' ')) {
+                date = new Date(timeValue.replace(' ', 'T'));
+            }
+
+            // 如果仍然解析失败，返回原始值
+            if (isNaN(date.getTime())) {
+                return timeValue;
+            }
+
+            // 检查时间字符串是否包含时区信息
+            const hasTimezone = /[+-]\d{2}:\d{2}$|Z$/.test(timeValue);
+
+            // 如果没有时区信息，说明是本地时间，需要补偿时区偏移
+            // 因为 JavaScript 会将无时区的字符串视为 UTC，然后转换为本地时间
+            if (!hasTimezone) {
+                const offset = date.getTimezoneOffset() * 60000; // 转换为毫秒
+                date = new Date(date.getTime() + offset);
+            }
+
+            return date.toLocaleString('zh-CN');
+        }
+
+        // ==================== 数据加载 ====================
         async function loadDashboard() {
             try {
-                const [tasksRes, executionsRes] = await Promise.all([
-                    fetch(`${API_BASE}/tasks?page_size=100`, getAuthHeaders()),
-                    fetch(`${API_BASE}/executions`, getAuthHeaders())
+                const [tasksRes, executionsRes, statsRes] = await Promise.all([
+                    fetch(`${API_BASE}/tasks?page_size=100`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/executions?page_size=10`, { headers: getAuthHeaders() }),
+                    fetch(`${API_BASE}/executions/stats`, { headers: getAuthHeaders() })
                 ]);
 
                 const tasksData = await tasksRes.json();
                 const executionsData = await executionsRes.json();
+                const statsData = await statsRes.json();
 
-                updateStats(tasksData.data?.items || [], executionsData.data?.items || []);
-                loadRecentExecutions(executionsData.data?.items || []);
-                loadTaskList(tasksData.data?.items || []);
-                updateSceneChart(tasksData.data?.items || []);
+                // 更新统计卡片
+                if (tasksData.code === 200) {
+                    const tasks = tasksData.data.items || [];
+                    const runningCount = tasks.filter(t => t.status === 'running').length;
+                    document.getElementById('totalTasks').textContent = tasks.length;
+                    document.getElementById('runningTasks').textContent = runningCount;
+                }
 
+                if (statsData.code === 200) {
+                    const stats = statsData.data || {};
+                    const total = stats.total_cases || 0;
+                    const passed = stats.passed_cases || 0;
+                    const failed = stats.failed_cases || 0;
+                    const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+                    document.getElementById('passRate').textContent = passRate + '%';
+                    document.getElementById('failedCases').textContent = failed;
+                }
+
+                // 更新最近执行记录
+                if (executionsData.code === 200) {
+                    const executions = executionsData.data.items || [];
+                    // 保存到localStorage供updateRecentMonitorsDropdown使用
+                    localStorage.setItem('recent_monitors', JSON.stringify(executions.slice(0, 5)));
+                    renderRecentExecutionsTable(executions.slice(0, 5));
+                    updateCharts(executions);
+                }
             } catch (error) {
-                console.error('加载仪表盘失败:', error);
-                showToast('加载数据失败，请检查服务是否启动', 'danger');
+                console.error('加载仪表盘数据失败:', error);
             }
         }
 
-        function updateStats(tasks, executions) {
-            document.getElementById('totalTasks').textContent = tasks.length;
-
-            const runningTasks = tasks.filter(t => t.status === 'running').length;
-            document.getElementById('runningTasks').textContent = runningTasks;
-
-            const failedCount = executions.filter(e => e.status === 'failed').length;
-            document.getElementById('failCount').textContent = failedCount;
-
-            const successful = executions.filter(e => e.status === 'success').length;
-            const total = executions.length;
-            const passRate = total > 0 ? ((successful / total) * 100).toFixed(1) : 0;
-            document.getElementById('passRate').textContent = passRate + '%';
-        }
-
-        function loadRecentExecutions(executions) {
-            const tbody = document.getElementById('recentExecutions');
-            if (executions.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                            暂无执行记录
-                        </td>
-                    </tr>
-                `;
+        function updateRecentMonitorsDropdown() {
+            const dropdown = document.getElementById('recentMonitorsDropdown');
+            if (!dropdown) return;
+            // 从localStorage获取最近监控记录
+            const recentMonitors = JSON.parse(localStorage.getItem('recent_monitors') || '[]');
+            if (recentMonitors.length === 0) {
+                dropdown.innerHTML = '<li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>';
                 return;
             }
 
-            tbody.innerHTML = executions.map(exec => `
-                <tr>
-                    <td>
-                        <input type="checkbox" class="execution-checkbox" value="${exec.execution_id}" onchange="updateBatchDeleteButton()">
-                    </td>
-                    <td>任务 #${exec.task_id}</td>
-                    <td><span class="badge badge-${getSceneBadge(exec.scene)}">${getSceneName(exec.scene)}</span></td>
-                    <td><span class="badge badge-${getTypeBadge(exec.test_type)}">${exec.test_type}</span></td>
-                    <td><span class="badge badge-${getStatusBadge(exec.status)}">${getStatusText(exec.status)}</span></td>
+            dropdown.innerHTML = recentMonitors.slice(0, 5).map(exec => {
+                const statusIcon = exec.status === 'success' ? 'bi-check-circle text-success' :
+                    exec.status === 'failed' ? 'bi-x-circle text-danger' : 'bi-play-circle text-primary';
+                const statusText = exec.status === 'success' ? '成功' :
+                    exec.status === 'failed' ? '失败' : '执行中';
+                return `
+                    <li>
+                        <a class="dropdown-item" href="/execution-monitor.html?execution_id=${exec.execution_id}">
+                            <i class="bi ${statusIcon} me-2"></i>
+                            <span>${exec.task_name || '未知任务'}</span>
+                            <span class="badge bg-${exec.status === 'success' ? 'success' : exec.status === 'failed' ? 'danger' : 'primary'} ms-2">${statusText}</span>
+                            <small class="text-muted d-block">${formatTime(exec.start_time)}</small>
+                        </a>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function renderRecentExecutionsTable(executions) {
+            const tbody = document.getElementById('recentExecutionsTable');
+            if (executions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无执行记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = executions.map((exec, index) => {
+                const displayId = executions.length - index;
+                return `<tr class="selectable-row" data-execution-id="${exec.execution_id}">
+                    <td><input type="checkbox" class="execution-checkbox" value="${exec.execution_id}" onchange="updateBatchDeleteExecutionsButton()"></td>
+                    <td><code>#${displayId}</code></td>
+                    <td>${exec.task_name || '未知任务'}</td>
+                    <td><span class="badge badge-${getSceneBadge(exec.test_scene || 'other')}">${getSceneName(exec.test_scene || 'other')}</span></td>
+                    <td><span class="badge badge-${getTypeBadge(exec.test_type || 'api')}">${getTypeName(exec.test_type || 'api')}</span></td>
+                    <td>${getExecutionStatusBadge(exec.status)}</td>
+                    <td>${getTriggerBadge(exec.trigger_type)}</td>
                     <td>${formatTime(exec.start_time)}</td>
+                    <td>${formatDuration(exec.duration)}</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="viewExecution('${exec.execution_id}')">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary" onclick="event.stopPropagation(); viewExecution('${exec.execution_id}')" title="查看执行详情">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="event.stopPropagation(); deleteSingleExecution('${exec.execution_id}')" title="删除">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // 添加点击行选中复选框功能
+            tbody.querySelectorAll('.selectable-row').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('input[type="checkbox"]') || e.target.closest('.btn')) return;
+                    const checkbox = this.querySelector('.execution-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateBatchDeleteExecutionsButton();
+                    }
+                });
+            });
+        }
+
+        function toggleAllExecutions() {
+            const selectAll = document.getElementById('selectAllExecutions');
+            const checkboxes = document.querySelectorAll('.execution-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBatchDeleteExecutionsButton();
+        }
+
+        function syncSelectAllExecutionsCheckbox() {
+            const selectAll = document.getElementById('selectAllExecutions');
+            const checkboxes = document.querySelectorAll('.execution-checkbox');
+            if (!selectAll) return;
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            const noneChecked = checkboxes.length === 0 || Array.from(checkboxes).every(cb => !cb.checked);
+            if (allChecked) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else if (noneChecked) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else {
+                selectAll.indeterminate = true;
+            }
+        }
+
+        function updateBatchDeleteExecutionsButton() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            const batchBtn = document.getElementById('batchDeleteExecutionsBtn');
+            const selectedCount = document.getElementById('selectedExecutionCount');
+            if (!batchBtn || !selectedCount) return;
+            if (selected.length > 0) {
+                batchBtn.style.display = 'inline-block';
+                selectedCount.textContent = selected.length;
+            } else {
+                batchBtn.style.display = 'none';
+                selectedCount.textContent = '0';
+            }
+            syncSelectAllExecutionsCheckbox();
+        }
+
+        function resetExecutionSelection() {
+            const selectAll = document.getElementById('selectAllExecutions');
+            if (selectAll) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            }
+            const batchBtn = document.getElementById('batchDeleteExecutionsBtn');
+            const selectedCount = document.getElementById('selectedExecutionCount');
+            if (batchBtn) batchBtn.style.display = 'none';
+            if (selectedCount) selectedCount.textContent = '0';
+        }
+
+        async function batchDeleteExecutions() {
+            const selected = document.querySelectorAll('.execution-checkbox:checked');
+            if (selected.length === 0) {
+                showToast('请先选择要删除的执行记录', 'warning');
+                return;
+            }
+            if (!confirm(`确定要删除选中的 ${selected.length} 条执行记录吗？此操作不可恢复。`)) {
+                updateBatchDeleteExecutionsButton();
+                return;
+            }
+            const executionIds = Array.from(selected).map(cb => cb.value);
+            try {
+                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ execution_ids: executionIds })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast(data.message || '删除成功', 'success');
+                    resetExecutionSelection();
+                    loadDashboard();
+                } else {
+                    showToast(data.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteSingleExecution(executionId) {
+            if (!confirm('确定要删除这条执行记录吗？此操作不可恢复。')) return;
+            try {
+                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ execution_ids: [executionId] })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('删除成功', 'success');
+                    resetExecutionSelection();
+                    loadDashboard();
+                } else {
+                    showToast(data.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
+
+        function viewExecution(executionId) {
+            window.location.href = `/execution-monitor.html?execution_id=${executionId}`;
+        }
+
+        // ==================== 图表 ====================
+        let trendChartInstance = null;
+        let sceneChartInstance = null;
+
+        function updateCharts(executions) {
+            updateTrendChart(executions);
+            updateSceneChart(executions);
+        }
+
+        function updateTrendChart(executions) {
+            const ctx = document.getElementById('trendChart');
+            if (!ctx) return;
+
+            // 生成最近7天的日期标签
+            const labels = [];
+            const passedData = [];
+            const failedData = [];
+            const today = new Date();
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                labels.push(`${month}/${day}`);
+
+                // 统计当天的通过/失败数
+                const dateStr = date.toISOString().split('T')[0];
+                const dayExecutions = executions.filter(e => {
+                    if (!e.start_time) return false;
+                    const execDate = new Date(e.start_time).toISOString().split('T')[0];
+                    return execDate === dateStr;
+                });
+
+                const passed = dayExecutions.filter(e => e.status === 'success').length;
+                const failed = dayExecutions.filter(e => e.status === 'failed').length;
+                passedData.push(passed);
+                failedData.push(failed);
+            }
+
+            if (trendChartInstance) {
+                trendChartInstance.destroy();
+            }
+
+            trendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '通过',
+                        data: passedData,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: '失败',
+                        data: failedData,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateSceneChart(executions) {
+            const ctx = document.getElementById('sceneChart');
+            if (!ctx) return;
+
+            // 统计各场景的执行次数
+            const sceneCounts = {};
+            executions.forEach(e => {
+                const scene = e.test_scene || 'other';
+                sceneCounts[scene] = (sceneCounts[scene] || 0) + 1;
+            });
+
+            const labels = [];
+            const data = [];
+            const colors = ['#667eea', '#764ba2', '#11998e', '#fc4a1a', '#f093fb'];
+
+            Object.entries(sceneCounts).forEach(([scene, count], index) => {
+                labels.push(getSceneName(scene));
+                data.push(count);
+            });
+
+            // 如果没有数据，显示默认值
+            if (labels.length === 0) {
+                labels.push('暂无数据');
+                data.push(1);
+            }
+
+            if (sceneChartInstance) {
+                sceneChartInstance.destroy();
+            }
+
+            sceneChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==================== 报告列表 ====================
+        async function loadDashboardReports() {
+            try {
+                const res = await fetch(`${API_BASE}/reports/dashboard-summary`, { headers: getAuthHeaders() });
+                const data = await res.json();
+
+                if (data.code === 200) {
+                    const reports = data.data.reports || [];
+                    renderDashboardReports(reports);
+                }
+            } catch (error) {
+                console.error('加载报告列表失败:', error);
+            }
+        }
+
+        function getSelectedDashboardReportIds() {
+            const checkboxes = document.querySelectorAll('.dashboard-report-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function restoreDashboardReportCheckboxes(selectedIds) {
+            if (!selectedIds || selectedIds.length === 0) return;
+            const checkboxes = document.querySelectorAll('.dashboard-report-checkbox');
+            checkboxes.forEach(cb => {
+                if (selectedIds.includes(cb.value)) cb.checked = true;
+            });
+            updateBatchDeleteReportsButton();
+        }
+
+        function renderDashboardReports(reports) {
+            const tbody = document.getElementById('recentReports');
+            const selectedIds = getSelectedDashboardReportIds();
+
+            if (reports.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无测试报告</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = reports.map((r, index) => {
+                const summary = r.result_summary || {};
+                const passed = summary.passed || r.passed || 0;
+                const failed = summary.failed || r.failed || 0;
+                const skipped = summary.skipped || r.skipped || 0;
+                const duration = summary.duration || r.duration || 0;
+                const passRate = r.pass_rate || (summary.total > 0 ? Math.round((passed / summary.total) * 100) : 0);
+                const displayId = reports.length - index;
+                const reportId = r.id || r.execution_id;
+
+                return `
+                <tr class="selectable-row" data-report-id="${reportId}">
+                    <td><input type="checkbox" class="dashboard-report-checkbox" value="${reportId}" onchange="updateBatchDeleteReportsButton()"></td>
+                    <td><code>#${displayId}</code></td>
+                    <td>
+                        <div>${r.task_name || '-'}</div>
+                        <small class="text-muted">${r.report_name || '-'}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-success">${passed}通过</span>
+                        ${failed > 0 ? `<span class="badge bg-danger">${failed}失败</span>` : ''}
+                        ${skipped > 0 ? `<span class="badge bg-secondary">${skipped}跳过</span>` : ''}
+                    </td>
+                    <td>
+                        <div class="progress" style="width: 80px; height: 18px;">
+                            <div class="progress-bar ${passRate >= 80 ? 'bg-success' : passRate >= 50 ? 'bg-warning' : 'bg-danger'}"
+                                 role="progressbar" style="width: ${passRate}%">${passRate}%</div>
+                        </div>
+                    </td>
+                    <td>${formatDuration(duration)}</td>
+                    <td>${formatTime(r.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); viewDashboardReportDetail('${reportId}')">
                             <i class="bi bi-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteSingleExecution('${exec.execution_id}')">
+                        <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteSingleDashboardReport('${reportId}')">
                             <i class="bi bi-trash"></i>
                         </button>
                     </td>
-                </tr>
-            `).join('');
-        }
+                </tr>`;
+            }).join('');
 
-        function loadTaskList(tasks) {
-            const tbody = document.getElementById('taskList');
-            const filterScene = document.getElementById('filterScene').value;
-            const filterType = document.getElementById('filterType').value;
+            restoreDashboardReportCheckboxes(selectedIds);
 
-            let filteredTasks = tasks;
-            if (filterScene) {
-                filteredTasks = filteredTasks.filter(t => t.scene === filterScene);
-            }
-            if (filterType) {
-                filteredTasks = filteredTasks.filter(t => t.test_type === filterType);
-            }
-
-            if (filteredTasks.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                            暂无任务
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = filteredTasks.slice(0, 10).map(task => `
-                <tr>
-                    <td>${task.name}</td>
-                    <td><span class="badge badge-${getSceneBadge(task.scene)}">${getSceneName(task.scene)}</span></td>
-                    <td><span class="badge badge-${getTypeBadge(task.test_type)}">${getTestTypeName(task.test_type)}</span></td>
-                    <td><span class="badge badge-${getStatusBadge(task.status)}">${getStatusText(task.status)}</span></td>
-                    <td>${task.run_count || 0}</td>
-                    <td>${formatTime(task.last_run_at)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" onclick="executeTask(${task.id})">
-                            <i class="bi bi-play"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="location.href='/tasks/${task.id}'">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function loadData() {
-            loadDashboard();
-        }
-
-        function updateSceneChart(tasks) {
-            const counts = {};
-            tasks.forEach(t => {
-                counts[t.scene] = (counts[t.scene] || 0) + 1;
+            tbody.querySelectorAll('.selectable-row').forEach(row => {
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('input[type="checkbox"]') || e.target.closest('.btn')) return;
+                    const checkbox = this.querySelector('.dashboard-report-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateBatchDeleteReportsButton();
+                    }
+                });
             });
+        }
 
-            const chartDiv = document.getElementById('sceneChart');
-            if (Object.keys(counts).length === 0) {
-                chartDiv.innerHTML = `
-                    <div class="text-center text-muted py-5">
-                        <i class="bi bi-bar-chart fs-1 d-block mb-2"></i>
-                        暂无数据
-                    </div>
-                `;
+        function toggleAllReports() {
+            const selectAll = document.getElementById('selectAllReports');
+            const checkboxes = document.querySelectorAll('.dashboard-report-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBatchDeleteReportsButton();
+        }
+
+        function syncSelectAllReportsCheckbox() {
+            const selectAll = document.getElementById('selectAllReports');
+            const checkboxes = document.querySelectorAll('.dashboard-report-checkbox');
+            if (!selectAll) return;
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            const noneChecked = checkboxes.length === 0 || Array.from(checkboxes).every(cb => !cb.checked);
+            if (allChecked) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else if (noneChecked) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else {
+                selectAll.indeterminate = true;
+            }
+        }
+
+        function updateBatchDeleteReportsButton() {
+            const selected = document.querySelectorAll('.dashboard-report-checkbox:checked');
+            const batchBtn = document.getElementById('batchDeleteReportsBtn');
+            const selectedCount = document.getElementById('selectedReportCount');
+            if (!batchBtn || !selectedCount) return;
+            if (selected.length > 0) {
+                batchBtn.style.display = 'inline-block';
+                selectedCount.textContent = selected.length;
+            } else {
+                batchBtn.style.display = 'none';
+                selectedCount.textContent = '0';
+            }
+            syncSelectAllReportsCheckbox();
+        }
+
+        function resetReportSelection() {
+            const selectAll = document.getElementById('selectAllReports');
+            if (selectAll) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            }
+            const batchBtn = document.getElementById('batchDeleteReportsBtn');
+            const selectedCount = document.getElementById('selectedReportCount');
+            if (batchBtn) batchBtn.style.display = 'none';
+            if (selectedCount) selectedCount.textContent = '0';
+        }
+
+        async function batchDeleteDashboardReports() {
+            const selected = document.querySelectorAll('.dashboard-report-checkbox:checked');
+            if (selected.length === 0) {
+                showToast('请先选择要删除的报告', 'warning');
                 return;
             }
+            if (!confirm(`确定要删除选中的 ${selected.length} 条报告记录吗？此操作不可恢复。`)) {
+                updateBatchDeleteReportsButton();
+                return;
+            }
+            const reportIds = Array.from(selected).map(cb => cb.value);
+            try {
+                const res = await fetch(`${API_BASE}/reports/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ report_ids: reportIds })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast(data.message || '删除成功', 'success');
+                    resetReportSelection();
+                    loadDashboardReports();
+                } else {
+                    showToast(data.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
 
-            const colors = {
-                platform: '#ec4899',
-                local: '#10b981',
-                external: '#06b6d4',
-                other: '#6b7280'
-            };
+        async function deleteSingleDashboardReport(reportId) {
+            if (!confirm('确定要删除这条报告记录吗？此操作不可恢复。')) return;
+            try {
+                const res = await fetch(`${API_BASE}/reports/batch-delete`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ report_ids: [reportId] })
+                });
+                const data = await res.json();
+                if (data.code === 200) {
+                    showToast('删除成功', 'success');
+                    resetReportSelection();
+                    loadDashboardReports();
+                } else {
+                    showToast(data.message || '删除失败', 'error');
+                }
+            } catch (error) {
+                showToast('删除失败: ' + error.message, 'error');
+            }
+        }
 
-            let html = '<div class="row g-3">';
-            for (const [scene, count] of Object.entries(counts)) {
-                html += `
-                    <div class="col-6">
-                        <div class="d-flex align-items-center">
-                            <div style="width: 12px; height: 12px; background: ${colors[scene] || '#6b7280'}; border-radius: 2px; margin-right: 8px;"></div>
-                            <span>${getSceneName(scene)}</span>
-                            <span class="ms-auto fw-bold">${count}</span>
+        async function viewDashboardReportDetail(reportId) {
+            try {
+                const res = await fetch(`${API_BASE}/reports/${encodeURIComponent(reportId)}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await res.json();
+                if (data.code === 200 && data.data) {
+                    showDashboardReportDetailModal(data.data);
+                } else {
+                    showToast('获取报告详情失败', 'error');
+                }
+            } catch (error) {
+                showToast('获取报告详情失败: ' + error.message, 'error');
+            }
+        }
+
+        function showDashboardReportDetailModal(report) {
+            const summary = report.summary || {};
+            const passed = summary.passed || report.passed || 0;
+            const failed = summary.failed || report.failed || 0;
+            const skipped = summary.skipped || report.skipped || 0;
+            const errors = summary.errors || report.errors || 0;
+            const total = summary.total || report.total || 0;
+            const duration = summary.duration || report.duration || 0;
+            const passRate = report.pass_rate || (total > 0 ? Math.round((passed / total) * 100) : 0);
+
+            const modalHtml = `
+                <div class="modal fade" id="dashboardReportDetailModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">测试报告详情 - ${report.task_name || '未知任务'}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-3"><strong>执行ID:</strong></div>
+                                    <div class="col-md-9"><code>${report.execution_id || '-'}</code></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3"><strong>报告类型:</strong></div>
+                                    <div class="col-md-9">${report.report_type || 'allure'}</div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3"><strong>执行耗时:</strong></div>
+                                    <div class="col-md-9">${formatDuration(duration)}</div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-3"><strong>通过率:</strong></div>
+                                    <div class="col-md-9">
+                                        <div class="progress" style="height: 25px;">
+                                            <div class="progress-bar ${passRate >= 80 ? 'bg-success' : passRate >= 50 ? 'bg-warning' : 'bg-danger'}"
+                                                 role="progressbar" style="width: ${passRate}%">${passRate}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <h6>测试结果统计</h6>
+                                <div class="row text-center">
+                                    <div class="col-md-3">
+                                        <div class="card bg-success text-white">
+                                            <div class="card-body py-2">
+                                                <h3 class="mb-0">${passed}</h3>
+                                                <small>通过</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-danger text-white">
+                                            <div class="card-body py-2">
+                                                <h3 class="mb-0">${failed}</h3>
+                                                <small>失败</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-warning text-white">
+                                            <div class="card-body py-2">
+                                                <h3 class="mb-0">${skipped}</h3>
+                                                <small>跳过</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-info text-white">
+                                            <div class="card-body py-2">
+                                                <h3 class="mb-0">${errors}</h3>
+                                                <small>错误</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                ${total > 0 ? `
+                                <hr>
+                                <h6>摘要数据</h6>
+                                <pre class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;"><code>${escapeHtml(JSON.stringify(summary, null, 2))}</code></pre>
+                                ` : ''}
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                            </div>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
+
+            const existingModal = document.getElementById('dashboardReportDetailModal');
+            if (existingModal) existingModal.remove();
+
+            const modalContainer = document.createElement('div');
+            modalContainer.innerHTML = modalHtml;
+            document.body.appendChild(modalContainer);
+
+            const modalEl = document.getElementById('dashboardReportDetailModal');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                modalEl.remove();
+            });
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ==================== 任务列表 ====================
+        async function loadTasks() {
+            try {
+                const scene = document.getElementById('filterScene').value;
+                const type = document.getElementById('filterType').value;
+                let url = `${API_BASE}/tasks?page_size=10`;
+                if (scene) url += `&scene=${scene}`;
+                if (type) url += `&test_type=${type}`;
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const data = await res.json();
+                if (data.code === 200) {
+                    renderTasks(data.data.items || []);
+                }
+            } catch (error) {
+                console.error('加载任务列表失败:', error);
             }
-            html += '</div>';
-            chartDiv.innerHTML = html;
+        }
+
+        function renderTasks(tasks) {
+            const tbody = document.getElementById('taskList');
+            if (tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>暂无任务，<a href="tasks-create.html">创建第一个任务</a></td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tasks.map(task => {
+                const scene = task.scene || 'other';
+                const type = task.test_type || 'api';
+                const status = task.status || 'idle';
+                const runCount = task.run_count || 0;
+                const lastRun = task.last_run_at;
+                return `<tr>
+                    <td><div class="fw-bold">${task.name}</div>${task.description ? `<small class="text-muted">${task.description}</small>` : ''}</td>
+                    <td><span class="badge badge-${getSceneBadge(scene)}">${getSceneName(scene)}</span></td>
+                    <td><span class="badge badge-${getTypeBadge(type)}">${getTypeName(type)}</span></td>
+                    <td>${getStatusBadge(status)}</td>
+                    <td>${runCount}</td>
+                    <td>${formatTime(lastRun)}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-primary" onclick="executeTask('${task.id}')" title="执行"><i class="bi bi-play-fill"></i></button>
+                            <button class="btn btn-outline-secondary" onclick="viewTask('${task.id}')" title="查看"><i class="bi bi-eye"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
         }
 
         async function executeTask(taskId) {
@@ -569,254 +1289,62 @@
 
                 const data = await res.json();
                 if (data.code === 200) {
-                    const executionId = data.data.execution_id;
-                    showToast('任务已启动执行，正在跳转到监控页面...', 'success');
-                    addToRecentMonitors(executionId, taskId);
+                    showToast('任务已启动', 'success');
                     setTimeout(() => {
-                        window.location.href = `/execution/${executionId}`;
-                    }, 500);
+                        window.location.href = `/execution-monitor.html?execution_id=${data.data.execution_id}`;
+                    }, 1000);
                 } else {
-                    showToast(data.message || '启动失败', 'danger');
+                    showToast(data.message || '启动失败', 'error');
                 }
             } catch (error) {
-                showToast('启动失败: ' + error.message, 'danger');
+                showToast('启动失败: ' + error.message, 'error');
             }
         }
 
-        function addToRecentMonitors(executionId, taskId) {
-            let recentMonitors = JSON.parse(localStorage.getItem('recentMonitors') || '[]');
-            recentMonitors = recentMonitors.filter(m => m.executionId !== executionId);
-            recentMonitors.unshift({
-                executionId: executionId,
-                taskId: taskId,
-                timestamp: new Date().toISOString()
-            });
-            recentMonitors = recentMonitors.slice(0, 5);
-            localStorage.setItem('recentMonitors', JSON.stringify(recentMonitors));
+        function viewTask(taskId) {
+            window.location.href = `/tasks-detail.html?id=${taskId}`;
         }
 
-        function getRecentMonitors() {
-            return JSON.parse(localStorage.getItem('recentMonitors') || '[]');
+        function showUserProfile() {
+            showToast('个人资料功能开发中...', 'info');
         }
 
-        function clearRecentMonitors() {
-            localStorage.removeItem('recentMonitors');
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/index.html';
         }
 
-        function updateRecentMonitorsDropdown() {
-            const recentMonitors = getRecentMonitors();
-            const dropdown = document.getElementById('recentMonitorsDropdown');
-
-            if (recentMonitors.length === 0) {
-                dropdown.innerHTML = '<li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>';
-                return;
-            }
-
-            dropdown.innerHTML = recentMonitors.map(monitor => `
-                <li>
-                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="/execution/${monitor.executionId}">
-                        <div>
-                            <div class="fw-normal">任务 #${monitor.taskId}</div>
-                            <small class="text-muted">${formatTime(monitor.timestamp)}</small>
-                        </div>
-                        <i class="bi bi-arrow-right text-muted"></i>
-                    </a>
-                </li>
-            `).join('');
-        }
-
-        function viewExecution(executionId) {
-            location.href = `/execution/${executionId}`;
-        }
-
-        function toggleAllExecutions() {
-            const selectAll = document.getElementById('selectAllExecutions');
-            const checkboxes = document.querySelectorAll('.execution-checkbox');
-            checkboxes.forEach(cb => cb.checked = selectAll.checked);
-            updateBatchDeleteButton();
-        }
-
-        function updateBatchDeleteButton() {
-            const selected = document.querySelectorAll('.execution-checkbox:checked');
-            const batchBtn = document.getElementById('batchDeleteBtn');
-            if (selected.length > 0) {
-                batchBtn.style.display = 'inline-block';
-                batchBtn.innerHTML = `<i class="bi bi-trash"></i> 批量删除 (${selected.length})`;
-            } else {
-                batchBtn.style.display = 'none';
-            }
-        }
-
-        async function batchDeleteExecutions() {
-            const selected = document.querySelectorAll('.execution-checkbox:checked');
-            if (selected.length === 0) {
-                showToast('请先选择要删除的执行记录', 'warning');
-                return;
-            }
-
-            if (!confirm(`确定要删除选中的 ${selected.length} 条执行记录吗？此操作不可恢复。`)) {
-                return;
-            }
-
-            const executionIds = Array.from(selected).map(cb => cb.value);
-
-            try {
-                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ execution_ids: executionIds })
-                });
-
-                const data = await res.json();
-                if (data.code === 200) {
-                    showToast(data.message, 'success');
-                    loadData();
-                } else {
-                    showToast(data.message || '删除失败', 'danger');
-                }
-            } catch (error) {
-                showToast('删除失败: ' + error.message, 'danger');
-            }
-        }
-
-        async function deleteSingleExecution(executionId) {
-            if (!confirm('确定要删除这条执行记录吗？此操作不可恢复。')) {
-                return;
-            }
-
-            try {
-                const res = await fetch(`${API_BASE}/executions/batch-delete`, {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ execution_ids: [executionId] })
-                });
-
-                const data = await res.json();
-                if (data.code === 200) {
-                    showToast('删除成功', 'success');
-                    loadData();
-                } else {
-                    showToast(data.message || '删除失败', 'danger');
-                }
-            } catch (error) {
-                showToast('删除失败: ' + error.message, 'danger');
-            }
-        }
-
-        function getAuthHeaders() {
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
-            };
-        }
-
-        function getSceneBadge(scene) {
-            const badges = {
-                platform: 'platform',
-                local: 'local',
-                external: 'external',
-                other: 'other'
-            };
-            return badges[scene] || 'other';
-        }
-
-        function getSceneName(scene) {
-            const names = {
-                platform: '测试平台',
-                local: '本地服务',
-                external: '外部网站',
-                other: '其他'
-            };
-            return names[scene] || scene;
-        }
-
-        function getTypeBadge(type) {
-            const badges = {
-                api: 'api',
-                ui: 'ui',
-                smoke: 'warning',
-                android: 'success',
-                ios: 'info',
-                windows: 'primary',
-                linux: 'primary',
-                harmony: 'info',
-                service: 'warning',
-                performance: 'danger',
-                ai: 'danger',
-                whitebox: 'secondary'
-            };
-            return badges[type] || 'secondary';
-        }
-
-        function getStatusBadge(status) {
-            const badges = {
-                idle: 'secondary',
-                running: 'warning',
-                success: 'success',
-                failed: 'danger',
-                stopped: 'secondary'
-            };
-            return badges[status] || 'secondary';
-        }
-
-        function getStatusText(status) {
-            const texts = {
-                idle: '空闲',
-                running: '执行中',
-                success: '成功',
-                failed: '失败',
-                stopped: '已停止'
-            };
-            return texts[status] || status;
-        }
-
-        function getTestTypeName(type) {
-            const names = {
-                api: 'API测试',
-                ui: 'UI测试',
-                smoke: '冒烟测试',
-                android: 'Android',
-                ios: 'iOS',
-                windows: 'Windows',
-                linux: 'Linux',
-                harmony: '鸿蒙',
-                service: '服务测试',
-                performance: '性能测试',
-                ai: 'AI测试',
-                whitebox: '白盒测试'
-            };
-            return names[type] || type;
-        }
-
-        function formatTime(timeStr) {
-            if (!timeStr) return '-';
-            const date = new Date(timeStr);
-            return date.toLocaleString('zh-CN');
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${type} border-0`;
-            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
+        // ==================== 初始化 ====================
         if (checkAuth()) {
             const user = JSON.parse(localStorage.getItem('user') || '{}');
-            document.getElementById('currentUser').textContent = user.username || '管理员';
+            const displayName = user.nickname || user.username || '管理员';
+            const userEmail = user.email || '-';
+
+            // 更新旧版用户显示
+            const currentUserEl = document.getElementById('currentUser');
+            if (currentUserEl) currentUserEl.textContent = displayName;
+
+            // 更新新版用户菜单
+            const userFullnameEl = document.getElementById('userFullname');
+            const userEmailEl = document.getElementById('userEmail');
+            if (userFullnameEl) userFullnameEl.textContent = displayName;
+            if (userEmailEl) userEmailEl.textContent = userEmail;
+
+            // 更新头像占位符
+            const avatarPlaceholder = document.querySelector('.user-avatar-placeholder');
+            const avatarLargePlaceholder = document.querySelector('.user-avatar-large-placeholder');
+            const firstLetter = (displayName.charAt(0) || 'A').toUpperCase();
+            if (avatarPlaceholder) avatarPlaceholder.textContent = firstLetter;
+            if (avatarLargePlaceholder) avatarLargePlaceholder.textContent = firstLetter;
+
             loadDashboard();
             setInterval(() => {
-                if (!document.hidden) {
-                    loadDashboard();
-                }
-            }, 5000);
+                loadDashboard();
+                loadDashboardReports();
+            }, 30000);
+            loadDashboardReports();
+            loadTasks();
         }
     </script>
 </body>

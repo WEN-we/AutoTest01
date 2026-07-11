@@ -4,7 +4,7 @@ from page_objects.web.login_page import LoginPage
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
 
-test_data = ConfigReader.read_yaml("test_data/ui/ui_test_data.yaml")["login_syzy_web"]
+test_data = ConfigReader.read_yaml("test_data/ui/ui_test_data.yaml")["login_web"]
 
 class TestUserUI:
     """用户模块UI用例（最终正确版）"""

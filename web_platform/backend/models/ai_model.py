@@ -12,9 +12,12 @@ class AIModel:
     def find_all():
         """获取所有AI模型配置"""
         sql = """
-            SELECT * FROM ai_model_config
-            WHERE is_active = TRUE
-            ORDER BY priority DESC, id ASC
+            SELECT id, name as model_name, provider, model_type, api_endpoint as base_url, model_id, api_key, 
+                   api_version, max_tokens, temperature, timeout, priority, status, is_default, 
+                   config, created_by, created_at, updated_at
+            FROM ai_model_config
+            WHERE status = 'active'
+            ORDER BY is_default DESC, id ASC
         """
         models = Database.execute_query(sql)
 
@@ -30,7 +33,12 @@ class AIModel:
     @staticmethod
     def find_by_id(model_id: int):
         """根据ID查找模型"""
-        sql = "SELECT * FROM ai_model_config WHERE id = %s"
+        sql = """
+            SELECT id, name as model_name, provider, model_type, api_endpoint as base_url, model_id, api_key,
+                   api_version, max_tokens, temperature, timeout, priority, status, is_default,
+                   config, created_by, created_at, updated_at
+            FROM ai_model_config WHERE id = %s
+        """
         return Database.execute_query(sql, (model_id,), fetch_one=True)
 
     @staticmethod
@@ -42,16 +50,23 @@ class AIModel:
 
         sql = """
             INSERT INTO ai_model_config
-            (model_type, model_name, api_key, base_url, model_id, priority, config, is_active, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+            (name, provider, model_type, api_endpoint, model_id, api_key, api_version, max_tokens, temperature, timeout, priority, status, is_default, config, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         return Database.execute_insert(sql, (
-            data['model_type'],
-            data['model_name'],
-            data.get('api_key', ''),
+            data.get('model_name', ''),
+            data.get('provider', 'openai'),
+            data.get('model_type', ''),
             data.get('base_url', ''),
             data.get('model_id', ''),
-            data.get('priority', 0),
+            data.get('api_key', ''),
+            data.get('api_version', ''),
+            data.get('max_tokens', 4000),
+            data.get('temperature', 0.7),
+            data.get('timeout', 60),
+            data.get('priority', 0) or 0,
+            'active',
+            0,
             config,
             user_id
         ))
@@ -62,10 +77,10 @@ class AIModel:
         updates = []
         params = []
 
-        fields = ['model_name', 'api_key', 'base_url', 'model_id', 'priority', 'is_active']
-        for field in fields:
+        fields = {'model_name': 'name', 'model_type': 'model_type', 'model_id': 'model_id', 'api_key': 'api_key', 'base_url': 'api_endpoint', 'api_version': 'api_version', 'max_tokens': 'max_tokens', 'temperature': 'temperature', 'timeout': 'timeout', 'priority': 'priority', 'status': 'status', 'is_default': 'is_default'}
+        for field, db_field in fields.items():
             if field in data:
-                updates.append(f"{field} = %s")
+                updates.append(f"{db_field} = %s")
                 params.append(data[field])
 
         if 'config' in data:
@@ -84,5 +99,5 @@ class AIModel:
     @staticmethod
     def delete(model_id: int):
         """删除AI模型配置"""
-        sql = "UPDATE ai_model_config SET is_active = FALSE WHERE id = %s"
+        sql = "UPDATE ai_model_config SET status = 'inactive' WHERE id = %s"
         Database.execute_update(sql, (model_id,))

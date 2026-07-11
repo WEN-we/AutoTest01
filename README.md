@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="img/fufu.png" alt="Logo" width="200" height="200">
   
   # 企业级电商全平台自动化测试框架
   
@@ -70,13 +69,13 @@ AutoTest01/                     # repo 根（默认分支: master）
 ├─ README.md
 ├─ README_en.md
 ├─ Run_CI.bat                   # 一键运行 CI（Windows batch）
-├─ 笔记.txt                      # 个人笔记 / 文档
 ├─ pytest.ini                   # pytest 配置
 ├─ requirements.txt
 ├─ requirements-ci.txt
-├─ Run_CI.bat
 ├─ bat/
 │  └─ run_allure.bat            # Allure 报告相关 batch 脚本
+├─ agents/                      # AI Agent 智能体模块
+├─ ai_agents/                   # AI Agent 核心模块
 ├─ ai_page_objects/
 │  ├─ __init__.py
 │  ├─ base/                     # AI 相关 page object 基础
@@ -103,14 +102,7 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ perf_config.yaml
 │  ├─ ui_config.yaml
 │  └─ windows_config.yaml       # 各类运行/环境/平台配置文件（yaml）
-├─ erp/
-│  └─ driver/                   # ERP 相关驱动（目录存在，可能为空）
-├─ img/
-│  ├─ fufu.png
-│  └─ img.png                   # 演示/文档用图片资源
-├─ local_web_login/
-│  ├─ __init__.py
-│  └─ backend_server.py         # 本地登录后端服务（示例/测试用）
+├─ local_web_login/             # 本地登录后端服务（示例/测试用）
 ├─ test_data/
 │  ├─ ai/
 │  ├─ api/
@@ -133,10 +125,13 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  └─ test_windows/             # 各类测试集（按平台/类型分）
 ├─ tools/
 │  └─ get_mouse_pos.py          # 小工具脚本
-└─ utils/
-   ├─ __init__.py
-   ├─ drivers/                  # 驱动相关工具/封装
-   └─ tools/                    # 工具集合
+├─ utils/
+│  ├─ __init__.py
+│  ├─ drivers/                  # 驱动相关工具/封装
+│  └─ tools/                    # 工具集合
+└─ web_platform/                # 图形化测试管理平台（Flask 后端 + 前端）
+   ├─ backend/
+   └─ frontend/
 ```
 
 ---
@@ -146,7 +141,7 @@ AutoTest01/                     # repo 根（默认分支: master）
 ### 1. 克隆项目
 ```bash
 git clone https://github.com/WEN-we/AutoTest01.git
-cd ecommerce_auto_test
+cd AutoTest01
 ```
 
 ### 2. 创建并激活虚拟环境（推荐）
@@ -348,17 +343,6 @@ allure serve allure-results
 ## 支持与打赏
 
 如果您觉得这个项目对您有帮助，欢迎通过以下方式支持我：
-
-### 国内用户
-
-| 微信                   | 支付宝                   |
-|:---------------------|:----------------------|
-| ![微信收款码](img/wx.jpg) | ![支付宝收款码](img/zfb.jpg) |
-
-
-
-
-> 感谢您的支持与鼓励，您的支持是我持续开发的动力！
 
 ### 海外用户
 

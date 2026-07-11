@@ -1,12 +1,23 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme) {
+                const theme = savedTheme === 'system' 
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : savedTheme;
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 测试平台</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
     <div class="login-container">
@@ -37,23 +48,140 @@
                     <label class="form-check-label" for="rememberMe">记住我</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2" id="loginBtn">
+                <button type="submit" class="btn btn-primary w-100 py-3 fs-5" id="loginBtn">
                     <span class="spinner-border spinner-border-sm d-none" id="loading"></span>
                     <span id="btnText">登 录</span>
                 </button>
             </form>
 
-            <div class="text-center mt-3">
-                <span class="text-muted">还没有账号？</span>
-                <a href="#" onclick="alert('请联系管理员创建账号')" class="text-primary">立即注册</a>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <a href="#" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal" class="text-primary text-decoration-none">忘记密码？</a>
+                <span class="text-muted">还没有账号？
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" class="text-primary">立即注册</a>
+                </span>
             </div>
         </div>
     </div>
 
-    <script src="static/js/app.js"></script>
+    <!-- 找回密码模态框 -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="forgotPasswordModalLabel">
+                        <i class="bi bi-key me-2"></i>找回密码
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="forgotPasswordForm">
+                        <div class="mb-3">
+                            <label for="forgotEmail" class="form-label">注册邮箱</label>
+                            <input type="email" class="form-control" id="forgotEmail" placeholder="请输入注册时的邮箱" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="forgotNewPassword" class="form-label">新密码</label>
+                            <input type="password" class="form-control" id="forgotNewPassword" placeholder="请输入新密码" required>
+                            <div class="form-text">密码长度8-32个字符，需包含字母和数字</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="forgotConfirmPassword" class="form-label">确认新密码</label>
+                            <input type="password" class="form-control" id="forgotConfirmPassword" placeholder="请再次输入新密码" required>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="forgotPasswordBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="forgotPasswordLoading"></span>
+                                <span id="forgotPasswordBtnText">重置密码</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <span class="text-muted small">想起来了？</span>
+                    <a href="#" data-bs-dismiss="modal" class="small">返回登录</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 注册模态框 -->
+    <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="registerModalLabel">
+                        <i class="bi bi-person-plus me-2"></i>用户注册
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm">
+                        <div class="mb-3">
+                            <label for="regUsername" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="regUsername" placeholder="请输入用户名（3-20个字符）" required>
+                            <div class="form-text">用户名长度3-20个字符，支持字母、数字、下划线</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regEmail" class="form-label">邮箱</label>
+                            <input type="email" class="form-control" id="regEmail" placeholder="请输入邮箱地址" required>
+                            <div class="form-text">用于找回密码和接收通知</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regPassword" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="regPassword" placeholder="请输入密码" required>
+                            <div class="form-text">密码长度8-32个字符，需包含字母和数字</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="regConfirmPassword" class="form-label">确认密码</label>
+                            <input type="password" class="form-control" id="regConfirmPassword" placeholder="请再次输入密码" required>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="registerBtn">
+                                <span class="spinner-border spinner-border-sm d-none" id="registerLoading"></span>
+                                <span id="registerBtnText">注 册</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <span class="text-muted small">已有账号？</span>
+                    <a href="#" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#loginSection" class="small">立即登录</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="/static/js/crypto.js"></script>
+    <script src="/static/js/app.js"></script>
     <script>
         if (isLoggedIn()) {
             window.location.href = '/dashboard';
+        }
+
+        // 页面加载时，恢复记住的用户名
+        (function() {
+            const savedUsername = localStorage.getItem('remembered_username');
+            const rememberMe = localStorage.getItem('remember_me') === 'true';
+            if (savedUsername && rememberMe) {
+                document.getElementById('username').value = savedUsername;
+                document.getElementById('rememberMe').checked = true;
+            }
+        })();
+
+        // 获取RSA公钥
+        async function getPublicKey() {
+            try {
+                const response = await fetch('/api/auth/public-key');
+                const data = await response.json();
+                if (data.code === 200) {
+                    return data.data.public_key;
+                }
+            } catch (e) {
+                console.error('获取公钥失败:', e);
+            }
+            return null;
         }
 
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -61,6 +189,7 @@
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
 
             if (!username || !password) {
                 showToast('请输入用户名和密码', 'error');
@@ -76,11 +205,27 @@
             btnText.textContent = '登录中...';
 
             try {
-                const response = await API.auth.login(username, password);
+                // 获取公钥并加密密码
+                const publicKey = await getPublicKey();
+                let encryptedPassword = password;
+                if (publicKey) {
+                    encryptedPassword = await PasswordCrypto.encryptPassword(password, publicKey);
+                }
+                const response = await API.auth.login(username, encryptedPassword);
 
                 if (response.code === 200) {
                     localStorage.setItem('token', response.data.token);
                     localStorage.setItem('user', JSON.stringify(response.data.user));
+
+                    // 处理记住我功能
+                    if (rememberMe) {
+                        localStorage.setItem('remembered_username', username);
+                        localStorage.setItem('remember_me', 'true');
+                    } else {
+                        localStorage.removeItem('remembered_username');
+                        localStorage.removeItem('remember_me');
+                    }
+
                     showToast('登录成功', 'success');
                     setTimeout(() => {
                         window.location.href = '/dashboard';
@@ -94,6 +239,159 @@
                 loginBtn.disabled = false;
                 loading.classList.add('d-none');
                 btnText.textContent = '登 录';
+            }
+        });
+
+        // 注册表单提交
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+            // 前端验证
+            if (!username || !email || !password || !confirmPassword) {
+                showToast('请填写所有字段', 'error');
+                return;
+            }
+
+            if (username.length < 3 || username.length > 20) {
+                showToast('用户名长度需在3-20个字符之间', 'error');
+                return;
+            }
+
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                showToast('用户名只能包含字母、数字和下划线', 'error');
+                return;
+            }
+
+            if (password.length < 8 || password.length > 32) {
+                showToast('密码长度需在8-32个字符之间', 'error');
+                return;
+            }
+
+            if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+                showToast('密码需包含字母和数字', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showToast('两次输入的密码不一致', 'error');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtn');
+            const registerLoading = document.getElementById('registerLoading');
+            const registerBtnText = document.getElementById('registerBtnText');
+
+            registerBtn.disabled = true;
+            registerLoading.classList.remove('d-none');
+            registerBtnText.textContent = '注册中...';
+
+            try {
+                // 获取公钥并加密密码
+                const publicKey = await getPublicKey();
+                let encryptedPassword = password;
+                if (publicKey) {
+                    encryptedPassword = await PasswordCrypto.encryptPassword(password, publicKey);
+                }
+                const response = await API.auth.register({
+                    username: username,
+                    email: email,
+                    password: encryptedPassword
+                });
+
+                if (response.code === 200) {
+                    showToast('注册成功，请登录', 'success');
+                    
+                    // 清空表单
+                    document.getElementById('registerForm').reset();
+                    
+                    // 关闭注册模态框
+                    const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+                    registerModal.hide();
+                    
+                    // 自动填充用户名到登录表单
+                    document.getElementById('username').value = username;
+                    document.getElementById('password').focus();
+                } else {
+                    showToast(response.message || '注册失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.message || '网络错误，请稍后重试', 'error');
+            } finally {
+                registerBtn.disabled = false;
+                registerLoading.classList.add('d-none');
+                registerBtnText.textContent = '注 册';
+            }
+        });
+
+        // 找回密码表单提交
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('forgotEmail').value.trim();
+            const newPassword = document.getElementById('forgotNewPassword').value;
+            const confirmPassword = document.getElementById('forgotConfirmPassword').value;
+
+            // 前端验证
+            if (!email || !newPassword || !confirmPassword) {
+                showToast('请填写所有字段', 'error');
+                return;
+            }
+
+            if (newPassword.length < 8 || newPassword.length > 32) {
+                showToast('密码长度需在8-32个字符之间', 'error');
+                return;
+            }
+
+            if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(newPassword)) {
+                showToast('密码需包含字母和数字', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showToast('两次输入的密码不一致', 'error');
+                return;
+            }
+
+            const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
+            const forgotPasswordLoading = document.getElementById('forgotPasswordLoading');
+            const forgotPasswordBtnText = document.getElementById('forgotPasswordBtnText');
+
+            forgotPasswordBtn.disabled = true;
+            forgotPasswordLoading.classList.remove('d-none');
+            forgotPasswordBtnText.textContent = '重置中...';
+
+            try {
+                // 获取公钥并加密新密码
+                const publicKey = await getPublicKey();
+                let encryptedNewPassword = newPassword;
+                if (publicKey) {
+                    encryptedNewPassword = await PasswordCrypto.encryptPassword(newPassword, publicKey);
+                }
+                const response = await API.auth.forgotPassword(email, encryptedNewPassword);
+
+                if (response.code === 200) {
+                    showToast('密码重置成功，请使用新密码登录', 'success');
+                    
+                    // 清空表单
+                    document.getElementById('forgotPasswordForm').reset();
+                    
+                    // 关闭找回密码模态框
+                    const forgotPasswordModal = bootstrap.Modal.getInstance(document.getElementById('forgotPasswordModal'));
+                    forgotPasswordModal.hide();
+                } else {
+                    showToast(response.message || '重置密码失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.message || '网络错误，请稍后重试', 'error');
+            } finally {
+                forgotPasswordBtn.disabled = false;
+                forgotPasswordLoading.classList.add('d-none');
+                forgotPasswordBtnText.textContent = '重置密码';
             }
         });
     </script>

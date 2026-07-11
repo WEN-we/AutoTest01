@@ -1,5 +1,6 @@
 """
 集成配置API
+适配web_platform数据库表结构
 """
 from flask import Blueprint, request, jsonify
 from local_web_login.backend_server import (
@@ -10,6 +11,29 @@ from utils.tools.logger import log as logger
 import json
 
 integrations_bp = Blueprint('integrations', __name__, url_prefix='/api/integrations')
+
+
+def _format_integration(integration):
+    """格式化集成数据，适配前端"""
+    if not integration:
+        return integration
+    if integration.get('config') and isinstance(integration['config'], str):
+        try:
+            integration['config'] = json.loads(integration['config'])
+        except Exception:
+            pass
+    credentials = {}
+    if integration.get('api_token'):
+        credentials['api_token'] = '********'
+    if integration.get('api_key'):
+        credentials['api_key'] = integration['api_key'][:4] + '****'
+    if integration.get('username'):
+        credentials['username'] = integration['username']
+    if integration.get('password'):
+        credentials['password'] = '********'
+    integration['credentials'] = credentials
+    integration['is_active'] = integration.get('status') == 'active'
+    return integration
 
 
 @integrations_bp.route('', methods=['GET'])
@@ -29,24 +53,8 @@ def get_integrations():
         sql += " ORDER BY integration_type, id"
 
         integrations = Database.execute_query(sql, tuple(params))
-
         for integration in integrations:
-            if integration.get('credentials') and isinstance(integration['credentials'], str):
-                try:
-                    integration['credentials'] = json.loads(integration['credentials'])
-                except:
-                    pass
-
-            if integration.get('config') and isinstance(integration['config'], str):
-                try:
-                    integration['config'] = json.loads(integration['config'])
-                except:
-                    pass
-
-            if integration.get('credentials') and integration['credentials'].get('password'):
-                integration['credentials']['password'] = '********'
-            if integration.get('credentials') and integration['credentials'].get('api_token'):
-                integration['credentials']['api_token'] = '********'
+            _format_integration(integration)
 
         return jsonify(success_response(data={"integrations": integrations}))
     except Exception as e:
@@ -65,18 +73,7 @@ def get_integration_detail(integration_id):
         if not integration:
             return error_response("集成不存在", 404)
 
-        if integration.get('credentials') and isinstance(integration['credentials'], str):
-            try:
-                integration['credentials'] = json.loads(integration['credentials'])
-            except:
-                pass
-
-        if integration.get('config') and isinstance(integration['config'], str):
-            try:
-                integration['config'] = json.loads(integration['config'])
-            except:
-                pass
-
+        _format_integration(integration)
         return jsonify(success_response(data=integration))
     except Exception as e:
         logger.error(f"获取集成详情失败: {e}")
@@ -93,31 +90,42 @@ def create_integration():
         integration_type = data.get('integration_type', '').strip()
         name = data.get('name', '').strip()
         base_url = data.get('base_url', '').strip()
-        auth_type = data.get('auth_type', 'api_key')
+        auth_type = data.get('auth_type', 'apikey')
         credentials = data.get('credentials', {})
         config = data.get('config', {})
 
         if not integration_type or not name or not base_url:
             return error_response("集成类型、名称和URL不能为空")
 
-        if integration_type not in ['jenkins', 'zentao', 'gitlab', 'jira']:
-            return error_response("不支持的集成类型")
+        api_token = ''
+        api_key = ''
+        username = ''
+        password = ''
+
+        if isinstance(credentials, str):
+            try:
+                credentials = json.loads(credentials)
+            except Exception:
+                credentials = {}
 
         if isinstance(credentials, dict):
-            credentials = json.dumps(credentials)
+            api_token = credentials.get('api_token', '')
+            api_key = credentials.get('api_key', '')
+            username = credentials.get('username', '')
+            password = credentials.get('password', '')
 
         if isinstance(config, dict):
             config = json.dumps(config)
 
         sql = """
             INSERT INTO integration_config
-            (integration_type, name, base_url, auth_type, credentials, config, is_active, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s)
+            (integration_type, name, base_url, api_token, api_key, username, password, auth_type, config, status, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'active', %s)
         """
 
         Database.execute_update(
             sql,
-            (integration_type, name, base_url, auth_type, credentials, config, request.current_user['id'])
+            (integration_type, name, base_url, api_token, api_key, username, password, auth_type, config, request.current_user['id'])
         )
 
         result = Database.execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)
@@ -140,7 +148,6 @@ def update_integration(integration_id):
     try:
         data = request.get_json()
 
-        sql = "UPDATE integration_config SET updated_at = NOW()"
         updates = []
         params = []
 
@@ -157,12 +164,29 @@ def update_integration(integration_id):
             params.append(data['auth_type'])
 
         if 'credentials' in data:
-            updates.append("credentials = %s")
-            params.append(json.dumps(data['credentials']))
+            credentials = data['credentials']
+            if isinstance(credentials, str):
+                try:
+                    credentials = json.loads(credentials)
+                except Exception:
+                    credentials = {}
+            if isinstance(credentials, dict):
+                if 'api_token' in credentials:
+                    updates.append("api_token = %s")
+                    params.append(credentials['api_token'])
+                if 'api_key' in credentials:
+                    updates.append("api_key = %s")
+                    params.append(credentials['api_key'])
+                if 'username' in credentials:
+                    updates.append("username = %s")
+                    params.append(credentials['username'])
+                if 'password' in credentials:
+                    updates.append("password = %s")
+                    params.append(credentials['password'])
 
         if 'is_active' in data:
-            updates.append("is_active = %s")
-            params.append(data['is_active'])
+            updates.append("status = %s")
+            params.append('active' if data['is_active'] else 'inactive')
 
         if 'config' in data:
             updates.append("config = %s")
@@ -171,6 +195,7 @@ def update_integration(integration_id):
         if not updates:
             return error_response("没有需要更新的字段")
 
+        updates.append("updated_at = NOW()")
         sql = "UPDATE integration_config SET " + ", ".join(updates) + " WHERE id = %s"
         params.append(integration_id)
 
@@ -189,7 +214,7 @@ def update_integration(integration_id):
 def delete_integration(integration_id):
     """删除集成配置"""
     try:
-        sql = "UPDATE integration_config SET is_active = FALSE WHERE id = %s"
+        sql = "UPDATE integration_config SET status = 'inactive' WHERE id = %s"
         affected = Database.execute_update(sql, (integration_id,))
 
         if affected == 0:
@@ -208,8 +233,6 @@ def delete_integration(integration_id):
 def test_integration(integration_type):
     """测试集成连接"""
     try:
-        integration_id = request.json.get('integration_id')
-
         if integration_type == 'jenkins':
             from local_web_login.jenkins_api import jenkins_api_request, get_jenkins_config
             config = get_jenkins_config()

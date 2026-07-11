@@ -1,90 +1,320 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme) {
+                const theme = savedTheme === 'system' 
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : savedTheme;
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>集成配置 - 测试平台</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="sidebar-header"><i class="bi bi-shield-check" style="font-size: 28px;"></i><span style="font-size: 18px; font-weight: 600;">测试平台</span></div>
-        <div class="sidebar-nav">
-            <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="bi bi-house"></i><span>首页</span></a>
-            <a href="tasks.html" class="nav-item" data-page="tasks"><i class="bi bi-list-task"></i><span>测试任务</span></a>
-            <a href="ai-models.html" class="nav-item" data-page="ai-models"><i class="bi bi-cpu"></i><span>AI模型</span></a>
-            <a href="reports.html" class="nav-item" data-page="reports"><i class="bi bi-file-earmark-text"></i><span>测试报告</span></a>
-            <div class="nav-item" style="padding-left: 20px; color: rgba(255,255,255,0.4); font-size: 12px;">第三方集成</div>
-            <a href="integrations.html" class="nav-item active" data-page="integrations"><i class="bi bi-plug"></i><span>集成配置</span></a>
-            <a href="jenkins.html" class="nav-item" data-page="jenkins"><i class="bi bi-hdd"></i><span>Jenkins</span></a>
-            <a href="zentao.html" class="nav-item" data-page="zentao"><i class="bi bi-kanban"></i><span>禅道</span></a>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard.html">
+                <div class="brand-logo">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <span class="brand-text">自动化测试平台</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html"><i class="bi bi-house me-1"></i>首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks.html"><i class="bi bi-list-task me-1"></i>测试任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-models.html"><i class="bi bi-cpu me-1"></i>AI模型</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-agents.html"><i class="bi bi-robot me-1"></i>AI智能体</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html"><i class="bi bi-file-earmark-text me-1"></i>测试报告</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle active" href="#" id="integrationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plug me-1"></i>第三方集成
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item active" href="/integrations.html"><i class="bi bi-gear me-2"></i>集成配置</a></li>
+                            <li><a class="dropdown-item" href="/jenkins.html"><i class="bi bi-hdd me-2"></i>Jenkins</a></li>
+                            <li><a class="dropdown-item" href="/zentao.html"><i class="bi bi-kanban me-2"></i>禅道</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()">
+                        <i class="bi bi-clock-history me-1"></i>最近监控
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="recentMonitorsDropdown" style="min-width: 250px;">
+                        <li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>
+                    </ul>
+                </div>
+                
+                <!-- 现代化主题切换下拉组件 -->
+                <div class="theme-dropdown-wrapper me-3">
+                    <button class="theme-toggle-btn">
+                        <span class="theme-icon"></span>
+                        <span class="theme-label"></span>
+                        <i class="bi bi-chevron-down ms-2" style="font-size: 12px;"></i>
+                    </button>
+                    <div class="theme-dropdown-menu">
+                        <div class="theme-dropdown-header">主题模式</div>
+                        
+                        <div class="theme-option" data-theme="light">
+                            <div class="theme-option-icon">☀️</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">日间模式</div>
+                                <div class="theme-option-desc">明亮清爽的浅色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-option-icon">🌙</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">夜间模式</div>
+                                <div class="theme-option-desc">护眼舒适的深色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="system">
+                            <div class="theme-option-icon">💻</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">跟随系统</div>
+                                <div class="theme-option-desc">自动跟随系统设置切换</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 用户管理下拉菜单 (GitHub风格) -->
+                <div class="user-menu-wrapper">
+                    <button class="user-menu-btn">
+                        <img class="user-avatar" src="" alt="头像" style="display: none;">
+                        <div class="user-avatar-placeholder">A</div>
+                        <span class="user-name" id="currentUser">管理员</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <div class="user-menu-header">
+                            <div class="user-info">
+                                <img class="user-avatar-large" src="" alt="头像" style="display: none;">
+                                <div class="user-avatar-large-placeholder">A</div>
+                                <div class="user-details">
+                                    <div class="user-fullname" id="userFullname">管理员</div>
+                                    <div class="user-email" id="userEmail">-</div>
+                                </div>
+                            </div>
+                            <button class="edit-profile-btn" id="editProfileBtn">编辑个人资料</button>
+                        </div>
+                        
+                        <button class="user-menu-item" id="uploadAvatarBtn">
+                            <i class="bi bi-camera menu-icon"></i>
+                            <span class="menu-text">上传头像</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changeUsernameBtn">
+                            <i class="bi bi-pencil menu-icon"></i>
+                            <span class="menu-text">修改用户名</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changePasswordBtn">
+                            <i class="bi bi-lock menu-icon"></i>
+                            <span class="menu-text">修改密码</span>
+                        </button>
+                        
+                        <div class="user-menu-divider"></div>
+                        
+                        <button class="user-menu-item user-menu-item-danger" id="deleteAccountBtn">
+                            <i class="bi bi-trash menu-icon"></i>
+                            <span class="menu-text">注销账号</span>
+                        </button>
+                        
+                        <div class="user-menu-footer">
+                            <button class="user-menu-item" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right menu-icon"></i>
+                                <span class="menu-text">退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div style="position: absolute; bottom: 20px; left: 0; right: 0; padding: 0 20px;">
-            <div class="nav-item" onclick="logout()"><i class="bi bi-box-arrow-right"></i><span>退出登录</span></div>
-        </div>
-    </div>
+    </nav>
 
-    <div class="main-content">
-        <div class="page-header d-flex justify-content-between align-items-center">
-            <h2 class="page-title">集成配置</h2>
-            <button class="btn btn-primary" onclick="showCreateModal()" data-tooltip="添加新的第三方集成配置"><i class="bi bi-plus-circle me-1"></i>添加配置</button>
+    <div class="container-fluid py-4 px-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-0">集成配置</h4>
+                <p class="text-muted mb-0">管理第三方系统集成配置</p>
+            </div>
+            <button class="btn btn-primary" onclick="showCreateModal()" title="添加新的第三方集成配置"><i class="bi bi-plus-circle me-1"></i>添加配置</button>
         </div>
 
         <div class="card">
             <div class="card-body">
-                <table class="table table-hover">
-                    <thead><tr><th>ID</th><th>名称</th><th>类型</th><th>URL</th><th>状态</th><th>操作</th></tr></thead>
-                    <tbody id="integrationsBody"><tr><td colspan="6" class="text-center">加载中...</td></tr></tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead><tr><th>ID</th><th>名称</th><th>类型</th><th>URL</th><th>状态</th><th>默认</th><th>操作</th></tr></thead>
+                        <tbody id="integrationsBody"><tr><td colspan="7" class="text-center">加载中...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade" id="createModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header"><h5 class="modal-title">添加集成配置</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <form id="createForm">
                         <div class="mb-3">
                             <label class="form-label">集成类型 *</label>
-                            <select class="form-select" name="integration_type" required data-tooltip="选择要集成的第三方系统类型">
+                            <select class="form-select" name="integration_type" required title="选择要集成的第三方系统类型">
                                 <option value="">请选择</option>
                                 <option value="jenkins">Jenkins</option>
                                 <option value="zentao">禅道</option>
                             </select>
                         </div>
-                        <div class="mb-3"><label class="form-label">名称 *</label><input type="text" class="form-control" name="name" required data-tooltip="为此集成配置指定一个易识别的名称"></div>
-                        <div class="mb-3"><label class="form-label">服务地址 *</label><input type="text" class="form-control" name="base_url" placeholder="http://example.com" required data-tooltip="第三方系统的访问地址，包含协议和域名"></div>
+                        <div class="mb-3"><label class="form-label">名称 *</label><input type="text" class="form-control" name="name" required title="为此集成配置指定一个易识别的名称"></div>
+                        <div class="mb-3"><label class="form-label">服务地址 *</label><input type="text" class="form-control" name="base_url" placeholder="http://example.com" required title="第三方系统的访问地址，包含协议和域名"></div>
                         <div class="jenkins-fields" style="display:none;">
-                            <div class="mb-3"><label class="form-label">用户名</label><input type="text" class="form-control" name="username" data-tooltip="Jenkins账户用户名，用于API认证"></div>
-                            <div class="mb-3"><label class="form-label">API Token</label><input type="password" class="form-control" name="api_token" data-tooltip="Jenkins用户的API Token，可在用户设置中生成"></div>
+                            <div class="mb-3"><label class="form-label">用户名</label><input type="text" class="form-control" name="username" title="Jenkins账户用户名，用于API认证"></div>
+                            <div class="mb-3"><label class="form-label">API Token</label><input type="password" class="form-control" name="api_token" title="Jenkins用户的API Token，可在用户设置中生成"></div>
                         </div>
                         <div class="zentao-fields" style="display:none;">
-                            <div class="mb-3"><label class="form-label">账户</label><input type="text" class="form-control" name="account" data-tooltip="禅道系统的登录账户"></div>
-                            <div class="mb-3"><label class="form-label">密码</label><input type="password" class="form-control" name="password" data-tooltip="禅道账户的登录密码"></div>
+                            <div class="mb-3"><label class="form-label">账户</label><input type="text" class="form-control" name="account" title="禅道系统的登录账户"></div>
+                            <div class="mb-3"><label class="form-label">密码</label><input type="password" class="form-control" name="password" title="禅道账户的登录密码"></div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" data-tooltip="取消并关闭对话框">取消</button>
-                    <button type="button" class="btn btn-primary" onclick="createIntegration()" data-tooltip="保存配置到系统">保存</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="取消并关闭对话框">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="createIntegration()" title="保存配置到系统">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">编辑集成配置</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" name="id" id="editIntegrationId">
+                        <div class="mb-3">
+                            <label class="form-label">集成类型</label>
+                            <select class="form-select" name="integration_type" id="editIntegrationType" disabled>
+                                <option value="jenkins">Jenkins</option>
+                                <option value="zentao">禅道</option>
+                            </select>
+                            <small class="text-muted">集成类型不可修改</small>
+                        </div>
+                        <div class="mb-3"><label class="form-label">名称 *</label><input type="text" class="form-control" name="name" id="editName" required></div>
+                        <div class="mb-3"><label class="form-label">服务地址 *</label><input type="text" class="form-control" name="base_url" id="editBaseUrl" required></div>
+                        <div class="jenkins-edit-fields" style="display:none;">
+                            <div class="mb-3"><label class="form-label">用户名</label><input type="text" class="form-control" name="username" id="editUsername"></div>
+                            <div class="mb-3"><label class="form-label">API Token</label><input type="password" class="form-control" name="api_token" id="editApiToken" placeholder="留空则不修改"></div>
+                            <small class="text-muted">留空表示不修改API Token</small>
+                        </div>
+                        <div class="zentao-edit-fields" style="display:none;">
+                            <div class="mb-3"><label class="form-label">账户</label><input type="text" class="form-control" name="account" id="editAccount"></div>
+                            <div class="mb-3"><label class="form-label">密码</label><input type="password" class="form-control" name="password" id="editPassword" placeholder="留空则不修改"></div>
+                            <small class="text-muted">留空表示不修改密码</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" title="取消并关闭对话框">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="updateIntegration()" title="保存更改">保存更改</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="static/js/app.js"></script>
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/crypto.js"></script>
+<script src="/static/js/user-menu.js"></script>
     <script>
         let createModal = null;
+        let editModal = null;
+        let currentEditData = null;
+
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            if (confirm('确定要退出登录吗？')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = 'index.html';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            if (!isLoggedIn()) { window.location.href = 'index.html'; return; }
-            createModal = new bootstrap.Modal(document.getElementById('createModal'));
-            document.querySelector('[name="integration_type"]').addEventListener('change', toggleFields);
-            loadIntegrations();
+            if (checkAuth()) {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const displayName = user.nickname || user.username || '管理员';
+                document.getElementById('currentUser').textContent = displayName;
+                const userFullnameEl = document.getElementById('userFullname');
+                const userEmailEl = document.getElementById('userEmail');
+                if (userFullnameEl) userFullnameEl.textContent = displayName;
+                if (userEmailEl) userEmailEl.textContent = user.email || '-';
+                const avatarPlaceholder = document.querySelector('.user-avatar-placeholder');
+                const avatarLargePlaceholder = document.querySelector('.user-avatar-large-placeholder');
+                const firstLetter = (displayName.charAt(0) || 'A').toUpperCase();
+                if (avatarPlaceholder) avatarPlaceholder.textContent = firstLetter;
+                if (avatarLargePlaceholder) avatarLargePlaceholder.textContent = firstLetter;
+                createModal = new bootstrap.Modal(document.getElementById('createModal'));
+                editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                document.querySelector('[name="integration_type"]').addEventListener('change', toggleFields);
+                loadIntegrations();
+            }
         });
 
         function toggleFields() {
@@ -102,20 +332,41 @@
 
         function renderIntegrations(integrations) {
             const tbody = document.getElementById('integrationsBody');
-            if (!integrations.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">暂无配置</td></tr>'; return; }
-            tbody.innerHTML = integrations.map(i => `
+            if (!integrations.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center">暂无配置</td></tr>'; return; }
+            tbody.innerHTML = integrations.map((i, idx) => `
                 <tr>
-                    <td>${i.id}</td>
+                    <td>${idx + 1}</td>
                     <td>${i.name}</td>
                     <td>${i.integration_type}</td>
                     <td>${i.base_url}</td>
                     <td><span class="badge bg-${i.is_active ? 'success' : 'secondary'}">${i.is_active ? '启用' : '禁用'}</span></td>
+                    <td>${i.is_default ? '<span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>默认</span>' : '<span class="text-muted">-</span>'}</td>
                     <td>
-                        <button class="btn btn-sm btn-primary me-1" onclick="testIntegration('${i.integration_type}')" data-tooltip="测试该集成配置的连接是否正常">测试</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteIntegration(${i.id})" data-tooltip="删除该集成配置，删除后不可恢复">删除</button>
+                        <button class="btn btn-sm btn-success me-1" onclick="editIntegration(${i.id}, event)" title="编辑该集成配置">编辑</button>
+                        <button class="btn btn-sm btn-primary me-1" onclick="testIntegration(${i.id}, '${i.integration_type}', event)" title="测试该集成配置的连接是否正常">测试</button>
+                        ${!i.is_default ? `<button class="btn btn-sm btn-warning me-1" onclick="setDefaultIntegration(${i.id}, event)" title="设为默认配置，Jenkins/禅道页面将优先使用该配置">设为默认</button>` : ''}
+                        <button class="btn btn-sm btn-danger" onclick="deleteIntegration(${i.id}, event)" title="删除该集成配置，删除后不可恢复">删除</button>
                     </td>
                 </tr>
             `).join('');
+            if (typeof initTooltips === 'function') {
+                initTooltips();
+            }
+        }
+
+        async function setDefaultIntegration(id, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            try {
+                const response = await API.integrations.setDefault(id);
+                if (response.code === 200) {
+                    showToast('已设为默认配置', 'success');
+                    loadIntegrations();
+                } else {
+                    showToast(response.message || '设置失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.message || '设置失败', 'error');
+            }
         }
 
         function showCreateModal() { document.getElementById('createForm').reset(); toggleFields(); createModal.show(); }
@@ -139,16 +390,111 @@
             } catch (error) { showToast(error.message, 'error'); }
         }
 
-        async function testIntegration(type) {
+        async function testIntegration(id, type, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            showToast('测试连接中...', 'info');
             try {
-                const response = await API.integrations.test(type);
-                if (response.code === 200) showToast(response.message, 'success');
-            } catch (error) { showToast('测试失败', 'error'); }
+                const response = await API.integrations.testById(id);
+                if (response.code === 200) {
+                    if (response.data && response.data.connected === false) {
+                        showToast(response.data.message || '连接失败', 'error');
+                    } else {
+                        showToast('测试成功', 'success');
+                    }
+                } else {
+                    showToast(response.message || '测试失败', 'error');
+                }
+            } catch (error) { showToast(error.message || '测试失败', 'error'); }
         }
 
-        async function deleteIntegration(id) { if (!confirm('删除?')) return; try { const r = await API.integrations.delete(id); if (r.code === 200) { showToast('已删除', 'success'); loadIntegrations(); } } catch (e) { showToast(e.message, 'error'); } }
-        function logout() { if (confirm('退出?')) { localStorage.clear(); window.location.href = 'index.html'; } }
+        async function deleteIntegration(id, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            if (!confirm('确定要删除该配置吗？')) return;
+            try {
+                const r = await API.integrations.delete(id);
+                if (r.code === 200) { showToast('已删除', 'success'); loadIntegrations(); }
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        function editIntegration(id, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const tbody = document.getElementById('integrationsBody');
+            const rows = tbody.querySelectorAll('tr');
+            let integrationData = null;
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 6 && cells[0].textContent == id) {
+                    integrationData = {
+                        id: id,
+                        integration_type: cells[2].textContent,
+                        name: cells[1].textContent,
+                        base_url: cells[3].textContent,
+                        is_active: cells[4].textContent.trim() === '启用'
+                    };
+                }
+            });
+            if (!integrationData) {
+                showToast('未找到集成配置数据', 'error');
+                return;
+            }
+            currentEditData = integrationData;
+            document.getElementById('editIntegrationId').value = integrationData.id;
+            document.getElementById('editIntegrationType').value = integrationData.integration_type;
+            document.getElementById('editName').value = integrationData.name;
+            document.getElementById('editBaseUrl').value = integrationData.base_url;
+
+            // 清空凭证字段（留空表示不修改）
+            document.getElementById('editUsername').value = '';
+            document.getElementById('editApiToken').value = '';
+            document.getElementById('editAccount').value = '';
+            document.getElementById('editPassword').value = '';
+
+            // 显示对应的字段区域
+            document.querySelector('.jenkins-edit-fields').style.display = integrationData.integration_type === 'jenkins' ? 'block' : 'none';
+            document.querySelector('.zentao-edit-fields').style.display = integrationData.integration_type === 'zentao' ? 'block' : 'none';
+
+            editModal.show();
+        }
+
+        async function updateIntegration() {
+            const id = document.getElementById('editIntegrationId').value;
+            const type = document.getElementById('editIntegrationType').value;
+            const data = {
+                name: document.getElementById('editName').value,
+                base_url: document.getElementById('editBaseUrl').value
+            };
+
+            // 只添加非空的凭证字段
+            if (type === 'jenkins') {
+                const username = document.getElementById('editUsername').value;
+                const apiToken = document.getElementById('editApiToken').value;
+                if (username) data.username = username;
+                if (apiToken) data.api_token = apiToken;
+            } else if (type === 'zentao') {
+                const account = document.getElementById('editAccount').value;
+                const password = document.getElementById('editPassword').value;
+                if (account) data.account = account;
+                if (password) data.password = password;
+            }
+
+            if (!data.name || !data.base_url) {
+                showToast('名称和服务地址不能为空', 'error');
+                return;
+            }
+
+            try {
+                const response = await API.integrations.update(id, data);
+                if (response.code === 200) {
+                    showToast('更新成功', 'success');
+                    editModal.hide();
+                    loadIntegrations();
+                } else {
+                    showToast(response.message || '更新失败', 'error');
+                }
+            } catch (error) {
+                showToast(error.message || '更新失败', 'error');
+            }
+        }
     </script>
-    <script src="static/js/tooltips.js"></script>
 </body>
 </html>

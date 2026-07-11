@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS `test_execution` (
     `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '执行ID',
     `execution_id` VARCHAR(36) NOT NULL UNIQUE COMMENT '执行UUID',
     `task_id` INT NOT NULL COMMENT '任务ID',
+    `task_name` VARCHAR(255) COMMENT '任务名称（冗余存储，任务删除后仍可显示）',
     `user_id` INT COMMENT '执行者ID',
     `status` ENUM('pending', 'running', 'success', 'failed', 'stopped') DEFAULT 'pending' COMMENT '执行状态',
     `start_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
@@ -66,13 +67,17 @@ CREATE TABLE IF NOT EXISTS `test_execution` (
     `exit_code` INT COMMENT '退出码',
     `result_summary` JSON COMMENT '结果摘要（passed, failed, skipped, errors数量）',
     `trigger_type` ENUM('manual', 'scheduled', 'api', 'jenkins') DEFAULT 'manual' COMMENT '触发方式',
+    `test_type` VARCHAR(50) DEFAULT 'api' COMMENT '测试类型: api, ui, smoke, android, ios, windows, linux, harmony, service, performance, ai, whitebox',
+    `test_scene` VARCHAR(50) DEFAULT 'other' COMMENT '测试场景: platform, external, local, other',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     INDEX `idx_execution_id` (`execution_id`),
     INDEX `idx_task_id` (`task_id`),
     INDEX `idx_user_id` (`user_id`),
     INDEX `idx_status` (`status`),
     INDEX `idx_start_time` (`start_time`),
-    FOREIGN KEY (`task_id`) REFERENCES `test_task`(`id`) ON DELETE CASCADE,
+    INDEX `idx_test_type` (`test_type`),
+    INDEX `idx_test_scene` (`test_scene`),
+    FOREIGN KEY (`task_id`) REFERENCES `test_task`(`id`) ON DELETE SET NULL,
     FOREIGN KEY (`user_id`) REFERENCES `platform_user`(`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试执行记录表';
 
@@ -83,6 +88,7 @@ CREATE TABLE IF NOT EXISTS `test_report` (
     `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '报告ID',
     `execution_id` VARCHAR(36) NOT NULL COMMENT '执行UUID',
     `task_id` INT NOT NULL COMMENT '任务ID',
+    `report_name` VARCHAR(255) COMMENT '报告名称（时间戳_测试类型）',
     `report_type` ENUM('json', 'html', 'allure', 'junit') DEFAULT 'json' COMMENT '报告类型',
     `report_path` VARCHAR(500) COMMENT '报告文件路径',
     `report_data` JSON COMMENT '报告数据（JSON格式）',
@@ -100,6 +106,29 @@ CREATE TABLE IF NOT EXISTS `test_report` (
     INDEX `idx_report_type` (`report_type`),
     INDEX `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试报告表';
+
+-- =============================================
+-- 4.1 测试用例结果表（存储每个测试用例的执行结果）
+-- =============================================
+CREATE TABLE IF NOT EXISTS `test_case_result` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '结果ID',
+    `execution_id` VARCHAR(36) NOT NULL COMMENT '执行UUID',
+    `case_name` VARCHAR(255) NOT NULL COMMENT '测试用例名称',
+    `case_path` VARCHAR(500) COMMENT '测试用例路径',
+    `status` ENUM('passed', 'failed', 'skipped', 'error', 'broken') DEFAULT 'passed' COMMENT '执行状态',
+    `duration` DECIMAL(10,3) DEFAULT 0 COMMENT '执行时长（秒）',
+    `stdout` TEXT COMMENT '标准输出',
+    `stderr` TEXT COMMENT '标准错误',
+    `error_type` VARCHAR(100) COMMENT '错误类型',
+    `error_message` TEXT COMMENT '错误信息',
+    `stack_trace` TEXT COMMENT '堆栈信息',
+    `attachments` JSON COMMENT '附件列表',
+    `metadata` JSON COMMENT '元数据',
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX `idx_execution_id` (`execution_id`),
+    INDEX `idx_status` (`status`),
+    INDEX `idx_case_name` (`case_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试用例结果表';
 
 -- =============================================
 -- 5. AI模型配置表
@@ -142,13 +171,15 @@ CREATE TABLE IF NOT EXISTS `integration_config` (
     `auth_type` ENUM('token', 'basic', 'oauth', 'apikey') DEFAULT 'token' COMMENT '认证类型',
     `config` JSON COMMENT '其他配置',
     `status` ENUM('active', 'inactive', 'error') DEFAULT 'active' COMMENT '状态',
+    `is_default` TINYINT DEFAULT 0 COMMENT '是否默认配置',
     `last_sync` DATETIME COMMENT '最后同步时间',
     `remark` TEXT COMMENT '备注',
     `created_by` INT COMMENT '创建者',
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     INDEX `idx_integration_type` (`integration_type`),
-    INDEX `idx_status` (`status`)
+    INDEX `idx_status` (`status`),
+    INDEX `idx_is_default` (`is_default`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='集成配置表';
 
 -- =============================================

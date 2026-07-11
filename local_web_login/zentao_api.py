@@ -1,5 +1,6 @@
 """
 禅道集成API
+适配web_platform数据库表结构
 """
 from flask import Blueprint, request, jsonify
 from local_web_login.backend_server import (
@@ -7,6 +8,7 @@ from local_web_login.backend_server import (
     Database
 )
 import requests
+import json
 from utils.tools.logger import log as logger
 
 zentao_bp = Blueprint('zentao', __name__, url_prefix='/api/integrations/zentao')
@@ -16,7 +18,7 @@ def get_zentao_config():
     """获取禅道配置"""
     sql = """
         SELECT * FROM integration_config
-        WHERE integration_type = 'zentao' AND is_active = TRUE
+        WHERE integration_type = 'zentao' AND status = 'active'
         LIMIT 1
     """
     return Database.execute_query(sql, fetch_one=True)
@@ -29,33 +31,33 @@ def zentao_api_request(method, api_path, data=None):
     if not config:
         return None, "禅道未配置"
 
-    credentials = config.get('credentials', '{}')
-    if isinstance(credentials, str):
-        import json
-        credentials = json.loads(credentials)
-
-    account = credentials.get('account', '')
-    password = credentials.get('password', '')
+    account = config.get('username', '')
+    password = config.get('password', '')
 
     if not account or not password:
         return None, "禅道凭证未配置"
 
     base_url = config['base_url'].rstrip('/')
-    session_key = credentials.get('session_key', 'zentaosid')
-
     url = f"{base_url}/{api_path}"
 
-    cookies = {session_key: credentials.get('session_value', '')}
-
-    headers = {
-        "Content-Type": "application/json"
-    }
-
     try:
+        token_info, error = zentao_get_session()
+        if error:
+            return None, error
+
+        headers = {
+            "Content-Type": "application/json",
+            "Token": token_info['token']
+        }
+
         if method == 'GET':
-            response = requests.get(url, headers=headers, cookies=cookies, timeout=10)
+            response = requests.get(url, headers=headers, timeout=10)
         elif method == 'POST':
-            response = requests.post(url, headers=headers, json=data, cookies=cookies, timeout=30)
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+        elif method == 'PUT':
+            response = requests.put(url, headers=headers, json=data, timeout=30)
+        elif method == 'DELETE':
+            response = requests.delete(url, headers=headers, timeout=10)
         else:
             return None, f"不支持的请求方法: {method}"
 
@@ -73,14 +75,9 @@ def zentao_get_session():
     if not config:
         return None, "禅道未配置"
 
-    credentials = config.get('credentials', '{}')
-    if isinstance(credentials, str):
-        import json
-        credentials = json.loads(credentials)
-
     base_url = config['base_url'].rstrip('/')
-    account = credentials.get('account', '')
-    password = credentials.get('password', '')
+    account = config.get('username', '')
+    password = config.get('password', '')
 
     url = f"{base_url}/api.php/v1/tokens"
 
@@ -105,40 +102,7 @@ def zentao_get_session():
         return None, f"获取Session失败: {str(e)}"
 
 
-def zentao_api_request_with_auth(method, api_path, data=None):
-    """禅道API请求（带认证）"""
-    token_info, error = zentao_get_session()
-
-    if error:
-        return None, error
-
-    config = get_zentao_config()
-    base_url = config['base_url'].rstrip('/')
-
-    url = f"{base_url}/{api_path}"
-
-    headers = {
-        "Content-Type": "application/json",
-        "Token": token_info['token']
-    }
-
-    try:
-        if method == 'GET':
-            response = requests.get(url, headers=headers, timeout=10)
-        elif method == 'POST':
-            response = requests.post(url, headers=headers, json=data, timeout=30)
-        elif method == 'PUT':
-            response = requests.put(url, headers=headers, json=data, timeout=30)
-        elif method == 'DELETE':
-            response = requests.delete(url, headers=headers, timeout=10)
-        else:
-            return None, f"不支持的请求方法: {method}"
-
-        return response, None
-    except requests.exceptions.Timeout:
-        return None, "禅道请求超时"
-    except requests.exceptions.RequestException as e:
-        return None, f"禅道请求失败: {str(e)}"
+zentao_api_request_with_auth = zentao_api_request
 
 
 @zentao_bp.route('/status', methods=['GET'])
@@ -184,7 +148,7 @@ def check_status():
 def get_products():
     """获取产品列表"""
     try:
-        response, error = zentao_api_request_with_auth('GET', 'api.php/v1/products')
+        response, error = zentao_api_request('GET', 'api.php/v1/products')
 
         if error:
             return error_response(error, 400)
@@ -193,7 +157,6 @@ def get_products():
             return error_response(f"禅道返回错误: {response.status_code}", 400)
 
         data = response.json()
-
         products = data.get('data', [])
 
         return jsonify(success_response(
@@ -213,7 +176,7 @@ def get_products():
 def get_product_detail(product_id):
     """获取产品详情"""
     try:
-        response, error = zentao_api_request_with_auth('GET', f'api.php/v1/products/{product_id}')
+        response, error = zentao_api_request('GET', f'api.php/v1/products/{product_id}')
 
         if error:
             return error_response(error, 400)
@@ -222,7 +185,6 @@ def get_product_detail(product_id):
             return error_response(f"禅道返回错误: {response.status_code}", 400)
 
         data = response.json()
-
         return jsonify(success_response(data=data.get('data', {})))
 
     except Exception as e:
@@ -243,7 +205,7 @@ def get_cases():
         if product_id:
             api_path += f'&product_id={product_id}'
 
-        response, error = zentao_api_request_with_auth('GET', api_path)
+        response, error = zentao_api_request('GET', api_path)
 
         if error:
             return error_response(error, 400)
@@ -252,7 +214,6 @@ def get_cases():
             return error_response(f"禅道返回错误: {response.status_code}", 400)
 
         data = response.json()
-
         cases = data.get('data', [])
         total = data.get('total', len(cases))
 
@@ -270,67 +231,6 @@ def get_cases():
         return error_response("获取测试用例列表失败", 500)
 
 
-@zentao_bp.route('/cases/<int:case_id>', methods=['GET'])
-@login_required
-def get_case_detail(case_id):
-    """获取用例详情"""
-    try:
-        response, error = zentao_api_request_with_auth('GET', f'api.php/v1/testcases/{case_id}')
-
-        if error:
-            return error_response(error, 400)
-
-        if response.status_code != 200:
-            return error_response(f"禅道返回错误: {response.status_code}", 400)
-
-        data = response.json()
-
-        return jsonify(success_response(data=data.get('data', {})))
-
-    except Exception as e:
-        logger.error(f"获取用例详情失败: {e}")
-        return error_response("获取用例详情失败", 500)
-
-
-@zentao_bp.route('/cases/<int:case_id>/execute', methods=['POST'])
-@login_required
-def execute_case(case_id):
-    """执行测试用例"""
-    try:
-        data = request.get_json()
-
-        run_type = data.get('run_type', 'manual')
-        version = data.get('version', 1)
-
-        api_path = f'api.php/v1/testruns'
-        request_data = {
-            "product": data.get('product_id', 1),
-            "execution": data.get('execution', 1),
-            "cases": [str(case_id)],
-            "version": version,
-            "run_type": run_type
-        }
-
-        response, error = zentao_api_request_with_auth('POST', api_path, request_data)
-
-        if error:
-            return error_response(error, 400)
-
-        if response.status_code not in [200, 201]:
-            return error_response(f"禅道返回错误: {response.status_code}", 400)
-
-        result = response.json()
-
-        return jsonify(success_response(
-            data=result.get('data', {}),
-            message="测试用例已开始执行"
-        ))
-
-    except Exception as e:
-        logger.error(f"执行测试用例失败: {e}")
-        return error_response("执行测试用例失败", 500)
-
-
 @zentao_bp.route('/bugs', methods=['GET'])
 @login_required
 def get_bugs():
@@ -344,7 +244,7 @@ def get_bugs():
         if product_id:
             api_path += f'&product_id={product_id}'
 
-        response, error = zentao_api_request_with_auth('GET', api_path)
+        response, error = zentao_api_request('GET', api_path)
 
         if error:
             return error_response(error, 400)
@@ -353,7 +253,6 @@ def get_bugs():
             return error_response(f"禅道返回错误: {response.status_code}", 400)
 
         data = response.json()
-
         bugs = data.get('data', [])
         total = data.get('total', len(bugs))
 
@@ -399,7 +298,7 @@ def create_bug():
         if assigned_to:
             bug_data["assignedTo"] = assigned_to
 
-        response, error = zentao_api_request_with_auth('POST', api_path, bug_data)
+        response, error = zentao_api_request('POST', api_path, bug_data)
 
         if error:
             return error_response(error, 400)
@@ -409,12 +308,6 @@ def create_bug():
 
         result = response.json()
         bug_id = result.get('data', {}).get('id', 0)
-
-        Database.execute_update(
-            """INSERT INTO test_execution (task_id, executor_id, status, logs)
-               VALUES (0, %s, 'failed', %s)""",
-            (request.current_user['id'], f"创建禅道Bug: {bug_id}")
-        )
 
         return jsonify(success_response(
             data={
@@ -442,7 +335,7 @@ def get_executions():
         if product_id:
             api_path += f'&product_id={product_id}'
 
-        response, error = zentao_api_request_with_auth('GET', api_path)
+        response, error = zentao_api_request('GET', api_path)
 
         if error:
             return error_response(error, 400)
@@ -451,7 +344,6 @@ def get_executions():
             return error_response(f"禅道返回错误: {response.status_code}", 400)
 
         data = response.json()
-
         executions = data.get('data', [])
         total = data.get('total', len(executions))
 
@@ -469,28 +361,6 @@ def get_executions():
         return error_response("获取测试执行列表失败", 500)
 
 
-@zentao_bp.route('/executions/<int:execution_id>', methods=['GET'])
-@login_required
-def get_execution_detail(execution_id):
-    """获取执行详情"""
-    try:
-        response, error = zentao_api_request_with_auth('GET', f'api.php/v1/testtasks/{execution_id}')
-
-        if error:
-            return error_response(error, 400)
-
-        if response.status_code != 200:
-            return error_response(f"禅道返回错误: {response.status_code}", 400)
-
-        data = response.json()
-
-        return jsonify(success_response(data=data.get('data', {})))
-
-    except Exception as e:
-        logger.error(f"获取执行详情失败: {e}")
-        return error_response("获取执行详情失败", 500)
-
-
 @zentao_bp.route('/sync/cases', methods=['POST'])
 @login_required
 def sync_cases():
@@ -499,7 +369,7 @@ def sync_cases():
         data = request.get_json()
         product_id = data.get('product_id', 1)
 
-        response, error = zentao_api_request_with_auth('GET', f'api.php/v1/testcases?product_id={product_id}')
+        response, error = zentao_api_request('GET', f'api.php/v1/testcases?product_id={product_id}')
 
         if error:
             return error_response(error, 400)
@@ -514,7 +384,7 @@ def sync_cases():
 
         for case in cases:
             sql = """
-                INSERT INTO test_task (name, description, task_type, target_url, created_by)
+                INSERT INTO test_task (name, description, test_type, test_path, created_by)
                 VALUES (%s, %s, 'zentao', %s, %s)
                 ON DUPLICATE KEY UPDATE
                     description = VALUES(description),

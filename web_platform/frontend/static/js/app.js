@@ -62,7 +62,32 @@ const API = {
             body: JSON.stringify(data)
         }),
 
-        getProfile: () => apiRequest('/auth/profile')
+        forgotPassword: (email, newPassword) => apiRequest('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email, new_password: newPassword })
+        }),
+
+        getProfile: () => apiRequest('/auth/profile'),
+        
+        updateProfile: (nickname, email) => apiRequest('/auth/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ nickname, email })
+        }),
+        
+        changePassword: (oldPassword, newPassword) => apiRequest('/auth/password', {
+            method: 'PUT',
+            body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+        }),
+        
+        updateUsername: (username) => apiRequest('/auth/username', {
+            method: 'PUT',
+            body: JSON.stringify({ username })
+        }),
+        
+        deleteAccount: (password) => apiRequest('/auth/account', {
+            method: 'DELETE',
+            body: JSON.stringify({ password })
+        })
     },
 
     // 任务
@@ -192,6 +217,14 @@ const API = {
 
         test: (type) => apiRequest(`/integrations/${type}/test`, {
             method: 'POST'
+        }),
+
+        testById: (id) => apiRequest(`/integrations/test/${id}`, {
+            method: 'POST'
+        }),
+
+        setDefault: (id) => apiRequest(`/integrations/${id}/default`, {
+            method: 'POST'
         })
     },
 
@@ -203,10 +236,37 @@ const API = {
         },
 
         detail: (id) => apiRequest(`/reports/${id}`)
+    },
+
+    // 执行记录
+    executions: {
+        list: (params = {}) => {
+            const query = new URLSearchParams(params).toString();
+            return apiRequest(`/executions${query ? '?' + query : ''}`);
+        },
+
+        status: (executionId) => apiRequest(`/execution/${executionId}/status`),
+
+        logs: (executionId, params = {}) => {
+            const query = new URLSearchParams(params).toString();
+            return apiRequest(`/execution/${executionId}/logs${query ? '?' + query : ''}`);
+        },
+
+        stop: (executionId) => apiRequest(`/execution/${executionId}/stop`, {
+            method: 'POST'
+        }),
+
+        batchDelete: (executionIds) => apiRequest('/executions/batch-delete', {
+            method: 'POST',
+            body: JSON.stringify({ execution_ids: executionIds })
+        })
     }
 };
 
 // 显示提示消息
+let _toastTimer = null;
+let _currentToast = null;
+
 function showToast(message, type = 'success') {
     const colors = {
         success: '#52c41a',
@@ -215,40 +275,53 @@ function showToast(message, type = 'success') {
         info: '#1890ff'
     };
 
+    if (_currentToast && _currentToast.parentNode) {
+        _currentToast.remove();
+        if (_toastTimer) clearTimeout(_toastTimer);
+    }
+
+    const navbar = document.querySelector('.navbar');
+    const navbarHeight = navbar ? navbar.offsetHeight + 15 : 80;
+
     const toast = document.createElement('div');
     toast.className = 'toast-message';
     toast.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 20px;
+        top: ${navbarHeight}px;
+        left: 50%;
+        transform: translateX(-50%);
         padding: 12px 24px;
         background: ${colors[type]};
         color: white;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 9999;
-        animation: slideIn 0.3s ease;
+        z-index: 2147483647;
+        animation: fadeInDown 0.3s ease;
     `;
     toast.textContent = message;
 
     document.body.appendChild(toast);
+    _currentToast = toast;
 
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
+    _toastTimer = setTimeout(() => {
+        toast.style.animation = 'fadeOutUp 0.3s ease';
+        setTimeout(() => {
+            if (toast.parentNode) toast.remove();
+            _currentToast = null;
+        }, 300);
     }, 3000);
 }
 
 // 添加动画样式
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+    @keyframes fadeInDown {
+        from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
     }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
+    @keyframes fadeOutUp {
+        from { transform: translateX(-50%) translateY(0); opacity: 1; }
+        to { transform: translateX(-50%) translateY(-20px); opacity: 0; }
     }
 `;
 document.head.appendChild(style);
@@ -256,7 +329,17 @@ document.head.appendChild(style);
 // 格式化时间
 function formatDateTime(dateString) {
     if (!dateString) return '-';
-    const date = new Date(dateString);
+    const timeValue = String(dateString).trim();
+    let date = new Date(timeValue);
+    if (isNaN(date.getTime()) && timeValue.includes(' ')) {
+        date = new Date(timeValue.replace(' ', 'T'));
+    }
+    if (isNaN(date.getTime())) return timeValue;
+    const hasTimezone = /[+-]\d{2}:\d{2}$|Z$/.test(timeValue);
+    if (!hasTimezone) {
+        const offset = date.getTimezoneOffset() * 60000;
+        date = new Date(date.getTime() + offset);
+    }
     return date.toLocaleString('zh-CN', {
         year: 'numeric',
         month: '2-digit',
@@ -302,4 +385,30 @@ function getTaskTypeText(type) {
         zentao: '禅道同步'
     };
     return texts[type] || type;
+}
+
+function updateRecentMonitorsDropdown() {
+    const dropdown = document.getElementById('recentMonitorsDropdown');
+    if (!dropdown) return;
+    const recentMonitors = JSON.parse(localStorage.getItem('recent_monitors') || '[]');
+    if (recentMonitors.length === 0) {
+        dropdown.innerHTML = '<li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>';
+        return;
+    }
+    dropdown.innerHTML = recentMonitors.slice(0, 5).map(exec => {
+        const statusIcon = exec.status === 'success' ? 'bi-check-circle text-success' :
+            exec.status === 'failed' ? 'bi-x-circle text-danger' : 'bi-play-circle text-primary';
+        const statusText = exec.status === 'success' ? '成功' :
+            exec.status === 'failed' ? '失败' : '执行中';
+        return `
+            <li>
+                <a class="dropdown-item" href="/execution-monitor.html?execution_id=${exec.execution_id}">
+                    <i class="bi ${statusIcon} me-2"></i>
+                    <span>${exec.task_name || '未知任务'}</span>
+                    <span class="badge bg-${exec.status === 'success' ? 'success' : exec.status === 'failed' ? 'danger' : 'primary'} ms-2">${statusText}</span>
+                    <small class="text-muted d-block">${formatDateTime(exec.start_time)}</small>
+                </a>
+            </li>
+        `;
+    }).join('');
 }

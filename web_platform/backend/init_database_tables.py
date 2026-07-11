@@ -90,11 +90,13 @@ SQL_COMMANDS = [
         `provider` VARCHAR(50) NOT NULL COMMENT '提供商',
         `model_type` VARCHAR(100) NOT NULL COMMENT '模型类型',
         `api_endpoint` VARCHAR(500) COMMENT 'API端点',
+        `model_id` VARCHAR(255) DEFAULT '' COMMENT '模型ID',
         `api_key` VARCHAR(255) COMMENT 'API密钥',
         `api_version` VARCHAR(50) COMMENT 'API版本',
         `max_tokens` INT DEFAULT 4000 COMMENT '最大Token数',
         `temperature` DECIMAL(3,2) DEFAULT 0.7 COMMENT '温度参数',
         `timeout` INT DEFAULT 60 COMMENT '超时时间',
+        `priority` INT DEFAULT 0 COMMENT '优先级',
         `status` ENUM('active', 'inactive') DEFAULT 'active' COMMENT '状态',
         `is_default` TINYINT DEFAULT 0 COMMENT '是否默认',
         `config` JSON COMMENT '其他配置',
@@ -120,13 +122,15 @@ SQL_COMMANDS = [
         `auth_type` ENUM('token', 'basic', 'oauth', 'apikey') DEFAULT 'token' COMMENT '认证类型',
         `config` JSON COMMENT '其他配置',
         `status` ENUM('active', 'inactive', 'error') DEFAULT 'active' COMMENT '状态',
+        `is_default` TINYINT DEFAULT 0 COMMENT '是否默认配置',
         `last_sync` DATETIME COMMENT '最后同步时间',
         `remark` TEXT COMMENT '备注',
         `created_by` INT COMMENT '创建者',
         `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
         `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
         INDEX `idx_integration_type` (`integration_type`),
-        INDEX `idx_status` (`status`)
+        INDEX `idx_status` (`status`),
+        INDEX `idx_is_default` (`is_default`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='集成配置表';
     """,
     
@@ -140,6 +144,69 @@ SQL_COMMANDS = [
         INDEX `idx_execution_id` (`execution_id`),
         INDEX `idx_timestamp` (`timestamp`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='执行日志表';
+    """,
+    
+    """
+    CREATE TABLE IF NOT EXISTS `test_case_result` (
+        `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '结果ID',
+        `execution_id` VARCHAR(36) NOT NULL COMMENT '执行UUID',
+        `case_name` VARCHAR(255) NOT NULL COMMENT '测试用例名称',
+        `case_path` VARCHAR(500) NOT NULL COMMENT '测试用例路径',
+        `status` ENUM('passed', 'failed', 'skipped', 'error', 'broken') NOT NULL COMMENT '执行状态',
+        `duration` DECIMAL(12,3) DEFAULT 0 COMMENT '执行时长（秒）',
+        `stdout` TEXT COMMENT '标准输出',
+        `stderr` TEXT COMMENT '标准错误',
+        `error_type` VARCHAR(255) COMMENT '错误类型',
+        `error_message` TEXT COMMENT '错误信息',
+        `stack_trace` TEXT COMMENT '堆栈信息',
+        `attachments` JSON COMMENT '附件列表',
+        `metadata` JSON COMMENT '元数据',
+        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX `idx_execution_id` (`execution_id`),
+        INDEX `idx_status` (`status`),
+        INDEX `idx_case_name` (`case_name`),
+        INDEX `idx_created_at` (`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='测试用例结果表';
+    """,
+    
+    """
+    CREATE TABLE IF NOT EXISTS `ai_agent` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '智能体ID',
+        `agent_id` VARCHAR(36) NOT NULL UNIQUE COMMENT '智能体UUID',
+        `name` VARCHAR(100) NOT NULL COMMENT '智能体名称',
+        `description` TEXT COMMENT '描述',
+        `status` ENUM('idle', 'running', 'error', 'stopped') DEFAULT 'idle' COMMENT '状态',
+        `current_skill` VARCHAR(100) DEFAULT 'test_expert' COMMENT '当前Skill',
+        `skill_history` JSON COMMENT 'Skill切换历史',
+        `statistics` JSON COMMENT '统计信息',
+        `config` JSON COMMENT '配置信息',
+        `last_active` DATETIME COMMENT '最后活跃时间',
+        `created_by` INT COMMENT '创建者ID',
+        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+        INDEX `idx_agent_id` (`agent_id`),
+        INDEX `idx_status` (`status`),
+        INDEX `idx_created_by` (`created_by`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI智能体表';
+    """,
+    
+    """
+    CREATE TABLE IF NOT EXISTS `ai_agent_execution_log` (
+        `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
+        `agent_id` VARCHAR(36) NOT NULL COMMENT '智能体UUID',
+        `action` VARCHAR(100) NOT NULL COMMENT '执行动作',
+        `skill` VARCHAR(100) COMMENT '使用的Skill',
+        `input` JSON COMMENT '输入参数',
+        `output` JSON COMMENT '输出结果',
+        `status` ENUM('success', 'failed', 'running') DEFAULT 'running' COMMENT '执行状态',
+        `error_message` TEXT COMMENT '错误信息',
+        `duration` DECIMAL(12,3) COMMENT '执行时长（秒）',
+        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+        INDEX `idx_agent_id` (`agent_id`),
+        INDEX `idx_action` (`action`),
+        INDEX `idx_created_at` (`created_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI智能体执行日志表';
     """
 ]
 

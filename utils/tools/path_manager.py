@@ -83,7 +83,23 @@ class PathManager:
     
     def get_reports_path(self, *args):
         """获取报告路径"""
-        return self.get_path('web_platform', 'reports', *args)
+        return self.get_path('reports', *args)
+    
+    def get_allure_results_path(self, *args):
+        """获取Allure结果路径"""
+        return self.get_path('reports', 'allure-results', *args)
+    
+    def get_allure_report_path(self, *args):
+        """获取Allure报告路径"""
+        return self.get_path('reports', 'allure-report', *args)
+    
+    def get_tests_path(self, *args):
+        """获取测试文件路径"""
+        return self.get_path('tests', *args)
+    
+    def get_venv_scripts_path(self, *args):
+        """获取虚拟环境Scripts路径"""
+        return self.get_path('.venv', 'Scripts', *args)
 
 # 单例模式，确保全局只有一个 PathManager 实例
 path_manager = PathManager()
@@ -105,3 +121,7 @@ get_web_platform_api_path = path_manager.get_web_platform_api_path
 get_web_platform_models_path = path_manager.get_web_platform_models_path
 get_web_platform_services_path = path_manager.get_web_platform_services_path
 get_reports_path = path_manager.get_reports_path
+get_allure_results_path = path_manager.get_allure_results_path
+get_allure_report_path = path_manager.get_allure_report_path
+get_tests_path = path_manager.get_tests_path
+get_venv_scripts_path = path_manager.get_venv_scripts_path

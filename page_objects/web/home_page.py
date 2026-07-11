@@ -5,8 +5,8 @@ class HomePage(BasePage):
 
     # 你自己定位一个【登录后一定存在、且有固定文字】的元素
     # 比如：首页标题、用户名、欢迎语、菜单名称都行
-    HOME_TITLE = "#zccd > div.edu-main > div.edu-header.edu-navBar > div.breadcrumbs > ul > li > a > span"       # 你自己改成真实定位符
-    MY_DESKTOP = "text='我的桌面'"
+    HOME_TITLE = ".card-title"       # 你自己改成真实定位符
+    MY_DESKTOP = "text='欢迎使用测试平台'"
 
     def __init__(self, page):
         super().__init__(page)

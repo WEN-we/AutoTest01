@@ -27,9 +27,46 @@ report/
 # 临时文件
 *.tmp
 *.log
-#配置数据
+
+# 配置数据（如需上传可取消注释）
 #config/
 #test_data/
+
+# 个人笔记与文档（不公开）
 笔记.txt
 系统启动手册.txt
 Claude_Code_Prompt.txt
+双系统启动指南.txt
+
+# 隐私与安全文件
+# SSL 证书
+certs/
+# RSA 密钥
+keys/
+# 用户上传文件
+web_platform/backend/uploads/
+# 重置密码脚本与密码测试脚本（含敏感操作）
+web_platform/scripts/reset_password*.py
+web_platform/scripts/reset_admin_password.py
+web_platform/scripts/test_password.py
+
+# Claude / AI 工具个人配置
+.claude/
+
+# 测试报告（本地生成，不入库）
+reports/
+report/
+allure-results/
+allure-report/
+
+# 调试脚本与截图（临时排查用）
+debug_mysql_direct.py
+deep_check*.py
+final_check*.py
+test_agent_example.py
+check_login.png
+deep_check_login.png
+final_check.png
+
+# 开发过程笔记
+docs/superpowers/

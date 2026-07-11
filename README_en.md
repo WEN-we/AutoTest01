@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="img/fufu.png" alt="Logo" width="200" height="200">
   
   # Enterprise E-commerce Full-Platform Automated Testing Framework
   
@@ -70,13 +69,13 @@ AutoTest01/                     # Repository root (default branch: master)
 ├─ README.md
 ├─ README_en.md
 ├─ Run_CI.bat                   # One-click CI runner (Windows batch)
-├─ notes.txt                    # Personal notes / documentation
 ├─ pytest.ini                   # pytest configuration
 ├─ requirements.txt
 ├─ requirements-ci.txt
-├─ Run_CI.bat
 ├─ bat/
 │  └─ run_allure.bat            # Allure report related batch scripts
+├─ agents/                      # AI Agent module
+├─ ai_agents/                   # AI Agent core module
 ├─ ai_page_objects/
 │  ├─ __init__.py
 │  ├─ base/                     # AI related page object base
@@ -103,14 +102,7 @@ AutoTest01/                     # Repository root (default branch: master)
 │  ├─ perf_config.yaml
 │  ├─ ui_config.yaml
 │  └─ windows_config.yaml       # Various runtime/environment/platform config files (yaml)
-├─ erp/
-│  └─ driver/                   # ERP related drivers (directory may be empty)
-├─ img/
-│  ├─ fufu.png
-│  └─ img.png                   # Demo/documentation image resources
-├─ local_web_login/
-│  ├─ __init__.py
-│  └─ backend_server.py         # Local login backend service (example/testing)
+├─ local_web_login/             # Local login backend service (example/testing)
 ├─ test_data/
 │  ├─ ai/
 │  ├─ api/
@@ -133,10 +125,13 @@ AutoTest01/                     # Repository root (default branch: master)
 │  └─ test_windows/             # Test suites by platform/type
 ├─ tools/
 │  └─ get_mouse_pos.py          # Utility scripts
-└─ utils/
-   ├─ __init__.py
-   ├─ drivers/                  # Driver-related utilities/wrappers
-   └─ tools/                    # Tool collection
+├─ utils/
+│  ├─ __init__.py
+│  ├─ drivers/                  # Driver-related utilities/wrappers
+│  └─ tools/                    # Tool collection
+└─ web_platform/                # Graphical test management platform (Flask backend + frontend)
+   ├─ backend/
+   └─ frontend/
 ```
 
 ---
@@ -146,7 +141,7 @@ AutoTest01/                     # Repository root (default branch: master)
 ### 1. Clone the Project
 ```bash
 git clone https://github.com/WEN-we/AutoTest01.git
-cd ecommerce_auto_test
+cd AutoTest01
 ```
 
 ### 2. Create and Activate Virtual Environment (Recommended)
@@ -348,14 +343,6 @@ The project has provided workflow: `.github/workflows/ci_allure.yml`, which will
 ## Support & Donation
 
 If you find this project helpful, you can support me through the following methods:
-
-### China Local Payment
-
-| WeChat | Alipay |
-| :--- | :--- |
-| ![WeChat QR Code](img/wx.jpg) | ![Alipay QR Code](img/zfb.jpg) |
-
-> Thank you for your support and encouragement! Your support is the motivation for my continuous development.
 
 ### Global Payment
 

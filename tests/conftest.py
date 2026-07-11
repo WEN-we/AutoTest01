@@ -1,6 +1,17 @@
 import os
 import sys
+import shutil
+import subprocess
 from pathlib import Path
+from datetime import datetime
+
+if sys.platform == 'win32':
+    os.system('chcp 65001 >nul 2>&1')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 import pytest
 
@@ -111,6 +122,21 @@ def fixture_ui_driver(web_driver):
     兼容用例中使用的 ui_driver 命名（实际复用 web_driver）。
     """
     yield web_driver
+
+
+@pytest.fixture(scope="session", name="selenium_driver")
+def fixture_selenium_driver():
+    """
+    Selenium Web驱动（Chrome/Firefox/Edge）
+    """
+    logger.info("===== Selenium 驱动初始化 =====")
+    from utils.drivers.selenium_driver import SeleniumDriver
+
+    selenium = SeleniumDriver()
+    driver = selenium.start_driver()
+    yield driver
+    selenium.quit_driver()
+    logger.info("===== Selenium 驱动关闭 =====")
 
 
 @pytest.fixture(scope="session", name="api_client")
@@ -241,3 +267,104 @@ def fixture_linux_client(request: pytest.FixtureRequest):
     yield client
     client.close()
     logger.info("===== Linux SSH 关闭 =====")
+
+
+# ==============================
+# 8. 本地执行自动生成Allure HTML报告
+# ==============================
+def _get_allure_path() -> str:
+    """获取allure可执行文件路径"""
+    allure_exe = shutil.which('allure')
+    if allure_exe:
+        return allure_exe
+    venv_allure = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.venv', 'Scripts', 'allure.exe')
+    if os.path.exists(venv_allure):
+        return venv_allure
+    return None
+
+
+def _detect_test_type_from_items(items) -> str:
+    """从测试用例路径检测测试类型"""
+    if not items:
+        return 'unknown'
+    # 取第一个用例的路径来判断测试类型
+    first_path = str(items[0].fspath).replace('\\', '/')
+    type_map = {
+        'test_api': 'api',
+        'test_ui': 'ui',
+        'test_smoke': 'smoke',
+        'test_android': 'android',
+        'test_ios': 'ios',
+        'test_windows': 'windows',
+        'test_linux': 'linux',
+        'test_harmony': 'harmony',
+        'test_service': 'service',
+        'test_performance': 'performance',
+        'test_ai': 'ai',
+        'test_whitebox': 'whitebox',
+    }
+    for key, test_type in type_map.items():
+        if f'/tests/{key}/' in first_path or f'\\tests\\{key}\\' in first_path:
+            return test_type
+    return 'unknown'
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """测试会话结束时自动生成Allure HTML报告
+
+    本地手动执行pytest时：
+    1. 从 allure-results 生成 HTML 报告
+    2. 报告目录命名为：reports/allure-report/YYYYMMDD_HHMMSS_测试类型/
+    3. 保留历史报告，不覆盖旧的
+    """
+    # 只在本地手动执行时生成（通过检测是否在测试平台执行）
+    if os.getenv('TEST_PLATFORM_EXECUTION', '').strip().lower() in ('1', 'true', 'yes'):
+        return
+
+    allure_path = _get_allure_path()
+    if not allure_path:
+        logger.warning("未找到allure命令，跳过生成HTML报告")
+        return
+
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    allure_results_dir = os.path.join(project_root, 'reports', 'allure-results')
+
+    # 检查是否有allure结果文件
+    if not os.path.exists(allure_results_dir) or not os.listdir(allure_results_dir):
+        logger.info("没有allure结果文件，跳过生成报告")
+        return
+
+    # 检测测试类型
+    test_type = _detect_test_type_from_items(session.items)
+
+    # 生成报告名称：时间戳_测试类型
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    report_name = f"{timestamp}_{test_type}"
+    report_output_dir = os.path.join(project_root, 'reports', 'allure-report', report_name)
+
+    try:
+        os.makedirs(report_output_dir, exist_ok=True)
+        cmd = f'"{allure_path}" generate "{allure_results_dir}" -o "{report_output_dir}" --clean'
+        logger.info(f"正在生成Allure HTML报告: {report_name}")
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=120
+        )
+
+        if result.returncode == 0:
+            logger.info(f"✅ Allure报告生成成功: {report_output_dir}")
+            # 生成完成后清空 allure-results，避免下次执行时混入旧数据
+            for f in os.listdir(allure_results_dir):
+                fpath = os.path.join(allure_results_dir, f)
+                if os.path.isfile(fpath):
+                    os.remove(fpath)
+                elif os.path.isdir(fpath):
+                    shutil.rmtree(fpath)
+            logger.info("已清理 allure-results 临时文件")
+        else:
+            logger.error(f"Allure报告生成失败: {result.stderr}")
+    except Exception as e:
+        logger.error(f"生成Allure报告异常: {e}")

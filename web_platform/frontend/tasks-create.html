@@ -1,159 +1,197 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme) {
+                const theme = savedTheme === 'system' 
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : savedTheme;
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>创建任务 - 自动化测试平台</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary-color: #4f46e5;
-        }
-        body {
-            background: #f3f4f6;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 1rem 2rem;
-        }
-        .card {
-            border-radius: 16px;
-            border: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        .form-label {
-            font-weight: 500;
-            color: #374151;
-        }
-        .form-control, .form-select {
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-            padding: 0.75rem 1rem;
-        }
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        .btn-primary {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-            padding: 0.75rem 2rem;
-            border-radius: 10px;
-            font-weight: 600;
-        }
-        .btn-primary:hover {
-            background: #4338ca;
-            border-color: #4338ca;
-        }
-        .scene-card {
-            border: 3px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-            position: relative;
-        }
-        .scene-card:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
-        }
-        .scene-card.selected {
-            border-color: var(--primary-color);
-            background: rgba(79, 70, 229, 0.05);
-        }
-        .scene-card.selected::after {
-            content: '✓';
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 24px;
-            height: 24px;
-            background: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-        }
-        .scene-card i {
-            font-size: 2.5rem;
-            color: var(--primary-color);
-            margin-bottom: 10px;
-        }
-        .scene-card .scene-name {
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-bottom: 5px;
-        }
-        .scene-card .scene-desc {
-            font-size: 0.85rem;
-            color: #6b7280;
-        }
-        .test-type-card {
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-        .test-type-card:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-3px);
-        }
-        .test-type-card.selected {
-            border-color: var(--primary-color);
-            background: rgba(79, 70, 229, 0.05);
-        }
-        .test-type-card i {
-            font-size: 2rem;
-            color: var(--primary-color);
-            margin-bottom: 8px;
-        }
-        .config-section {
-            background: #f9fafb;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 20px;
-            display: none;
-        }
-        .config-section.active {
-            display: block;
-        }
-        .info-box {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 10px;
-            padding: 16px;
-            margin-bottom: 20px;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
-            <a class="navbar-brand" href="dashboard.html">
-                <i class="bi bi-robot me-2"></i>自动化测试平台
+            <a class="navbar-brand" href="/dashboard.html">
+                <div class="brand-logo">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <span class="brand-text">自动化测试平台</span>
             </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html"><i class="bi bi-house me-1"></i>首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/tasks.html"><i class="bi bi-list-task me-1"></i>测试任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-models.html"><i class="bi bi-cpu me-1"></i>AI模型</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-agents.html"><i class="bi bi-robot me-1"></i>AI智能体</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html"><i class="bi bi-file-earmark-text me-1"></i>测试报告</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="integrationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plug me-1"></i>第三方集成
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/integrations.html"><i class="bi bi-gear me-2"></i>集成配置</a></li>
+                            <li><a class="dropdown-item" href="/jenkins.html"><i class="bi bi-hdd me-2"></i>Jenkins</a></li>
+                            <li><a class="dropdown-item" href="/zentao.html"><i class="bi bi-kanban me-2"></i>禅道</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
             <div class="d-flex align-items-center">
-                <a href="dashboard.html" class="text-white text-decoration-none">
-                    <i class="bi bi-arrow-left me-2"></i>返回首页
-                </a>
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()">
+                        <i class="bi bi-clock-history me-1"></i>最近监控
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="recentMonitorsDropdown" style="min-width: 250px;">
+                        <li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>
+                    </ul>
+                </div>
+                
+                <!-- 现代化主题切换下拉组件 -->
+                <div class="theme-dropdown-wrapper me-3">
+                    <button class="theme-toggle-btn">
+                        <span class="theme-icon"></span>
+                        <span class="theme-label"></span>
+                        <i class="bi bi-chevron-down ms-2" style="font-size: 12px;"></i>
+                    </button>
+                    <div class="theme-dropdown-menu">
+                        <div class="theme-dropdown-header">主题模式</div>
+                        
+                        <div class="theme-option" data-theme="light">
+                            <div class="theme-option-icon">☀️</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">日间模式</div>
+                                <div class="theme-option-desc">明亮清爽的浅色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-option-icon">🌙</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">夜间模式</div>
+                                <div class="theme-option-desc">护眼舒适的深色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="system">
+                            <div class="theme-option-icon">💻</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">跟随系统</div>
+                                <div class="theme-option-desc">自动跟随系统设置切换</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="user-menu-wrapper">
+                    <button class="user-menu-btn">
+                        <img class="user-avatar" src="" alt="头像" style="display: none;">
+                        <div class="user-avatar-placeholder">A</div>
+                        <span class="user-name" id="currentUser">管理员</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <div class="user-menu-header">
+                            <div class="user-info">
+                                <img class="user-avatar-large" src="" alt="头像" style="display: none;">
+                                <div class="user-avatar-large-placeholder">A</div>
+                                <div class="user-details">
+                                    <div class="user-fullname" id="userFullname">管理员</div>
+                                    <div class="user-email" id="userEmail">-</div>
+                                </div>
+                            </div>
+                            <button class="edit-profile-btn" id="editProfileBtn">编辑个人资料</button>
+                        </div>
+                        
+                        <button class="user-menu-item" id="uploadAvatarBtn">
+                            <i class="bi bi-camera menu-icon"></i>
+                            <span class="menu-text">上传头像</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changeUsernameBtn">
+                            <i class="bi bi-pencil menu-icon"></i>
+                            <span class="menu-text">修改用户名</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changePasswordBtn">
+                            <i class="bi bi-lock menu-icon"></i>
+                            <span class="menu-text">修改密码</span>
+                        </button>
+                        
+                        <div class="user-menu-divider"></div>
+                        
+                        <button class="user-menu-item user-menu-item-danger" id="deleteAccountBtn">
+                            <i class="bi bi-trash menu-icon"></i>
+                            <span class="menu-text">注销账号</span>
+                        </button>
+                        
+                        <div class="user-menu-footer">
+                            <button class="user-menu-item" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right menu-icon"></i>
+                                <span class="menu-text">退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container py-4">
+    <div class="container-fluid py-4 px-4">
+        <div class="row mb-4">
+            <div class="col">
+                <h4 class="mb-0"><i class="bi bi-plus-circle me-2"></i>创建测试任务</h4>
+                <p class="text-muted">创建新的自动化测试任务</p>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-outline-secondary" onclick="location.href='/dashboard.html'">
+                    <i class="bi bi-arrow-left me-1"></i>返回首页
+                </button>
+            </div>
+        </div>
+
         <div class="row justify-content-center">
             <div class="col-md-10">
                 <div class="card">
                     <div class="card-body p-4">
-                        <h4 class="mb-4"><i class="bi bi-plus-circle me-2"></i>创建测试任务</h4>
 
                         <div class="info-box">
                             <div class="d-flex align-items-start">
@@ -167,12 +205,12 @@
 
                         <form id="taskForm">
                             <div class="mb-4">
-                                <label class="form-label" data-bs-toggle="tooltip" title="任务的唯一标识名称，便于识别">任务名称 <span class="text-danger">*</span></label>
+                                <label class="form-label" title="任务的唯一标识名称，便于识别">任务名称 <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="taskName" placeholder="例如：测试本地登录服务API" required>
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label" data-bs-toggle="tooltip" title="任务的详细说明（可选）">任务描述</label>
+                                <label class="form-label" title="任务的详细说明（可选）">任务描述</label>
                                 <textarea class="form-control" id="taskDesc" rows="2" placeholder="描述任务的用途和测试范围"></textarea>
                             </div>
 
@@ -183,28 +221,28 @@
                                 </label>
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <div class="scene-card" data-scene="platform" onclick="selectScene('platform')" data-bs-toggle="tooltip" title="测试当前 web_platform 的功能，适用于回归测试">
+                                        <div class="scene-card" data-scene="platform" onclick="selectScene('platform')" title="测试当前 web_platform 的功能，适用于回归测试">
                                             <i class="bi bi-display"></i>
                                             <div class="scene-name">测试平台本身</div>
                                             <div class="scene-desc">测试 web_platform 自身功能</div>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="scene-card" data-scene="local" onclick="selectScene('local')" data-bs-toggle="tooltip" title="测试部署在本地的服务，如 local_web_login">
+                                        <div class="scene-card" data-scene="local" onclick="selectScene('local')" title="测试部署在本地的服务，如 local_web_login">
                                             <i class="bi bi-hdd-network"></i>
                                             <div class="scene-name">测试本地服务</div>
                                             <div class="scene-desc">测试本地运行的服务</div>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="scene-card" data-scene="external" onclick="selectScene('external')" data-bs-toggle="tooltip" title="测试互联网上的网站或API接口">
+                                        <div class="scene-card" data-scene="external" onclick="selectScene('external')" title="测试互联网上的网站或API接口">
                                             <i class="bi bi-globe"></i>
                                             <div class="scene-name">测试外部网站</div>
                                             <div class="scene-desc">测试互联网上的网站或API</div>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
-                                        <div class="scene-card" data-scene="other" onclick="selectScene('other')" data-bs-toggle="tooltip" title="自定义测试场景">
+                                        <div class="scene-card" data-scene="other" onclick="selectScene('other')" title="自定义测试场景">
                                             <i class="bi bi-three-dots"></i>
                                             <div class="scene-name">其他</div>
                                             <div class="scene-desc">自定义测试场景</div>
@@ -227,84 +265,84 @@
                                 </label>
                                 <div class="row g-3">
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="api" onclick="selectTestType('api')" data-bs-toggle="tooltip" title="通过HTTP请求测试接口功能和数据交换">
+                                        <div class="test-type-card" data-type="api" onclick="selectTestType('api')" title="通过HTTP请求测试接口功能和数据交换">
                                             <i class="bi bi-cloud-arrow-up"></i>
                                             <div class="fw-bold">API测试</div>
                                             <small class="text-muted">接口自动化</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="ui" onclick="selectTestType('ui')" data-bs-toggle="tooltip" title="使用Selenium/Playwright测试Web界面交互">
+                                        <div class="test-type-card" data-type="ui" onclick="selectTestType('ui')" title="使用Selenium/Playwright测试Web界面交互">
                                             <i class="bi bi-browser-chrome"></i>
                                             <div class="fw-bold">UI测试</div>
                                             <small class="text-muted">Web界面</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="smoke" onclick="selectTestType('smoke')" data-bs-toggle="tooltip" title="核心功能的快速验证测试">
+                                        <div class="test-type-card" data-type="smoke" onclick="selectTestType('smoke')" title="核心功能的快速验证测试">
                                             <i class="bi bi-fire"></i>
                                             <div class="fw-bold">冒烟测试</div>
                                             <small class="text-muted">核心验证</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="android" onclick="selectTestType('android')" data-bs-toggle="tooltip" title="使用Appium测试Android移动应用">
+                                        <div class="test-type-card" data-type="android" onclick="selectTestType('android')" title="使用Appium测试Android移动应用">
                                             <i class="bi bi-phone"></i>
                                             <div class="fw-bold">Android测试</div>
                                             <small class="text-muted">移动端</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="ios" onclick="selectTestType('ios')" data-bs-toggle="tooltip" title="测试iOS移动应用（需要Mac环境）">
+                                        <div class="test-type-card" data-type="ios" onclick="selectTestType('ios')" title="测试iOS移动应用（需要Mac环境）">
                                             <i class="bi bi-apple"></i>
                                             <div class="fw-bold">iOS测试</div>
                                             <small class="text-muted">苹果设备</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="windows" onclick="selectTestType('windows')" data-bs-toggle="tooltip" title="测试Windows桌面应用程序">
+                                        <div class="test-type-card" data-type="windows" onclick="selectTestType('windows')" title="测试Windows桌面应用程序">
                                             <i class="bi bi-windows"></i>
                                             <div class="fw-bold">Windows测试</div>
                                             <small class="text-muted">桌面应用</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="linux" onclick="selectTestType('linux')" data-bs-toggle="tooltip" title="测试Linux服务器端应用">
+                                        <div class="test-type-card" data-type="linux" onclick="selectTestType('linux')" title="测试Linux服务器端应用">
                                             <i class="bi bi-terminal"></i>
                                             <div class="fw-bold">Linux测试</div>
                                             <small class="text-muted">服务器</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="harmony" onclick="selectTestType('harmony')" data-bs-toggle="tooltip" title="测试鸿蒙操作系统应用">
+                                        <div class="test-type-card" data-type="harmony" onclick="selectTestType('harmony')" title="测试鸿蒙操作系统应用">
                                             <i class="bi bi-hexagon"></i>
                                             <div class="fw-bold">鸿蒙测试</div>
                                             <small class="text-muted">鸿蒙系统</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="service" onclick="selectTestType('service')" data-bs-toggle="tooltip" title="测试微服务架构的各个服务">
+                                        <div class="test-type-card" data-type="service" onclick="selectTestType('service')" title="测试微服务架构的各个服务">
                                             <i class="bi bi-server"></i>
                                             <div class="fw-bold">服务测试</div>
                                             <small class="text-muted">微服务</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="performance" onclick="selectTestType('performance')" data-bs-toggle="tooltip" title="使用Locust进行压力测试和性能评估">
+                                        <div class="test-type-card" data-type="performance" onclick="selectTestType('performance')" title="使用Locust进行压力测试和性能评估">
                                             <i class="bi bi-speedometer2"></i>
                                             <div class="fw-bold">性能测试</div>
                                             <small class="text-muted">压力测试</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="ai" onclick="selectTestType('ai')" data-bs-toggle="tooltip" title="测试AI模型和智能功能">
+                                        <div class="test-type-card" data-type="ai" onclick="selectTestType('ai')" title="测试AI模型和智能功能">
                                             <i class="bi bi-robot"></i>
                                             <div class="fw-bold">AI测试</div>
                                             <small class="text-muted">智能测试</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3 col-sm-6">
-                                        <div class="test-type-card" data-type="whitebox" onclick="selectTestType('whitebox')" data-bs-toggle="tooltip" title="代码级别的单元测试和覆盖率测试">
+                                        <div class="test-type-card" data-type="whitebox" onclick="selectTestType('whitebox')" title="代码级别的单元测试和覆盖率测试">
                                             <i class="bi bi-file-code"></i>
                                             <div class="fw-bold">白盒测试</div>
                                             <small class="text-muted">代码审计</small>
@@ -315,8 +353,8 @@
                             </div>
 
                             <div class="mb-4">
-                                <label class="form-label" data-bs-toggle="tooltip" title="相对于 tests 目录的测试文件路径，如 test_api/test_user.py">测试路径</label>
-                                <input type="text" class="form-control" id="testPath" placeholder="tests/test_api" value="test_api">
+                                <label class="form-label" title="相对于 tests 目录的测试文件路径，如 test_api/test_user.py">测试路径</label>
+                                <input type="text" class="form-control" id="testPath" placeholder="test_api" value="test_api">
                                 <small class="text-muted">相对于tests目录的路径，例如：test_api/test_user_api.py</small>
                             </div>
 
@@ -336,9 +374,12 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/crypto.js"></script>
+<script src="/static/js/user-menu.js"></script>
     <script>
-        const API_BASE = 'http://localhost:8081/api';
-
         const TEST_PATHS = {
             'api': 'test_api',
             'ui': 'test_ui',
@@ -396,6 +437,21 @@
         let selectedTestType = 'api';
         let sceneConfig = {};
 
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return false;
+            }
+            return true;
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
         function getFieldTooltip(fieldName) {
             const tooltips = {
                 'base_url': '被测地址',
@@ -412,7 +468,10 @@
             document.querySelectorAll('.scene-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            document.querySelector(`.scene-card[data-scene="${scene}"]`).classList.add('selected');
+            const selectedCard = document.querySelector('.scene-card[data-scene="' + scene + '"]');
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
             document.getElementById('scene').value = scene;
 
             updateSceneConfig(scene);
@@ -429,26 +488,24 @@
                 sceneConfig[field.name] = field.value || '';
 
                 if (field.type === 'select') {
-                    html += `
-                        <div class="col-md-6">
-                            <label class="form-label" data-bs-toggle="tooltip" title="${getFieldTooltip(field.name)}">${field.label}</label>
-                            <select class="form-select" id="config_${field.name}" ${field.readonly ? 'readonly' : ''}>
-                                ${field.options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('')}
-                            </select>
-                            ${field.desc ? `<small class="text-muted">${field.desc}</small>` : ''}
-                        </div>
-                    `;
+                    html += '<div class="col-md-6">' +
+                        '<label class="form-label" title="' + getFieldTooltip(field.name) + '">' + field.label + '</label>' +
+                        '<select class="form-select" id="config_' + field.name + '"' + (field.readonly ? ' readonly' : '') + '>';
+                    field.options.forEach(opt => {
+                        html += '<option value="' + opt.value + '"' + (opt.value === field.value ? ' selected' : '') + '>' + opt.label + '</option>';
+                    });
+                    html += '</select>' +
+                        (field.desc ? '<small class="text-muted">' + field.desc + '</small>' : '') +
+                        '</div>';
                 } else {
-                    html += `
-                        <div class="col-md-6">
-                            <label class="form-label" data-bs-toggle="tooltip" title="${getFieldTooltip(field.name)}">${field.label}</label>
-                            <input type="${field.type}" class="form-control" id="config_${field.name}"
-                                value="${field.value || ''}"
-                                placeholder="${field.placeholder || ''}"
-                                ${field.readonly ? 'readonly' : ''}>
-                            ${field.desc ? `<small class="text-muted">${field.desc}</small>` : ''}
-                        </div>
-                    `;
+                    html += '<div class="col-md-6">' +
+                        '<label class="form-label" title="' + getFieldTooltip(field.name) + '">' + field.label + '</label>' +
+                        '<input type="' + field.type + '" class="form-control" id="config_' + field.name + '"' +
+                        ' value="' + (field.value || '') + '"' +
+                        (field.placeholder ? ' placeholder="' + field.placeholder + '"' : '') +
+                        (field.readonly ? ' readonly' : '') + '>' +
+                        (field.desc ? '<small class="text-muted">' + field.desc + '</small>' : '') +
+                        '</div>';
                 }
             });
 
@@ -474,7 +531,10 @@
             document.querySelectorAll('.test-type-card').forEach(card => {
                 card.classList.remove('selected');
             });
-            document.querySelector(`.test-type-card[data-type="${type}"]`).classList.add('selected');
+            const selectedCard = document.querySelector('.test-type-card[data-type="' + type + '"]');
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+            }
             document.getElementById('testType').value = type;
             document.getElementById('testPath').value = TEST_PATHS[type] || '';
         }
@@ -488,17 +548,17 @@
             const testPath = document.getElementById('testPath').value.trim();
 
             if (!name) {
-                showToast('请输入任务名称', 'danger');
+                showToast('请输入任务名称', 'error');
                 return;
             }
 
             if (!selectedScene) {
-                showToast('请选择测试场景', 'danger');
+                showToast('请选择测试场景', 'error');
                 return;
             }
 
             if (!testType) {
-                showToast('请选择测试类型', 'danger');
+                showToast('请选择测试类型', 'error');
                 return;
             }
 
@@ -510,7 +570,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/tasks`, {
+                const res = await fetch(API_BASE + '/tasks', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -533,57 +593,55 @@
                     showToast('任务创建成功！', 'success');
                     const taskId = data.data.id;
                     setTimeout(() => {
-                        location.href = `/tasks/${taskId}`;
+                        location.href = '/tasks-detail.html?id=' + taskId;
                     }, 1500);
                 } else {
-                    showToast(data.message || '创建失败', 'danger');
+                    showToast(data.message || '创建失败', 'error');
                 }
             } catch (error) {
-                showToast('创建失败: ' + error.message, 'danger');
+                showToast('创建失败: ' + error.message, 'error');
             }
         });
 
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${type} border-0`;
-            toast.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999;';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sceneParam = urlParams.get('scene');
+            const typeParam = urlParams.get('type');
 
-        function checkAuth() {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                window.location.href = 'index.html';
-                return false;
+            if (checkAuth()) {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const displayName = user.nickname || user.username || '管理员';
+                const userEmail = user.email || '-';
+
+                const currentUserEl = document.getElementById('currentUser');
+                if (currentUserEl) currentUserEl.textContent = displayName;
+
+                const userFullnameEl = document.getElementById('userFullname');
+                const userEmailEl = document.getElementById('userEmail');
+                if (userFullnameEl) userFullnameEl.textContent = displayName;
+                if (userEmailEl) userEmailEl.textContent = userEmail;
+
+                const avatarPlaceholder = document.querySelector('.user-avatar-placeholder');
+                const avatarLargePlaceholder = document.querySelector('.user-avatar-large-placeholder');
+                const firstLetter = (displayName.charAt(0) || 'A').toUpperCase();
+                if (avatarPlaceholder) avatarPlaceholder.textContent = firstLetter;
+                if (avatarLargePlaceholder) avatarLargePlaceholder.textContent = firstLetter;
+                
+                setTimeout(function() {
+                    if (sceneParam) {
+                        selectScene(sceneParam);
+                    } else {
+                        selectScene('platform');
+                    }
+
+                    if (typeParam) {
+                        selectTestType(typeParam);
+                    } else {
+                        selectTestType('api');
+                    }
+                }, 100);
             }
-            return true;
-        }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const sceneParam = urlParams.get('scene');
-        const typeParam = urlParams.get('type');
-
-        if (checkAuth()) {
-            if (sceneParam) {
-                selectScene(sceneParam);
-            } else {
-                selectScene('platform');
-            }
-
-            if (typeParam) {
-                selectTestType(typeParam);
-            } else {
-                selectTestType('api');
-            }
-        }
+        });
     </script>
-    <script src="static/js/tooltips.js"></script>
 </body>
 </html>

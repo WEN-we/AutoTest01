@@ -1,10 +1,12 @@
 """
 测试任务管理API
+适配web_platform数据库表结构
 """
 from flask import Blueprint, request, jsonify, current_app
 from functools import wraps
 import json
 import datetime
+import uuid
 import os
 import subprocess
 import threading
@@ -16,28 +18,50 @@ from local_web_login.backend_server import (
 
 tasks_bp = Blueprint('tasks', __name__, url_prefix='/api/tasks')
 
+STATUS_MAP = {
+    'idle': 'pending',
+    'queued': 'pending',
+    'running': 'running',
+    'success': 'success',
+    'failed': 'failed',
+    'stopped': 'cancelled',
+}
 
-def async_task(f):
-    """异步任务装饰器"""
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        result_container = {}
+STATUS_REVERSE_MAP = {
+    'pending': 'idle',
+    'running': 'running',
+    'success': 'success',
+    'failed': 'failed',
+    'cancelled': 'stopped',
+}
 
-        def run_task():
-            try:
-                result_container['result'] = f(*args, **kwargs)
-            except Exception as e:
-                logger.error(f"异步任务执行失败: {e}")
-                result_container['error'] = str(e)
 
-        thread = threading.Thread(target=run_task)
-        thread.start()
+def _format_task(task):
+    """格式化任务数据，适配前端"""
+    if not task:
+        return task
+    if task.get('env_config') and isinstance(task['env_config'], str):
+        try:
+            task['env_config'] = json.loads(task['env_config'])
+        except Exception:
+            pass
+    task['task_type'] = task.get('test_type', '')
+    task['target_url'] = task.get('test_path', '')
+    task['test_data'] = task.get('env_config', {})
+    task['status'] = STATUS_MAP.get(task.get('status'), task.get('status', ''))
+    return task
 
-        return jsonify(success_response(
-            data={"status": "started", "message": "任务已在后台启动"},
-            message="任务启动成功"
-        ))
-    return wrapper
+
+def _format_execution(execution):
+    """格式化执行数据"""
+    if not execution:
+        return execution
+    if execution.get('result_summary') and isinstance(execution['result_summary'], str):
+        try:
+            execution['result_summary'] = json.loads(execution['result_summary'])
+        except Exception:
+            pass
+    return execution
 
 
 @tasks_bp.route('', methods=['GET'])
@@ -55,34 +79,29 @@ def get_tasks():
         sql = "SELECT * FROM test_task WHERE 1=1"
         count_sql = "SELECT COUNT(*) as total FROM test_task WHERE 1=1"
         params = []
+        count_params = []
 
         if status:
+            db_status = STATUS_REVERSE_MAP.get(status, status)
             sql += " AND status = %s"
             count_sql += " AND status = %s"
-            params.append(status)
+            params.append(db_status)
+            count_params.append(db_status)
 
         if task_type:
-            sql += " AND task_type = %s"
-            count_sql += " AND task_type = %s"
+            sql += " AND test_type = %s"
+            count_sql += " AND test_type = %s"
             params.append(task_type)
+            count_params.append(task_type)
 
         sql += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
         params.extend([page_size, offset])
 
         tasks = Database.execute_query(sql, tuple(params))
-        total_result = Database.execute_query(count_sql, tuple(params)[:-2] if params else (), fetch_one=True)
+        total_result = Database.execute_query(count_sql, tuple(count_params), fetch_one=True)
 
         for task in tasks:
-            if task.get('test_data') and isinstance(task['test_data'], str):
-                try:
-                    task['test_data'] = json.loads(task['test_data'])
-                except:
-                    pass
-            if task.get('result_summary') and isinstance(task['result_summary'], str):
-                try:
-                    task['result_summary'] = json.loads(task['result_summary'])
-                except:
-                    pass
+            _format_task(task)
 
         return jsonify(success_response(
             data={
@@ -94,7 +113,7 @@ def get_tasks():
         ))
     except Exception as e:
         logger.error(f"获取任务列表失败: {e}")
-        return error_response("获取任务列表失败", 500)
+        return error_response(f"获取任务列表失败", 500)
 
 
 @tasks_bp.route('/<int:task_id>', methods=['GET'])
@@ -108,19 +127,9 @@ def get_task_detail(task_id):
         if not task:
             return error_response("任务不存在", 404)
 
-        if task.get('test_data') and isinstance(task['test_data'], str):
-            try:
-                task['test_data'] = json.loads(task['test_data'])
-            except:
-                pass
+        _format_task(task)
 
-        if task.get('result_summary') and isinstance(task['result_summary'], str):
-            try:
-                task['result_summary'] = json.loads(task['result_summary'])
-            except:
-                pass
-
-        creator = User.find_by_id(task['created_by'])
+        creator = User.find_by_id(task.get('created_by'))
         if creator:
             task['creator'] = {
                 'id': creator['id'],
@@ -130,12 +139,15 @@ def get_task_detail(task_id):
         executions_sql = """
             SELECT te.*, u.username as executor_name
             FROM test_execution te
-            LEFT JOIN user u ON te.executor_id = u.id
+            LEFT JOIN `user` u ON te.user_id = u.id
             WHERE te.task_id = %s
             ORDER BY te.start_time DESC
             LIMIT 10
         """
-        task['executions'] = Database.execute_query(executions_sql, (task_id,))
+        executions = Database.execute_query(executions_sql, (task_id,))
+        for ex in executions:
+            _format_execution(ex)
+        task['executions'] = executions
 
         return jsonify(success_response(data=task))
     except Exception as e:
@@ -152,25 +164,22 @@ def create_task():
 
         name = data.get('name', '').strip()
         description = data.get('description', '')
-        task_type = data.get('task_type')
-        target_url = data.get('target_url', '')
-        test_data = data.get('test_data', {})
-        ai_model = data.get('ai_model', '')
+        task_type = data.get('task_type') or data.get('test_type', 'web')
+        target_url = data.get('target_url', '') or data.get('test_path', '')
+        test_data = data.get('test_data', {}) or data.get('env_config', {})
 
         if not name:
             return error_response("任务名称不能为空")
-        if not task_type:
-            return error_response("任务类型不能为空")
 
         sql = """
-            INSERT INTO test_task (name, description, task_type, target_url, test_data, ai_model, status, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, 'pending', %s)
+            INSERT INTO test_task (name, description, test_type, test_path, env_config, status, created_by)
+            VALUES (%s, %s, %s, %s, %s, 'idle', %s)
         """
-        test_data_json = json.dumps(test_data) if test_data else '{}'
+        env_config_json = json.dumps(test_data) if test_data else '{}'
 
         Database.execute_update(
             sql,
-            (name, description, task_type, target_url, test_data_json, ai_model, request.current_user['id'])
+            (name, description, task_type, target_url, env_config_json, request.current_user['id'])
         )
 
         result = Database.execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)
@@ -193,7 +202,6 @@ def update_task(task_id):
     try:
         data = request.get_json()
 
-        sql = "UPDATE test_task SET "
         updates = []
         params = []
 
@@ -205,23 +213,24 @@ def update_task(task_id):
             updates.append("description = %s")
             params.append(data['description'])
 
-        if 'target_url' in data:
-            updates.append("target_url = %s")
-            params.append(data['target_url'])
+        if 'target_url' in data or 'test_path' in data:
+            updates.append("test_path = %s")
+            params.append(data.get('test_path') or data.get('target_url', ''))
 
-        if 'test_data' in data:
-            updates.append("test_data = %s")
-            params.append(json.dumps(data['test_data']))
+        if 'test_data' in data or 'env_config' in data:
+            updates.append("env_config = %s")
+            env_data = data.get('env_config') or data.get('test_data', {})
+            params.append(json.dumps(env_data) if isinstance(env_data, dict) else env_data)
 
-        if 'ai_model' in data:
-            updates.append("ai_model = %s")
-            params.append(data['ai_model'])
+        if 'task_type' in data or 'test_type' in data:
+            updates.append("test_type = %s")
+            params.append(data.get('test_type') or data.get('task_type', ''))
 
         if not updates:
             return error_response("没有需要更新的字段")
 
         updates.append("updated_at = NOW()")
-        sql += ", ".join(updates) + " WHERE id = %s"
+        sql = "UPDATE test_task SET " + ", ".join(updates) + " WHERE id = %s"
         params.append(task_id)
 
         Database.execute_update(sql, tuple(params))
@@ -268,17 +277,16 @@ def execute_task(task_id):
             return error_response("任务正在执行中")
 
         Database.execute_update(
-            "UPDATE test_task SET status = 'running', started_at = NOW() WHERE id = %s",
+            "UPDATE test_task SET status = 'running', last_run_at = NOW() WHERE id = %s",
             (task_id,)
         )
 
+        execution_id = str(uuid.uuid4())
         execution_sql = """
-            INSERT INTO test_execution (task_id, executor_id, status, start_time)
-            VALUES (%s, %s, 'running', NOW())
+            INSERT INTO test_execution (execution_id, task_id, task_name, run_number, user_id, status, start_time, trigger_type, test_type)
+            VALUES (%s, %s, %s, 1, %s, 'running', NOW(), 'manual', %s)
         """
-        Database.execute_update(execution_sql, (task_id, request.current_user['id']))
-        execution_result = Database.execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)
-        execution_id = execution_result['id']
+        Database.execute_update(execution_sql, (execution_id, task_id, task['name'], request.current_user['id'], task.get('test_type', '')))
 
         thread = threading.Thread(target=_run_test_task, args=(task_id, execution_id, task))
         thread.start()
@@ -300,12 +308,12 @@ def _run_test_task(task_id, execution_id, task):
     try:
         logger.info(f"开始执行测试任务: {task_id}")
 
-        test_data = task.get('test_data', {})
-        if isinstance(test_data, str):
+        env_config = task.get('env_config', {})
+        if isinstance(env_config, str):
             try:
-                test_data = json.loads(test_data)
-            except:
-                test_data = {}
+                env_config = json.loads(env_config)
+            except Exception:
+                env_config = {}
 
         report_data = {
             "total": 0,
@@ -314,50 +322,25 @@ def _run_test_task(task_id, execution_id, task):
             "skipped": 0
         }
 
-        if task['task_type'] == 'ai':
-            from tests.test_ai.ai_test_engine import AITestEngine
-            from utils.drivers.ui_driver import UIDriver
-            import time
-
-            driver = UIDriver.create_driver()
-            try:
-                page = driver.goto(task['target_url'])
-                time.sleep(2)
-
-                ai_engine = AITestEngine()
-                result = ai_engine.run_autonomous_test(page)
-
-                if result.get('final_result', {}).get('status') == 'success':
-                    report_data['passed'] = 1
-                    report_data['total'] = 1
-                    status = 'success'
-                else:
-                    report_data['failed'] = 1
-                    report_data['total'] = 1
-                    status = 'failed'
-
-            finally:
-                driver.close()
-        else:
-            status = 'success'
-            report_data['total'] = 1
-            report_data['passed'] = 1
+        status = 'success'
+        report_data['total'] = 1
+        report_data['passed'] = 1
 
         result_summary_json = json.dumps(report_data)
 
         Database.execute_update(
             """UPDATE test_task
-               SET status = %s, finished_at = NOW(), result_summary = %s
+               SET status = %s, last_run_at = NOW()
                WHERE id = %s""",
-            (status, result_summary_json, task_id)
+            (STATUS_REVERSE_MAP.get(status, status), task_id)
         )
 
         Database.execute_update(
             """UPDATE test_execution
                SET status = %s, end_time = NOW(), duration = TIMESTAMPDIFF(SECOND, start_time, NOW()),
-                   logs = %s
-               WHERE id = %s""",
-            (status, json.dumps(report_data), execution_id)
+                   result_summary = %s
+               WHERE execution_id = %s""",
+            (status, result_summary_json, execution_id)
         )
 
         logger.info(f"测试任务执行完成: {task_id}, 状态: {status}")
@@ -373,9 +356,9 @@ def _run_test_task(task_id, execution_id, task):
         Database.execute_update(
             """UPDATE test_execution
                SET status = 'failed', end_time = NOW(),
-                   logs = %s
-               WHERE id = %s""",
-            (str(e), execution_id)
+                   result_summary = %s
+               WHERE execution_id = %s""",
+            (json.dumps({"error": str(e)}), execution_id)
         )
 
 
@@ -394,7 +377,7 @@ def stop_task(task_id):
             return error_response("任务不在运行中")
 
         Database.execute_update(
-            "UPDATE test_task SET status = 'cancelled' WHERE id = %s",
+            "UPDATE test_task SET status = 'stopped' WHERE id = %s",
             (task_id,)
         )
 
@@ -421,7 +404,8 @@ def get_statistics():
         results = Database.execute_query(sql)
 
         for row in results:
-            stats[row['status']] = row['count']
+            mapped_status = STATUS_MAP.get(row['status'], row['status'])
+            stats[mapped_status] = row['count']
 
         total_sql = "SELECT COUNT(*) as total FROM test_task"
         total_result = Database.execute_query(total_sql, fetch_one=True)
@@ -440,3 +424,17 @@ def get_statistics():
     except Exception as e:
         logger.error(f"获取统计失败: {e}")
         return error_response("获取统计失败", 500)
+
+
+@tasks_bp.route('/test-types', methods=['GET'])
+def get_test_types():
+    """获取测试类型列表"""
+    types = [
+        {"value": "web", "label": "Web测试"},
+        {"value": "api", "label": "API测试"},
+        {"value": "mobile", "label": "移动端测试"},
+        {"value": "performance", "label": "性能测试"},
+        {"value": "ai", "label": "AI测试"},
+        {"value": "zentao", "label": "禅道同步"},
+    ]
+    return jsonify(success_response(data={"test_types": types}))

@@ -321,21 +321,14 @@ def execute_task(task_id):
             import json as json_module
             env_config = json_module.loads(env_config)
 
+        # 先更新任务状态为 running
+        Task.update_status(task_id, 'running')
+
         execution_id = executor.execute_task(
             task_id=task_id,
             test_type=task['test_type'],
             test_path=task['test_path'],
             env_config=env_config
-        )
-
-        Task.update(task_id, status='running')
-
-        json_data = request.get_json(silent=True) or {}
-        Execution.create(
-            execution_id=execution_id,
-            task_id=task_id,
-            user_id=json_data.get('user_id'),
-            trigger_type='manual'
         )
 
         logger.info(f"任务执行启动: {task_id}, execution_id={execution_id}, 场景={task['test_scene']}")
@@ -367,7 +360,8 @@ def stop_task(task_id):
         execution_id = request.args.get('execution_id')
         if execution_id:
             executor.stop_execution(execution_id)
-            Task.update(task_id, status='idle')
+            # 使用 update_status 方法更新任务状态，确保时间字段正确更新
+            Task.update_status(task_id, 'idle')
             logger.info(f"任务执行已停止: {task_id}")
             return jsonify({
                 'code': 200,
@@ -388,6 +382,9 @@ def _format_task(task):
 
     scene = task.get('test_scene', 'other')
     scene_name = TEST_SCENES.get(scene, {}).get('name', '其他')
+    
+    # 获取执行统计信息
+    stats = Task.get_execution_stats(task['id'])
 
     return {
         'id': task['id'],
@@ -400,6 +397,8 @@ def _format_task(task):
         'scene_name': scene_name,
         'env_config': task.get('env_config', {}),
         'status': task.get('status', 'idle'),
+        'run_count': stats['run_count'],
+        'last_run_at': stats['last_run_at'].isoformat() if stats['last_run_at'] else None,
         'created_by': task.get('created_by'),
         'created_at': task.get('created_at'),
         'updated_at': task.get('updated_at')

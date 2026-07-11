@@ -1,5 +1,6 @@
 """
 AI模型配置API
+适配web_platform数据库表结构
 """
 from flask import Blueprint, request, jsonify
 from local_web_login.backend_server import (
@@ -7,9 +8,27 @@ from local_web_login.backend_server import (
     Database
 )
 import requests
+import json
 from utils.tools.logger import log as logger
 
 ai_models_bp = Blueprint('ai_models', __name__, url_prefix='/api/ai-models')
+
+
+def _format_model(model):
+    """格式化模型数据，适配前端"""
+    if not model:
+        return model
+    if model.get('config') and isinstance(model['config'], str):
+        try:
+            model['config'] = json.loads(model['config'])
+        except Exception:
+            pass
+    if model.get('api_key') and len(model.get('api_key', '')) > 10:
+        model['api_key'] = model['api_key'][:4] + '****' + model['api_key'][-4:]
+    model['model_name'] = model.get('name', '')
+    model['base_url'] = model.get('api_endpoint', '')
+    model['is_active'] = model.get('status') == 'active'
+    return model
 
 
 @ai_models_bp.route('', methods=['GET'])
@@ -19,22 +38,12 @@ def get_ai_models():
     try:
         sql = """
             SELECT * FROM ai_model_config
-            WHERE is_active = TRUE
+            WHERE status = 'active'
             ORDER BY priority DESC, id ASC
         """
         models = Database.execute_query(sql)
-
         for model in models:
-            if model.get('config') and isinstance(model['config'], str):
-                try:
-                    import json
-                    model['config'] = json.loads(model['config'])
-                except:
-                    pass
-
-            if model.get('api_key') and len(model['api_key']) > 10:
-                model['api_key'] = model['api_key'][:4] + '****' + model['api_key'][-4:]
-
+            _format_model(model)
         return jsonify(success_response(data={"models": models}))
     except Exception as e:
         logger.error(f"获取AI模型列表失败: {e}")
@@ -48,17 +57,9 @@ def get_model_detail(model_id):
     try:
         sql = "SELECT * FROM ai_model_config WHERE id = %s"
         model = Database.execute_query(sql, (model_id,), fetch_one=True)
-
         if not model:
             return error_response("模型不存在", 404)
-
-        if model.get('config') and isinstance(model['config'], str):
-            try:
-                import json
-                model['config'] = json.loads(model['config'])
-            except:
-                pass
-
+        _format_model(model)
         return jsonify(success_response(data=model))
     except Exception as e:
         logger.error(f"获取模型详情失败: {e}")
@@ -73,29 +74,29 @@ def create_model():
         data = request.get_json()
 
         model_type = data.get('model_type', '').strip()
-        model_name = data.get('model_name', '').strip()
+        model_name = data.get('model_name', '').strip() or data.get('name', '').strip()
         api_key = data.get('api_key', '')
-        base_url = data.get('base_url', '')
-        model_id = data.get('model_id', '')
+        base_url = data.get('base_url', '') or data.get('api_endpoint', '')
+        model_id_str = data.get('model_id', '')
         priority = data.get('priority', 0)
         config = data.get('config', {})
+        provider = data.get('provider', model_type)
 
         if not model_type or not model_name:
             return error_response("模型类型和名称不能为空")
 
         if isinstance(config, dict):
-            import json
             config = json.dumps(config)
 
         sql = """
             INSERT INTO ai_model_config
-            (model_type, model_name, api_key, base_url, model_id, priority, config, is_active, created_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+            (name, provider, model_type, api_endpoint, model_id, api_key, priority, config, status, created_by)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active', %s)
         """
 
         Database.execute_update(
             sql,
-            (model_type, model_name, api_key, base_url, model_id, priority, config, request.current_user['id'])
+            (model_name, provider, model_type, base_url, model_id_str, api_key, priority, config, request.current_user['id'])
         )
 
         result = Database.execute_query("SELECT LAST_INSERT_ID() as id", fetch_one=True)
@@ -118,21 +119,20 @@ def update_model(model_id):
     try:
         data = request.get_json()
 
-        sql = "UPDATE ai_model_config SET updated_at = NOW()"
         updates = []
         params = []
 
-        if 'model_name' in data:
-            updates.append("model_name = %s")
-            params.append(data['model_name'])
+        if 'model_name' in data or 'name' in data:
+            updates.append("name = %s")
+            params.append(data.get('name') or data.get('model_name'))
 
         if 'api_key' in data:
             updates.append("api_key = %s")
             params.append(data['api_key'])
 
-        if 'base_url' in data:
-            updates.append("base_url = %s")
-            params.append(data['base_url'])
+        if 'base_url' in data or 'api_endpoint' in data:
+            updates.append("api_endpoint = %s")
+            params.append(data.get('api_endpoint') or data.get('base_url'))
 
         if 'model_id' in data:
             updates.append("model_id = %s")
@@ -143,17 +143,17 @@ def update_model(model_id):
             params.append(data['priority'])
 
         if 'is_active' in data:
-            updates.append("is_active = %s")
-            params.append(data['is_active'])
+            updates.append("status = %s")
+            params.append('active' if data['is_active'] else 'inactive')
 
         if 'config' in data:
-            import json
             updates.append("config = %s")
             params.append(json.dumps(data['config']))
 
         if not updates:
             return error_response("没有需要更新的字段")
 
+        updates.append("updated_at = NOW()")
         sql = "UPDATE ai_model_config SET " + ", ".join(updates) + " WHERE id = %s"
         params.append(model_id)
 
@@ -172,7 +172,7 @@ def update_model(model_id):
 def delete_model(model_id):
     """删除AI模型配置"""
     try:
-        sql = "UPDATE ai_model_config SET is_active = FALSE WHERE id = %s"
+        sql = "UPDATE ai_model_config SET status = 'inactive' WHERE id = %s"
         affected = Database.execute_update(sql, (model_id,))
 
         if affected == 0:
@@ -191,75 +191,37 @@ def delete_model(model_id):
 def test_model_connection(model_id):
     """测试模型连接"""
     try:
-        sql = "SELECT * FROM ai_model_config WHERE id = %s AND is_active = TRUE"
+        sql = "SELECT * FROM ai_model_config WHERE id = %s AND status = 'active'"
         model = Database.execute_query(sql, (model_id,), fetch_one=True)
 
         if not model:
             return error_response("模型不存在或已禁用", 404)
 
         api_key = model['api_key']
-        base_url = model['base_url']
+        base_url = model['api_endpoint']
         model_id_str = model['model_id']
-        model_type = model['model_type']
+        model_type = model.get('provider', model.get('model_type', ''))
 
         test_prompt = "你好，这是一个测试消息。请回复'测试成功'。"
 
-        if model_type == 'qwen':
-            url = base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model_id_str or "qwen-turbo",
-                "messages": [{"role": "user", "content": test_prompt}],
-                "max_tokens": 100,
-                "temperature": 0.7
-            }
-        elif model_type == 'zhipu':
-            url = base_url or "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model_id_str or "glm-4-flash",
-                "messages": [{"role": "user", "content": test_prompt}],
-                "max_tokens": 100,
-                "temperature": 0.7
-            }
-        elif model_type == 'doubao':
-            url = base_url or "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+        if model_type in ('qwen', 'doubao', 'deepseek', 'zhipu', 'openai'):
+            if model_type == 'qwen':
+                url = base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+            elif model_type == 'zhipu':
+                url = base_url or "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+            elif model_type == 'doubao':
+                url = base_url or "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+            elif model_type == 'deepseek':
+                url = base_url or "https://api.deepseek.com/v1/chat/completions"
+            elif model_type == 'openai':
+                url = f"{base_url.rstrip('/')}/chat/completions" if base_url else "https://api.openai.com/v1/chat/completions"
+
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             data = {
                 "model": model_id_str,
-                "messages": [{"role": "user", "content": test_prompt}],
-                "max_tokens": 100,
-                "temperature": 0.7
-            }
-        elif model_type == 'deepseek':
-            url = base_url or "https://api.deepseek.com/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model_id_str or "deepseek-chat",
-                "messages": [{"role": "user", "content": test_prompt}],
-                "max_tokens": 100,
-                "temperature": 0.7
-            }
-        elif model_type == 'openai':
-            url = f"{base_url}/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": model_id_str or "gpt-3.5-turbo",
                 "messages": [{"role": "user", "content": test_prompt}],
                 "max_tokens": 100,
                 "temperature": 0.7

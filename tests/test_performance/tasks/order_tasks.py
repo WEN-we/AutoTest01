@@ -1,7 +1,3 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 # 订单模块压测任务文件
 # 此文件定义了订单相关的压测任务，包括创建订单、获取订单列表和订单详情
 # 注意：当前本地服务可能未实现订单相关接口，仅供将来扩展使用
@@ -12,24 +8,33 @@ import yaml
 from locust import TaskSet, task
 
 # 添加项目根目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 
 from utils.tools.logger import log as logger
+from utils.tools.path_manager import get_config_path
 
 # 加载压测数据
-CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-perf_data_path = os.path.join(CURRENT_DIR, 'perf_config.yaml')
-with open(perf_data_path, 'r', encoding='utf-8') as f:
-    perf_data = yaml.safe_load(f)
+perf_data_path = get_config_path('perf_config.yaml')
+logger.info(f"加载配置文件: {perf_data_path}")
+
+if not os.path.exists(perf_data_path):
+    logger.error(f"配置文件不存在: {perf_data_path}")
+    perf_data = {}
+else:
+    with open(perf_data_path, 'r', encoding='utf-8') as f:
+        perf_data = yaml.safe_load(f)
 
 class OrderTasks(TaskSet):
     """订单模块压测任务"""
-    
+
     @task(2)
     def create_order(self):
         """创建订单任务"""
         logger.info("开始创建订单")
         # 本地服务可能没有订单接口，这里仅作为示例
+        if not perf_data or 'api_params' not in perf_data:
+            logger.warning("配置数据为空，跳过创建订单")
+            return
         payload = {
             "product_id": perf_data['api_params']['order']['create']['product_id'],
             "quantity": perf_data['api_params']['order']['create']['quantity']
@@ -45,12 +50,15 @@ class OrderTasks(TaskSet):
             logger.info("创建订单成功")
         else:
             logger.error(f"创建订单失败，状态码: {response.status_code}")
-    
+
     @task(3)
     def get_order_list(self):
         """获取订单列表任务"""
         logger.info("开始获取订单列表")
         # 本地服务可能没有订单列表接口，这里仅作为示例
+        if not perf_data or 'api_params' not in perf_data:
+            logger.warning("配置数据为空，跳过获取订单列表")
+            return
         params = {
             "page": perf_data['api_params']['order']['list']['page'],
             "page_size": perf_data['api_params']['order']['list']['page_size']
@@ -63,12 +71,15 @@ class OrderTasks(TaskSet):
             logger.info("获取订单列表成功")
         else:
             logger.error(f"获取订单列表失败，状态码: {response.status_code}")
-    
+
     @task(1)
     def get_order_detail(self):
         """获取订单详情任务"""
         logger.info("开始获取订单详情")
         # 本地服务可能没有订单详情接口，这里仅作为示例
+        if not perf_data or 'api_params' not in perf_data:
+            logger.warning("配置数据为空，跳过获取订单详情")
+            return
         if hasattr(self, 'order_id'):
             # 替换endpoint中的order_id占位符
             endpoint = perf_data['api_params']['order']['detail']['endpoint'].format(

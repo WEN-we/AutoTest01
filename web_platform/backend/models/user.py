@@ -19,8 +19,8 @@ class User:
     def find_by_id(user_id: int):
         """根据ID查找用户"""
         sql = """
-            SELECT id, username, email, nickname, role, status,
-                   created_at, updated_at, last_login, login_attempts, locked_until, remark
+            SELECT id, username, password, email, nickname, role, status,
+                   created_at, updated_at, last_login, login_attempts, locked_until, remark, avatar_url
             FROM platform_user WHERE id = %s
         """
         return Database.execute_query(sql, (user_id,), fetch_one=True)
@@ -90,14 +90,15 @@ class User:
         return False
 
     @staticmethod
-    def verify_password(user: dict, password: str) -> bool:
+    def verify_password(stored_password: str, password: str) -> bool:
         """验证密码"""
-        stored = user.get('password', '')
+        if not stored_password:
+            return False
 
-        if isinstance(stored, str):
-            stored_hash = stored.encode('utf-8')
+        if isinstance(stored_password, str):
+            stored_hash = stored_password.encode('utf-8')
         else:
-            stored_hash = stored
+            stored_hash = stored_password
 
         return bcrypt.checkpw(password.encode('utf-8'), stored_hash)
 
@@ -160,3 +161,21 @@ class User:
             'page': page,
             'page_size': page_size
         }
+
+    @staticmethod
+    def update_username(user_id: int, username: str):
+        """更新用户名"""
+        sql = "UPDATE platform_user SET username = %s WHERE id = %s"
+        Database.execute_update(sql, (username, user_id))
+
+    @staticmethod
+    def update_avatar(user_id: int, avatar_url: str):
+        """更新头像"""
+        sql = "UPDATE platform_user SET avatar_url = %s WHERE id = %s"
+        Database.execute_update(sql, (avatar_url, user_id))
+
+    @staticmethod
+    def delete_user(user_id: int):
+        """删除用户"""
+        sql = "DELETE FROM platform_user WHERE id = %s"
+        Database.execute_update(sql, (user_id,))

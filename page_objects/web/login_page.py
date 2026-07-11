@@ -3,11 +3,18 @@ from page_objects.web.base_page import BasePage
 from utils.tools.config_reader import ConfigReader
 
 class LoginPage(BasePage):
-    """登录页面对象"""
-    USERNAME_INPUT = "[name='userAccount']"
-    PASSWORD_INPUT = "#userPassword"
-    LOGIN_BUTTON = "#btn-login"  # 定位不变
-    ERROR_TIP = "#showMsg"
+    """教务系统登录页面对象"""
+    # USERNAME_INPUT = "[name='userAccount']"
+    # PASSWORD_INPUT = "#userPassword"
+    # LOGIN_BUTTON = "#btn-login"  # 定位不变
+    # ERROR_TIP = "#showMsg"
+    #本地登录页面定位器
+    USERNAME_INPUT = "#username"
+    PASSWORD_INPUT = "#password"
+    LOGIN_BUTTON = "#loginBtn"  # 定位不变
+    ERROR_TIP = ".d-flex"
+
+
 
     def __init__(self, page):
         super().__init__(page)

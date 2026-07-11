@@ -229,22 +229,39 @@ class Task:
             sql = f"UPDATE test_task SET {', '.join(updates)} WHERE id = %s"
             params.append(task_id)
             Database.execute_update(sql, tuple(params))
+            
+            # 如果任务名称被更新，同步更新执行记录中的任务名称
+            if 'name' in data:
+                exec_sql = "UPDATE test_execution SET task_name = %s WHERE task_id = %s"
+                Database.execute_update(exec_sql, (data['name'], task_id))
 
     @staticmethod
     def delete(task_id: int):
         """删除任务"""
         sql = "DELETE FROM test_task WHERE id = %s"
         Database.execute_update(sql, (task_id,))
+    
+    @staticmethod
+    def get_execution_stats(task_id: int):
+        """获取任务的执行统计信息"""
+        sql = """
+            SELECT 
+                COUNT(*) as run_count,
+                MAX(start_time) as last_run_at
+            FROM test_execution 
+            WHERE task_id = %s
+        """
+        result = Database.execute_query(sql, (task_id,), fetch_one=True)
+        return {
+            'run_count': result['run_count'] if result else 0,
+            'last_run_at': result['last_run_at'] if result else None
+        }
 
     @staticmethod
     def update_status(task_id: int, status: str):
         """更新任务状态"""
-        if status == 'running':
-            sql = "UPDATE test_task SET status = %s, started_at = NOW() WHERE id = %s"
-        elif status in ['success', 'failed', 'cancelled']:
-            sql = "UPDATE test_task SET status = %s, finished_at = NOW() WHERE id = %s"
-        else:
-            sql = "UPDATE test_task SET status = %s WHERE id = %s"
+        # 使用表中实际存在的字段：updated_at
+        sql = "UPDATE test_task SET status = %s, updated_at = NOW() WHERE id = %s"
         Database.execute_update(sql, (status, task_id))
 
     @staticmethod

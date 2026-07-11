@@ -2,7 +2,7 @@
 # 此文件用于配置性能测试的各项参数
 
 # 基本配置
-BASE_URL = "http://localhost:8080"  # 被测系统域名（本地登录服务）
+BASE_URL = "http://localhost:8090"  # 被测系统域名（本地登录服务）
 
 # 压测参数
 USER_COUNT = 100  # 并发用户数（峰值并发）

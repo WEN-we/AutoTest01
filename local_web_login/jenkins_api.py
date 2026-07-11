@@ -1,5 +1,6 @@
 """
 Jenkins集成API
+适配web_platform数据库表结构
 """
 from flask import Blueprint, request, jsonify
 from local_web_login.backend_server import (
@@ -8,6 +9,7 @@ from local_web_login.backend_server import (
 )
 import requests
 import base64
+import json
 from utils.tools.logger import log as logger
 
 jenkins_bp = Blueprint('jenkins', __name__, url_prefix='/api/integrations/jenkins')
@@ -17,7 +19,7 @@ def get_jenkins_config():
     """获取Jenkins配置"""
     sql = """
         SELECT * FROM integration_config
-        WHERE integration_type = 'jenkins' AND is_active = TRUE
+        WHERE integration_type = 'jenkins' AND status = 'active'
         LIMIT 1
     """
     return Database.execute_query(sql, fetch_one=True)
@@ -30,13 +32,8 @@ def jenkins_api_request(method, url_path, data=None):
     if not config:
         return None, "Jenkins未配置"
 
-    credentials = config.get('credentials', '{}')
-    if isinstance(credentials, str):
-        import json
-        credentials = json.loads(credentials)
-
-    username = credentials.get('username', '')
-    api_token = credentials.get('api_token', '')
+    username = config.get('username', '')
+    api_token = config.get('api_token', '') or config.get('api_key', '')
 
     if not username or not api_token:
         return None, "Jenkins凭证未配置"
@@ -202,7 +199,6 @@ def trigger_build():
 
         job_name = data.get('job_name')
         parameters = data.get('parameters', {})
-        token = data.get('token', '')
 
         if not job_name:
             return error_response("任务名称不能为空")

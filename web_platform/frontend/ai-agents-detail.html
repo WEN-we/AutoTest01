@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('app_theme');
+            if (savedTheme) {
+                const theme = savedTheme === 'system' 
+                    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                    : savedTheme;
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI智能体详情 - 自动化测试平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard.html">
+                <div class="brand-logo">
+                    <i class="bi bi-robot"></i>
+                </div>
+                <span class="brand-text">自动化测试平台</span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/dashboard.html"><i class="bi bi-house me-1"></i>首页</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks.html"><i class="bi bi-list-task me-1"></i>测试任务</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/ai-models.html"><i class="bi bi-cpu me-1"></i>AI模型</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/ai-agents.html"><i class="bi bi-robot me-1"></i>AI智能体</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports.html"><i class="bi bi-file-earmark-text me-1"></i>测试报告</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="integrationsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plug me-1"></i>第三方集成
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/integrations.html"><i class="bi bi-gear me-2"></i>集成配置</a></li>
+                            <li><a class="dropdown-item" href="/jenkins.html"><i class="bi bi-hdd me-2"></i>Jenkins</a></li>
+                            <li><a class="dropdown-item" href="/zentao.html"><i class="bi bi-kanban me-2"></i>禅道</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+            <div class="d-flex align-items-center">
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" onclick="updateRecentMonitorsDropdown()" title="查看最近执行的监控记录">
+                        <i class="bi bi-clock-history me-1"></i>最近监控
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" id="recentMonitorsDropdown" style="min-width: 250px;">
+                        <li><span class="dropdown-item-text text-muted small">暂无最近监控记录</span></li>
+                    </ul>
+                </div>
+                <div class="theme-dropdown-wrapper me-3">
+                    <button class="theme-toggle-btn">
+                        <span class="theme-icon"></span>
+                        <span class="theme-label"></span>
+                        <i class="bi bi-chevron-down ms-2" style="font-size: 12px;"></i>
+                    </button>
+                    <div class="theme-dropdown-menu">
+                        <div class="theme-dropdown-header">主题模式</div>
+                        
+                        <div class="theme-option" data-theme="light">
+                            <div class="theme-option-icon">☀️</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">日间模式</div>
+                                <div class="theme-option-desc">明亮清爽的浅色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="dark">
+                            <div class="theme-option-icon">🌙</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">夜间模式</div>
+                                <div class="theme-option-desc">护眼舒适的深色主题</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <div class="theme-option" data-theme="system">
+                            <div class="theme-option-icon">💻</div>
+                            <div class="theme-option-content">
+                                <div class="theme-option-title">跟随系统</div>
+                                <div class="theme-option-desc">自动跟随系统设置切换</div>
+                            </div>
+                            <div class="theme-option-check">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="14" height="14">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="user-menu-wrapper">
+                    <button class="user-menu-btn">
+                        <img class="user-avatar" src="" alt="头像" style="display: none;">
+                        <div class="user-avatar-placeholder">A</div>
+                        <span class="user-name" id="currentUser">管理员</span>
+                        <i class="bi bi-chevron-down chevron"></i>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <div class="user-menu-header">
+                            <div class="user-info">
+                                <img class="user-avatar-large" src="" alt="头像" style="display: none;">
+                                <div class="user-avatar-large-placeholder">A</div>
+                                <div class="user-details">
+                                    <div class="user-fullname" id="userFullname">管理员</div>
+                                    <div class="user-email" id="userEmail">-</div>
+                                </div>
+                            </div>
+                            <button class="edit-profile-btn" id="editProfileBtn">编辑个人资料</button>
+                        </div>
+                        
+                        <button class="user-menu-item" id="uploadAvatarBtn">
+                            <i class="bi bi-camera menu-icon"></i>
+                            <span class="menu-text">上传头像</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changeUsernameBtn">
+                            <i class="bi bi-pencil menu-icon"></i>
+                            <span class="menu-text">修改用户名</span>
+                        </button>
+                        
+                        <button class="user-menu-item" id="changePasswordBtn">
+                            <i class="bi bi-lock menu-icon"></i>
+                            <span class="menu-text">修改密码</span>
+                        </button>
+                        
+                        <div class="user-menu-divider"></div>
+                        
+                        <button class="user-menu-item user-menu-item-danger" id="deleteAccountBtn">
+                            <i class="bi bi-trash menu-icon"></i>
+                            <span class="menu-text">注销账号</span>
+                        </button>
+                        
+                        <div class="user-menu-footer">
+                            <button class="user-menu-item" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right menu-icon"></i>
+                                <span class="menu-text">退出登录</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h1 class="h2"><i class="bi bi-robot text-primary me-2"></i>AI智能体详情</h1>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="/dashboard.html">首页</a></li>
+                                <li class="breadcrumb-item"><a href="/ai-agents.html">AI智能体</a></li>
+                                <li class="breadcrumb-item active" id="breadcrumbAgentName">智能体详情</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <a href="/ai-agents.html" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left me-1"></i>返回列表
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="agentDetail">
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>基本信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label text-sm text-muted">智能体ID</label>
+                            <p class="form-control-plaintext text-primary font-mono" id="agentId">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-sm text-muted">名称</label>
+                            <p class="form-control-plaintext font-weight-bold" id="agentName">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-sm text-muted">状态</label>
+                            <span class="badge" id="agentStatus">未知</span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-sm text-muted">创建时间</label>
+                            <p class="form-control-plaintext text-sm" id="createdAt">-</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-sm text-muted">最后活跃</label>
+                            <p class="form-control-plaintext text-sm" id="lastActive">-</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-bar-chart me-2"></i>统计信息</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6 mb-2">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="text-2xl font-bold text-primary" id="statTotal">-</div>
+                                    <div class="text-xs text-muted">总测试数</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="text-2xl font-bold text-success" id="statPassed">-</div>
+                                    <div class="text-xs text-muted">通过数</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="text-2xl font-bold text-danger" id="statFailed">-</div>
+                                    <div class="text-xs text-muted">失败数</div>
+                                </div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-center p-2 bg-light rounded">
+                                    <div class="text-2xl font-bold text-info" id="statMemory">-</div>
+                                    <div class="text-xs text-muted">记忆项数</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-person-circle me-2"></i>当前角色</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="currentSkill">
+                            <div class="text-center py-8 text-muted">
+                                <i class="bi bi-person-circle fs-4 mb-2"></i>
+                                <p>暂无激活的角色</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-switch me-2"></i>切换角色</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="skillsList">
+                            <div class="col-md-4 mb-3">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="bi bi-question-circle fs-3 text-muted"></i>
+                                        <p class="mt-2 text-muted">加载中...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-play-circle me-2"></i>执行操作</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">选择操作</label>
+                                <select class="form-select" id="actionSelect">
+                                    <option value="">请选择操作</option>
+                                    <option value="analyze_page">页面分析</option>
+                                    <option value="generate_test_cases">测试用例生成</option>
+                                    <option value="execute_test_step">执行测试步骤</option>
+                                    <option value="execute_test_suite">执行测试套件</option>
+                                    <option value="assert_result">智能断言</option>
+                                    <option value="analyze_test_result">结果分析</option>
+                                    <option value="generate_test_report">生成报告</option>
+                                    <option value="take_screenshot">截图取证</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">目标URL（可选）</label>
+                                <input type="text" class="form-control" id="targetUrl" placeholder="https://example.com">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">操作参数（JSON格式）</label>
+                            <textarea class="form-control" id="actionParams" rows="3" placeholder='{"param1": "value1"}'></textarea>
+                        </div>
+                        <button class="btn btn-primary" id="executeBtn" disabled>
+                            <i class="bi bi-play-circle me-1"></i>执行操作
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4" id="executionResult" style="display: none;">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-file-text me-2"></i>执行结果</h5>
+                    </div>
+                    <div class="card-body">
+                        <pre class="bg-dark text-light p-4 rounded-lg text-sm overflow-auto" id="resultOutput" style="color: #00ff88; min-height: 200px;"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/config.js"></script>
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/crypto.js"></script>
+<script src="/static/js/user-menu.js"></script>
+    <script src="/static/js/ai-agents-detail.js"></script>
+</body>
+</html>
