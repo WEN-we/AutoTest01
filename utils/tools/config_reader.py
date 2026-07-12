@@ -12,6 +12,7 @@
 import warnings
 import yaml
 import os
+import re
 from pathlib import Path
 
 # 导入路径管理工具
@@ -47,19 +48,40 @@ class ConfigReader:
             raise Exception(f"读取YAML配置失败：{e}")
 
     @staticmethod
+    def _resolve_env_var(value):
+        """递归解析字符串中的环境变量占位符，支持 ${VAR} 和 ${VAR:-default}"""
+        if isinstance(value, str):
+            # 匹配 ${VAR:-default} 格式
+            m = re.match(r'^\$\{(\w+):-(.+)\}$', value)
+            if m:
+                return os.environ.get(m.group(1), m.group(2))
+            # 匹配 ${VAR} 格式
+            m = re.match(r'^\$\{(\w+)\}$', value)
+            if m:
+                return os.environ.get(m.group(1), '')
+            return value
+        elif isinstance(value, dict):
+            return {k: ConfigReader._resolve_env_var(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            return [ConfigReader._resolve_env_var(item) for item in value]
+        return value
+
+    @staticmethod
     def get_env_config():
         """获取当前激活环境的配置"""
         ConfigReader._warn_deprecated()
         # 优先使用新的配置系统
         try:
             from backend.config.settings import config
-            return config.get_env_config()
+            raw = config.get_env_config()
+            return ConfigReader._resolve_env_var(raw)
         except ImportError:
             pass
 
         env_config = ConfigReader.read_yaml("config/env_config.yaml")
         active_env = env_config["active_env"]
-        return env_config[active_env]
+        raw = env_config[active_env]
+        return ConfigReader._resolve_env_var(raw)
 
     @staticmethod
     def get_db_config():
