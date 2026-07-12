@@ -381,7 +381,8 @@ jobs:
             if curl -f -s -o /dev/null http://127.0.0.1:8090/ 2>/dev/null; then
               echo "本地服务可用，开始性能测试"
               # 一次运行同时生成 CSV 和 HTML 报告（避免重复运行两次）
-              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 5 -t 1m \
+              # timeout 3m 防止 locust 异常挂起（测试时长 1m + 2m 余量）
+              timeout 3m locust -f tests/test_performance/locustfile.py --headless -u 20 -r 5 -t 1m \
                 --csv=${{ env.METRICS_DIR }}/performance_report \
                 --html=${{ env.REPORTS_DIR }}/performance-report.html \
                 --logfile=${{ env.LOGS_DIR }}/locust.log || true
