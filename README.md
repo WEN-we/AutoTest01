@@ -271,13 +271,9 @@ allure serve reports/allure-results
 - **触发条件**：每次 push 到 master 分支或提交 PR 时，自动执行测试、生成 Allure 报告并上传
 - **测试内容**：Web UI 测试、API 测试、AI 自主测试、性能监控
 
-#### 必需的 GitHub Secrets
+#### CI 数据库密码说明
 
-工作流运行前需在仓库「设置 → Secrets and variables → Actions」中配置以下 Secret：
-
-| Secret 名称 | 用途 | 说明 |
-| --- | --- | --- |
-| `MYSQL_CI_PASSWORD` | MySQL 服务容器 root 密码 | CI 中 MySQL service container 与数据库初始化脚本（init_database.py、测试用户插入脚本）均通过此 Secret 获取密码，必须配置否则 CI 数据库相关步骤将失败 |
+CI 工作流中的 MySQL 服务容器与数据库初始化脚本（init_database.py、测试用户插入脚本）使用固定密码 `ci_test_only_pwd`（非真实密码，仅用于 CI 测试环境），无需在仓库 Secrets 中配置 `MYSQL_CI_PASSWORD`。
 
 ### Jenkins 配置（可选）
 

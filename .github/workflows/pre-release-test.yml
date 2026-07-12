@@ -28,7 +28,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -80,7 +80,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化测试数据库
         run: |
@@ -92,7 +92,7 @@ jobs:
           );
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化数据库（建库建表）
         run: |
@@ -100,14 +100,24 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_USER: root
-          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          DB_PASSWORD: ci_test_only_pwd
           LOCAL_DB_NAME: local_web_login
+          LOCAL_DB_HOST: 127.0.0.1
+          LOCAL_DB_PORT: 3306
+          LOCAL_DB_USER: root
+          LOCAL_DB_PASSWORD: ci_test_only_pwd
 
       - name: 启动本地登录服务
         run: |
           nohup python local_web_login/backend_server.py > login_server.log 2>&1 &
           sleep 8
           curl -s http://127.0.0.1:8090/ || echo "服务启动失败，继续执行测试"
+        env:
+          LOCAL_DB_HOST: 127.0.0.1
+          LOCAL_DB_PORT: 3306
+          LOCAL_DB_USER: root
+          LOCAL_DB_PASSWORD: ci_test_only_pwd
+          ADMIN_DEFAULT_PASSWORD: change_me_in_production
 
       - name: 运行 Web 端 UI 测试
         run: |
@@ -177,7 +187,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
           MYSQL_DATABASE: test_auto
         ports:
           - 3306:3306
@@ -216,7 +226,7 @@ jobs:
             sleep 2
           done
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化测试数据库
         run: |
@@ -228,7 +238,7 @@ jobs:
           );
           EOF
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
 
       - name: 初始化数据库（建库建表）
         run: |
@@ -236,14 +246,24 @@ jobs:
         env:
           DB_HOST: 127.0.0.1
           DB_USER: root
-          DB_PASSWORD: ${{ secrets.MYSQL_CI_PASSWORD }}
+          DB_PASSWORD: ci_test_only_pwd
           LOCAL_DB_NAME: local_web_login
+          LOCAL_DB_HOST: 127.0.0.1
+          LOCAL_DB_PORT: 3306
+          LOCAL_DB_USER: root
+          LOCAL_DB_PASSWORD: ci_test_only_pwd
 
       - name: 启动本地登录服务
         run: |
           nohup python local_web_login/backend_server.py > login_server.log 2>&1 &
           sleep 8
           curl -s http://127.0.0.1:8090/ || echo "服务启动失败，继续执行测试"
+        env:
+          LOCAL_DB_HOST: 127.0.0.1
+          LOCAL_DB_PORT: 3306
+          LOCAL_DB_USER: root
+          LOCAL_DB_PASSWORD: ci_test_only_pwd
+          ADMIN_DEFAULT_PASSWORD: change_me_in_production
 
       - name: 检查 AI API 密钥
         id: check_keys
