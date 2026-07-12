@@ -21,8 +21,10 @@ with open(perf_data_path, 'r', encoding='utf-8') as f:
 
 # 生成随机用户数据用于性能测试
 # 用户名/密码必须与 CI 工作流（post-release-validation.yml）中插入数据库的凭据完全匹配
+# CI 环境（PERF_CI=1）使用 100 个用户，本地使用 1000 个
+perf_user_count = 100 if os.getenv('PERF_CI', '0') == '1' else 1000
 perf_users = []
-for i in range(1, 1001):
+for i in range(1, perf_user_count + 1):
     perf_users.append({
         'username': f'perf_test_{i:04d}',
         'password': 'Test@1234'

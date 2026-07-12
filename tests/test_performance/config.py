@@ -12,8 +12,9 @@ RUN_TIME = "10m"  # 压测运行时间（格式：数字+单位，如10s、5m、
 # 思考时间（秒）
 # 思考时间是指用户执行完一个任务后，等待一段时间再执行下一个任务
 # 用于模拟真实用户的操作间隔
-MIN_THINK_TIME = 1  # 最小思考时间
-MAX_THINK_TIME = 3  # 最大思考时间
+# CI 环境通过 PERF_CI=1 自动缩短思考时间
+MIN_THINK_TIME = 0.0 if os.getenv('PERF_CI', '0') == '1' else 1  # 最小思考时间
+MAX_THINK_TIME = 0.5 if os.getenv('PERF_CI', '0') == '1' else 3  # 最大思考时间
 
 # 报告配置
 import os

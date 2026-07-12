@@ -332,9 +332,10 @@ jobs:
           db = pymysql.connect(host="127.0.0.1", port=3306, user="root", password=os.getenv("MYSQL_ROOT_PASSWORD", ""), database="test_auto", charset="utf8mb4")
           cursor = db.cursor()
 
-          # 用户名 perf_test_0001 ~ perf_test_1000，密码统一 Test@1234
-          # 与 locust user_tasks.py 中生成的凭据完全匹配
-          users = [(f"perf_test_{i:04d}", "Test@1234") for i in range(1, 1001)]
+          # CI 环境插入 100 个用户即可（本地测试用 1000）
+          # 用户名 perf_test_0001 ~ perf_test_0100，密码统一 Test@1234
+          count = 100
+          users = [(f"perf_test_{i:04d}", "Test@1234") for i in range(1, count + 1)]
 
           cursor.executemany("INSERT INTO user (username, password) VALUES (%s, %s)", users)
           db.commit()
@@ -379,13 +380,11 @@ jobs:
           if [ -d "tests/test_performance/" ] && [ "$(ls -A tests/test_performance/)" ]; then
             if curl -f -s -o /dev/null http://127.0.0.1:8090/ 2>/dev/null; then
               echo "本地服务可用，开始性能测试"
-              # 运行性能测试并生成多种报告
-              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 2m \
+              # 一次运行同时生成 CSV 和 HTML 报告（避免重复运行两次）
+              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 5 -t 1m \
                 --csv=${{ env.METRICS_DIR }}/performance_report \
+                --html=${{ env.REPORTS_DIR }}/performance-report.html \
                 --logfile=${{ env.LOGS_DIR }}/locust.log || true
-              # 生成 HTML 报告
-              locust -f tests/test_performance/locustfile.py --headless -u 20 -r 2 -t 30s \
-                --html=${{ env.REPORTS_DIR }}/performance-report.html || true
             else
               echo "本地服务不可用，跳过性能测试"
             fi
@@ -396,6 +395,7 @@ jobs:
         env:
           TARGET_ENV: production
           API_URL: http://127.0.0.1:8090
+          PERF_CI: 1
 
       - name: 上传性能测试报告
         if: always()
