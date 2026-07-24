@@ -1,0 +1,3 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"","0","test_login[case0]","tests.test_smoke","2026-07-24","broken","2026-07-24","TestUserUI","test_smoke_ui","",""
+"","19","test_user_login[case0]","tests.test_smoke","2026-07-24","broken","2026-07-24","TestUserApi","test_smoke_api","",""

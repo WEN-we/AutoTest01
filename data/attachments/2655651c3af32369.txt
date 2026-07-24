@@ -1,0 +1,3 @@
+2026-07-24 02:25:08 | INFO     | test_smoke_api:21 | 执行冒烟用例：Web-云班课正确登录
+2026-07-24 02:25:08 | INFO     | api_client:61 | 发送POST请求：https://rica-names-tucson-story.trycloudflare.com/api/account-login，数据：{'account': '13800138000', 'password': 'Test@1234'}
+2026-07-24 02:25:08 | ERROR    | api_client:72 | POST请求失败：HTTPSConnectionPool(host='rica-names-tucson-story.trycloudflare.com', port=443): Max retries exceeded with url: /api/account-login (Caused by NameResolutionError("HTTPSConnection(host='rica-names-tucson-story.trycloudflare.com', port=443): Failed to resolve 'rica-names-tucson-story.trycloudflare.com' ([Errno -2] Name or service not known)"))
