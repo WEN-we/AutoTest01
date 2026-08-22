@@ -78,17 +78,51 @@ def _attach_failure_evidence(item, report) -> None:
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: pytest.Item, call):
     """
-    失败自动截图（大厂稳定性治理标配）。
+    失败自动截图（大厂稳定性治理标配）+ flaky 标记。
 
     说明：
     - 仅在 call 阶段（非 setup/teardown）且【最终失败】时截图；
     - 与 pytest-rerunfailures 配合：重试中的失败 report.outcome='rerun'，
       report.failed 为 False，不会重复截图；只有重试耗尽后的最终失败才截图。
+    - 曾失败但重试通过的用例 → 标记 flaky（Allure 附件 + flaky_rerun.json 记录）。
     """
     outcome = yield
     report = outcome.get_result()
-    if report.when == "call" and report.failed:
-        _attach_failure_evidence(item, report)
+    if report.when == "call":
+        if report.failed:
+            _attach_failure_evidence(item, report)
+        elif report.passed and getattr(item, "_previous_runs", None):
+            _mark_flaky(item, report)
+
+
+def _mark_flaky(item: pytest.Item, report) -> None:
+    """曾失败后重试通过的用例 → 标记 flaky（大厂 flaky 治理第一手信号）。"""
+    logger.warning(f"⚠️ 疑似 flaky（曾失败后重试通过）：{item.nodeid}")
+    try:
+        import allure
+        from allure_commons.types import AttachmentType
+
+        allure.attach(
+            "该用例在本次运行中曾失败，经自动重试后通过 —— 疑似 flaky，建议纳入治理清单。",
+            name="⚠️ flaky 标记（重试通过）",
+            attachment_type=AttachmentType.TEXT,
+        )
+    except Exception:
+        pass
+    # 落盘记录，供质量平台 flaky 治理
+    try:
+        flaky_file = os.path.join(PROJECT_ROOT, "reports", "flaky_rerun.json")
+        os.makedirs(os.path.dirname(flaky_file), exist_ok=True)
+        records = []
+        if os.path.exists(flaky_file):
+            import json
+            with open(flaky_file, "r", encoding="utf-8") as f:
+                records = json.load(f)
+        records.append({"nodeid": item.nodeid, "time": datetime.now().isoformat(timespec="seconds")})
+        with open(flaky_file, "w", encoding="utf-8") as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        logger.warning(f"flaky 记录写入失败：{exc}")
 
 
 def _truthy_env(name: str) -> bool:
@@ -192,7 +226,26 @@ def fixture_web_driver():
 
     web = UIDriver()
     driver = web.start_driver()
+    # Playwright trace 录制（大厂失败定位利器：录屏+DOM快照+网络请求）
+    _trace_dir = os.path.join(PROJECT_ROOT, "reports", "traces")
+    os.makedirs(_trace_dir, exist_ok=True)
+    _trace_started = False
+    try:
+        if hasattr(driver, "context") and hasattr(driver.context, "tracing"):
+            driver.context.tracing.start(screenshots=True, snapshots=True)
+            _trace_started = True
+    except Exception as exc:
+        logger.warning(f"Playwright trace 启动失败：{exc}")
     yield driver
+    try:
+        if _trace_started:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            driver.context.tracing.stop(
+                path=os.path.join(_trace_dir, f"session_{ts}.zip")
+            )
+            logger.info(f"Playwright trace 已保存：reports/traces/session_{ts}.zip")
+    except Exception as exc:
+        logger.warning(f"Playwright trace 保存失败：{exc}")
     web.quit_driver()
     logger.info("===== Web 驱动关闭 =====")
 

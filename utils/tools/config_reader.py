@@ -1,15 +1,16 @@
 """
-配置读取工具类（已废弃，请使用 backend.config.settings.Config）
+配置读取工具类（项目唯一配置入口）
 
-保留原因：
-1. 向后兼容：tests/ 目录下的测试代码可能仍在使用
-2. 逐步迁移：建议新项目使用 backend.config.settings.Config
+说明（2026-08-22 收敛）：
+- 历史迁移目标 backend.config.settings 已随旧 web_platform 删除，本类收敛为唯一配置入口
+- 能力：多环境 yaml（config/*.yaml）+ 环境变量覆盖（${VAR} / ${VAR:-default}）
+- 设计：配置与代码分离（大厂标准），敏感信息走环境变量，禁止硬编码
 
-迁移指南：
-- 旧：from utils.tools.config_reader import ConfigReader; ConfigReader.get_env_config()
-- 新：from backend.config.settings import config; config.get_env_config()
+用法：
+    from utils.tools.config_reader import ConfigReader
+    cfg = ConfigReader.get_ui_config()
+    env = ConfigReader.get_env_config()
 """
-import warnings
 import yaml
 import os
 import re
@@ -23,16 +24,12 @@ PROJECT_ROOT = Path(get_path())
 
 
 class ConfigReader:
-    """配置读取工具类（已废弃，请使用 backend.config.settings.Config）"""
+    """配置读取工具类（唯一配置入口）"""
 
     @staticmethod
     def _warn_deprecated():
-        """发出废弃警告"""
-        warnings.warn(
-            "ConfigReader 已废弃，请使用 backend.config.settings.Config",
-            DeprecationWarning,
-            stacklevel=3
-        )
+        """历史遗留方法（保留空实现以兼容旧调用，不再发废弃警告）"""
+        pass
 
     @staticmethod
     def read_yaml(file_path):
@@ -70,14 +67,6 @@ class ConfigReader:
     def get_env_config():
         """获取当前激活环境的配置"""
         ConfigReader._warn_deprecated()
-        # 优先使用新的配置系统
-        try:
-            from backend.config.settings import config
-            raw = config.get_env_config()
-            return ConfigReader._resolve_env_var(raw)
-        except ImportError:
-            pass
-
         env_config = ConfigReader.read_yaml("config/env_config.yaml")
         active_env = env_config["active_env"]
         raw = env_config[active_env]
@@ -87,19 +76,6 @@ class ConfigReader:
     def get_db_config():
         """获取数据库配置"""
         ConfigReader._warn_deprecated()
-        try:
-            from backend.config.settings import config
-            db_config = config.get_database_config()
-            return {
-                'host': db_config.get('host'),
-                'port': db_config.get('port'),
-                'user': db_config.get('username'),
-                'pwd': db_config.get('password'),
-                'database': db_config.get('database')
-            }
-        except ImportError:
-            pass
-
         env = ConfigReader.get_env_config()
         return env["db"]
 
@@ -107,18 +83,6 @@ class ConfigReader:
     def get_ui_config():
         """获取UI自动化配置"""
         ConfigReader._warn_deprecated()
-        try:
-            from backend.config.settings import config
-            ui_config = config.get_ui_config()
-            env_config = config.get_env_config()
-            if ui_config and env_config:
-                ui_config["login_url"] = ui_config.get("login_url", "").format(
-                    base_ui_url=env_config.get("base_ui_url", "")
-                )
-            return ui_config
-        except ImportError:
-            pass
-
         ui_config = ConfigReader.read_yaml("config/ui_config.yaml")
         env_config = ConfigReader.get_env_config()
         ui_config["login_url"] = ui_config["login_url"].format(
