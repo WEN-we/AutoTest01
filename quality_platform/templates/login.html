@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}登录 · 质量工程平台{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>质量工程平台</h1>
+    <p class="hint">请登录后使用（默认管理员 admin / admin123）</p>
+    <input type="text" id="login-user" placeholder="用户名" style="width:100%;margin-bottom:10px">
+    <input type="password" id="login-pass" placeholder="密码" style="width:100%;margin-bottom:14px">
+    <button class="btn" id="btn-login" style="width:100%">登 录</button>
+    <div id="login-msg" class="hint" style="margin-top:10px"></div>
+  </div>
+</div>
+<script>
+document.getElementById("btn-login").onclick = async () => {
+  const msg = document.getElementById("login-msg");
+  try {
+    const resp = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("login-user").value,
+        password: document.getElementById("login-pass").value,
+      }),
+    });
+    const d = await resp.json();
+    if (resp.ok) { location.href = "/"; }
+    else { msg.textContent = d.error || "登录失败"; }
+  } catch (e) { msg.textContent = "登录失败：" + e.message; }
+};
+</script>
+{% endblock %}

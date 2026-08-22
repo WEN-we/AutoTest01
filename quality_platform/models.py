@@ -56,6 +56,25 @@ CREATE TABLE IF NOT EXISTS ai_analysis (
     source        TEXT,                               -- llm / rule
     analyzed_at   TEXT
 );
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'user',       -- admin / user
+    created_at    TEXT
+);
+CREATE TABLE IF NOT EXISTS cases (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    nodeid        TEXT NOT NULL UNIQUE,
+    name          TEXT,
+    module        TEXT,
+    tags          TEXT DEFAULT '',
+    owner         TEXT DEFAULT '',
+    description   TEXT DEFAULT '',
+    status        TEXT DEFAULT 'active',              -- active / disabled
+    created_at    TEXT,
+    updated_at    TEXT
+);
 """
 
 
@@ -146,6 +165,80 @@ class _Database:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    # ---------- cases（用例库管理）----------
+    def list_cases(self, module: str = "", keyword: str = "", limit: int = 500) -> list[dict]:
+        sql = "SELECT * FROM cases WHERE 1=1"
+        args: list = []
+        if module:
+            sql += " AND module=?"
+            args.append(module)
+        if keyword:
+            sql += " AND (nodeid LIKE ? OR name LIKE ? OR tags LIKE ?)"
+            kw = f"%{keyword}%"
+            args += [kw, kw, kw]
+        sql += " ORDER BY id DESC LIMIT ?"
+        args.append(limit)
+        with self._conn() as conn:
+            rows = conn.execute(sql, args).fetchall()
+            return [dict(r) for r in rows]
+
+    def upsert_case(self, nodeid: str, name: str = "", module: str = "",
+                    tags: str = "", owner: str = "", description: str = "",
+                    status: str = "active") -> int:
+        now = datetime.now().isoformat(timespec="seconds")
+        with self._conn() as conn:
+            row = conn.execute("SELECT id FROM cases WHERE nodeid=?", (nodeid,)).fetchone()
+            if row:
+                conn.execute(
+                    "UPDATE cases SET name=?, module=?, tags=?, owner=?, description=?, "
+                    "status=?, updated_at=? WHERE id=?",
+                    (name, module, tags, owner, description, status, now, row["id"]),
+                )
+                return row["id"]
+            cur = conn.execute(
+                "INSERT INTO cases (nodeid, name, module, tags, owner, description, "
+                "status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                (nodeid, name, module, tags, owner, description, status, now, now),
+            )
+            return cur.lastrowid
+
+    def update_case(self, case_id: int, **fields) -> bool:
+        allowed = {"name", "module", "tags", "owner", "description", "status"}
+        sets = {k: v for k, v in fields.items() if k in allowed}
+        if not sets:
+            return False
+        sets["updated_at"] = datetime.now().isoformat(timespec="seconds")
+        cols = ", ".join(f"{k}=?" for k in sets)
+        with self._conn() as conn:
+            cur = conn.execute(
+                f"UPDATE cases SET {cols} WHERE id=?", (*sets.values(), case_id)
+            )
+            return cur.rowcount > 0
+
+    def delete_case(self, case_id: int) -> bool:
+        with self._conn() as conn:
+            cur = conn.execute("DELETE FROM cases WHERE id=?", (case_id,))
+            return cur.rowcount > 0
+
+    def import_cases(self, nodeids: list[str]) -> dict:
+        """批量导入用例（从 pytest collect），返回新增/更新统计。"""
+        imported, updated = 0, 0
+        for nodeid in nodeids:
+            module = nodeid.split("::")[0].replace("\\", "/").split("/")[-2] \
+                if "::" in nodeid else ""
+            name = nodeid.split("::")[-1]
+            with self._conn() as conn:
+                exists = conn.execute(
+                    "SELECT id FROM cases WHERE nodeid=?", (nodeid,)
+                ).fetchone()
+            if exists:
+                self.update_case(exists["id"], name=name, module=module)
+                updated += 1
+            else:
+                self.upsert_case(nodeid, name=name, module=module)
+                imported += 1
+        return {"imported": imported, "updated": updated}
+
     # ---------- ai_analysis ----------
     def upsert_analysis(self, case_result_id: int, result: dict):
         with self._conn() as conn:
@@ -170,3 +263,31 @@ class _Database:
 
 db = _Database()
 db.init_db()  # 模块加载即建表（幂等），平台/脚本无需手动初始化
+
+# ---------- 预置管理员账号（首次启动自动创建）----------
+import bcrypt as _bcrypt
+
+
+def ensure_admin():
+    with db._conn() as conn:
+        row = conn.execute("SELECT id FROM users WHERE username='admin'").fetchone()
+        if row:
+            return
+        pwd_hash = _bcrypt.hashpw(b"admin123", _bcrypt.gensalt()).decode()
+        conn.execute(
+            "INSERT INTO users (username, password_hash, role, created_at) VALUES (?,?,?,?)",
+            ("admin", pwd_hash, "admin", datetime.now().isoformat(timespec="seconds")),
+        )
+        print("已创建默认管理员账号：admin / admin123（请尽快修改密码）")
+
+
+def verify_user(username: str, password: str) -> dict | None:
+    """校验用户名密码，成功返回用户 dict。"""
+    with db._conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        if not row:
+            return None
+        user = dict(row)
+        if _bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
+            return user
+        return None

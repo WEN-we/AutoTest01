@@ -1,10 +1,21 @@
 {% extends "base.html" %}
-{% block title %}用例清单 · 质量工程平台{% endblock %}
+{% block title %}用例管理 · 质量工程平台{% endblock %}
 {% block content %}
-<h1>用例清单 <span class="hint">pytest --collect-only 实时收集</span></h1>
+<h1>用例管理 <span class="hint">pytest 实时收集 + 用例库（CRUD / 导入 / 标记）</span></h1>
+
 <div class="toolbar">
-  <input type="text" id="case-filter" placeholder="过滤关键字...">
+  <input type="text" id="case-filter" placeholder="过滤关键字..." style="width:260px">
+  <button class="btn" onclick="importCases()">从 pytest 一键导入</button>
+  <button class="btn" onclick="showAddCase()">新增用例</button>
   <span id="case-count" class="hint"></span>
 </div>
+
+<h2>用例库（可管理）</h2>
+<table class="tbl">
+  <thead><tr><th>ID</th><th>用例（nodeid）</th><th>模块</th><th>标签</th><th>负责人</th><th>状态</th><th>操作</th></tr></thead>
+  <tbody id="manage-tbody"></tbody>
+</table>
+
+<h2>pytest 实时收集（只读）</h2>
 <pre id="cases-pre" class="cases"></pre>
 {% endblock %}

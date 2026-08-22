@@ -2,6 +2,7 @@
 
 async function getJSON(url, options) {
   const resp = await fetch(url, options);
+  if (resp.status === 401) { location.href = "/login"; throw new Error("未登录"); }
   if (!resp.ok) throw new Error(await resp.text());
   return resp.json();
 }
@@ -36,6 +37,23 @@ function renderRuns(runs, tbodyId) {
     </tr>`).join("") || '<tr><td colspan="10" style="text-align:center;color:#9aa2b1">暂无执行记录</td></tr>';
 }
 
+/* ---------- 登录 / 登出 ---------- */
+function initNav() {
+  const userEl = document.getElementById("nav-user");
+  const logoutEl = document.getElementById("btn-logout");
+  if (!userEl) return;
+  const user = window._user;
+  if (user && user.username) {
+    userEl.textContent = user.username + "（" + (user.role === "admin" ? "管理员" : "用户") + "）";
+    logoutEl.style.display = "";
+    logoutEl.onclick = async (e) => {
+      e.preventDefault();
+      await getJSON("/api/logout", { method: "POST" });
+      location.href = "/login";
+    };
+  }
+}
+
 /* ---------- 看板 ---------- */
 function renderGate(gate) {
   const el = document.getElementById("gate-banner");
@@ -55,6 +73,8 @@ function renderGate(gate) {
 async function loadDashboard() {
   try {
     const d = await getJSON("/api/dashboard");
+    window._user = d.user;
+    initNav();
     renderGate(d.gate);
     document.getElementById("k-score").textContent = d.quality_score.score;
     document.getElementById("k-total").textContent = d.summary.total_cases;
@@ -199,7 +219,7 @@ async function triggerRun() {
   } catch (e) { msg.textContent = "触发失败：" + e.message; }
 }
 
-/* ---------- 执行详情 ---------- */
+/* ---------- 执行详情 + 单用例重跑 ---------- */
 async function loadRunDetail() {
   const tbody = document.getElementById("detail-tbody");
   if (!tbody) return;
@@ -214,8 +234,21 @@ async function loadRunDetail() {
         <td class="${c.error_type ? "fail" : ""}">${esc(c.error_type || "")}</td>
         <td class="msg" title="${esc(c.error_message || "")}">${esc((c.error_message || "").slice(0, 60))}</td>
         <td>${c.screenshot ? `<a class="shot" href="/${c.screenshot}" target="_blank">截图</a>` : "-"}</td>
+        <td><button class="btn" onclick="rerunCase('${esc(c.nodeid).replace(/'/g, "\\'")}')">重跑</button></td>
       </tr>`).join("");
-  } catch (e) { tbody.innerHTML = '<tr><td colspan="6">加载失败：' + esc(e.message) + "</td></tr>"; }
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="7">加载失败：' + esc(e.message) + "</td></tr>"; }
+}
+
+async function rerunCase(nodeid) {
+  if (!confirm("重跑该用例？\n" + nodeid)) return;
+  try {
+    await getJSON("/api/runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ test_path: nodeid, reruns: 1, timeout: 30 }),
+    });
+    alert("已触发重跑，去执行中心查看");
+  } catch (e) { alert("触发失败：" + e.message); }
 }
 
 /* ---------- 定时任务 ---------- */
@@ -275,7 +308,71 @@ async function delSched(id) {
   loadSchedules();
 }
 
-/* ---------- 用例清单 ---------- */
+/* ---------- 用例管理（CRUD） ---------- */
+async function loadManageCases() {
+  const tbody = document.getElementById("manage-tbody");
+  if (!tbody) return;
+  try {
+    const kw = (document.getElementById("case-filter").value || "").trim();
+    const d = await getJSON("/api/cases/manage?keyword=" + encodeURIComponent(kw));
+    tbody.innerHTML = d.cases.map(c => `
+      <tr>
+        <td>${c.id}</td>
+        <td class="msg" title="${esc(c.nodeid)}">${esc(c.nodeid)}</td>
+        <td>${esc(c.module || "")}</td>
+        <td>${esc(c.tags || "")}</td>
+        <td>${esc(c.owner || "")}</td>
+        <td class="${c.status === "active" ? "pass" : "skip"}">${c.status === "active" ? "启用" : "停用"}</td>
+        <td>
+          <button class="btn" onclick="editCase(${c.id}, '${esc(c.status).replace(/'/g, "\\'")}')">${c.status === "active" ? "停用" : "启用"}</button>
+          <button class="btn" onclick="delCase(${c.id})">删除</button>
+        </td>
+      </tr>`).join("") || '<tr><td colspan="7" style="text-align:center;color:#9aa2b1">用例库为空，可点击"从 pytest 一键导入"</td></tr>';
+  } catch (e) { console.error(e); }
+}
+
+async function importCases() {
+  const btn = document.querySelector('button[onclick="importCases()"]');
+  const count = document.getElementById("case-count");
+  if (btn) { btn.disabled = true; btn.textContent = "导入中..."; }
+  try {
+    const d = await getJSON("/api/cases/import", { method: "POST" });
+    if (count) count.textContent = `导入完成：新增 ${d.imported}，更新 ${d.updated}`;
+    loadManageCases();
+  } catch (e) { if (count) count.textContent = "导入失败：" + e.message; }
+  if (btn) { btn.disabled = false; btn.textContent = "从 pytest 一键导入"; }
+}
+
+async function showAddCase() {
+  const nodeid = prompt("输入用例 nodeid（如 tests/test_api/test_user_api.py::TestUserApi::test_user_login[case0]）：");
+  if (!nodeid) return;
+  try {
+    await getJSON("/api/cases/manage", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nodeid }),
+    });
+    loadManageCases();
+  } catch (e) { alert("新增失败：" + e.message); }
+}
+
+async function editCase(id, status) {
+  const next = status === "active" ? "disabled" : "active";
+  await getJSON(`/api/cases/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: next }),
+  });
+  loadManageCases();
+}
+
+async function delCase(id) {
+  if (!confirm("删除该用例记录？")) return;
+  await getJSON(`/api/cases/${id}`, { method: "DELETE" });
+  loadManageCases();
+}
+
+/* ---------- 用例清单（collect 只读） ---------- */
 async function loadCases() {
   const pre = document.getElementById("cases-pre");
   const count = document.getElementById("case-count");
@@ -283,7 +380,7 @@ async function loadCases() {
   try {
     const d = await getJSON("/api/cases");
     window._cases = d.cases || [];
-    if (count) count.textContent = "共 " + d.count + " 条";
+    if (count) count.textContent = "collect 共 " + d.count + " 条";
     applyCaseFilter();
   } catch (e) { pre.textContent = "收集失败：" + e.message; }
 }
@@ -291,7 +388,7 @@ async function loadCases() {
 function applyCaseFilter() {
   const pre = document.getElementById("cases-pre");
   const kw = (document.getElementById("case-filter").value || "").trim();
-  const list = kw ? window._cases.filter(c => c.includes(kw)) : window._cases;
+  const list = kw ? (window._cases || []).filter(c => c.includes(kw)) : (window._cases || []);
   pre.textContent = list.join("\n");
 }
 
@@ -305,15 +402,17 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (document.getElementById("history-tbody")) {
     loadHistory();
-    const btn = document.getElementById("btn-run");
-    if (btn) btn.onclick = triggerRun;
+    document.getElementById("btn-run").onclick = triggerRun;
     loadSchedules();
     const sbtn = document.getElementById("btn-sched");
     if (sbtn) sbtn.onclick = addSchedule;
   }
   if (document.getElementById("detail-tbody")) loadRunDetail();
-  if (document.getElementById("cases-pre")) {
-    loadCases();
-    document.getElementById("case-filter").addEventListener("input", applyCaseFilter);
+  if (document.getElementById("manage-tbody")) {
+    loadManageCases();
+    document.getElementById("case-filter").addEventListener("input", () => {
+      loadManageCases(); applyCaseFilter();
+    });
   }
+  if (document.getElementById("cases-pre")) loadCases();
 });

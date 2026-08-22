@@ -12,9 +12,9 @@
   <div class="card"><div class="num skip">{{ execution.skipped }}</div><div class="lbl">跳过</div></div>
   <div class="card"><div class="num">{{ execution.duration if execution.duration else "-" }}s</div><div class="lbl">耗时</div></div>
 </div>
-<h2>用例结果</h2>
+<h2>用例结果 <span class="hint">可对单个用例"重跑"（大厂：失败单用例快速重跑定位）</span></h2>
 <table class="tbl">
-  <thead><tr><th>用例</th><th>状态</th><th>耗时</th><th>错误类型</th><th>错误信息</th><th>截图</th></tr></thead>
+  <thead><tr><th>用例</th><th>状态</th><th>耗时</th><th>错误类型</th><th>错误信息</th><th>截图</th><th>操作</th></tr></thead>
   <tbody id="detail-tbody" data-exec="{{ execution.id }}"></tbody>
 </table>
 {% endif %}

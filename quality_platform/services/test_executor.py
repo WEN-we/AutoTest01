@@ -84,6 +84,7 @@ class TestExecutor:
             env = {**os.environ, **_load_exec_env()}  # 注入执行环境变量（覆盖被测服务地址）
             proc = subprocess.run(
                 cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+                encoding="utf-8", errors="replace",
                 timeout=self.default_timeout, env=env,
             )
             results = self._parse_junit(JUNIT_TMP) if JUNIT_TMP.exists() else []
@@ -103,6 +104,12 @@ class TestExecutor:
                                 round(time.time() - started, 2))
             log.info(f"[平台] 执行完成：exec={exec_id} total={total} "
                      f"passed={passed} failed={failed} skipped={skipped}")
+            # 完成通知（webhook，失败不阻塞主流程）
+            try:
+                from quality_platform.services.notifier import send_execution_summary
+                send_execution_summary(exec_id)
+            except Exception as exc:
+                log.warning(f"[平台] 通知异常：{exc}")
         except Exception as exc:
             log.error(f"[平台] 执行异常：{exc}")
             db.finish_execution(exec_id, 0, 0, 0, 0, round(time.time() - started, 2))

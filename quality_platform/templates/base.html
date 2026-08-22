@@ -13,7 +13,10 @@
     <a href="/" class="{{ 'active' if request.path == '/' }}">看板</a>
     <a href="/failures" class="{{ 'active' if request.path == '/failures' }}">失败分析</a>
     <a href="/runs" class="{{ 'active' if request.path == '/runs' }}">执行中心</a>
-    <a href="/cases" class="{{ 'active' if request.path == '/cases' }}">用例清单</a>
+    <a href="/cases" class="{{ 'active' if request.path == '/cases' }}">用例</a>
+    <span style="flex:1"></span>
+    <span id="nav-user" class="hint"></span>
+    <a href="#" id="btn-logout" style="display:none">登出</a>
   </nav>
   <main class="container">
     {% block content %}{% endblock %}

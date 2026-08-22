@@ -21,3 +21,9 @@ exec_env:
   TEST_API_URL: "http://127.0.0.1:8090/api"
   TEST_UI_URL: "http://127.0.0.1:8090"
   HEADLESS: "true"
+
+# 结果通知（大厂：失败自动告警；钉钉/企微/通用 webhook）
+# webhook_url 支持 ${ENV_VAR} 从环境变量读取，如 ${DINGTALK_WEBHOOK}
+notify:
+  enabled: true
+  webhook_url: ""            # 留空则关闭通知
