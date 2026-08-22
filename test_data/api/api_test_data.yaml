@@ -237,3 +237,20 @@ user_local_login_api:
       password: ""
     expected_code: 400
     errorMessage: "用户名和密码不能为空"
+
+  - case_name: 本地-正确登录
+    method: POST
+    url: "/api/login"
+    json:
+      username: "qa_test"
+      password: "Test@1234"
+    expected_code: 200
+
+  - case_name: 本地-错误密码
+    method: POST
+    url: "/api/login"
+    json:
+      username: "qa_test"
+      password: "wrong-pass"
+    expected_code: 400
+    errorMessage: "用户名或密码错误"
