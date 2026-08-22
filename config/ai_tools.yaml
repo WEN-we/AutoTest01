@@ -1,0 +1,24 @@
+# AI 工具链配置（大厂 AI 时代测开）
+# API Key 优先从环境变量读取：LLM_API_KEY / LLM_BASE_URL / LLM_MODEL
+# 环境变量未配置时，回落到本文件；均未配置时 AI 能力自动降级为规则/模板模式
+
+llm:
+  # OpenAI 兼容服务地址（示例：通义千问 https://dashscope.aliyuncs.com/compatible-mode/v1
+  #                        DeepSeek https://api.deepseek.com/v1
+  #                        OpenAI https://api.openai.com/v1）
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  model: "qwen-plus"          # 可用 qwen-plus / deepseek-chat / gpt-4o-mini 等
+  api_key: ""                  # 留空则走环境变量 LLM_API_KEY
+  timeout: 60                  # 单次请求超时（秒）
+
+# 失败分析参数
+failure_analysis:
+  max_error_chars: 500         # 错误信息截断长度
+  max_trace_chars: 1500        # 堆栈截断长度
+
+# flaky 识别参数
+flaky_detector:
+  window: 10                   # 统计窗口：最近 10 次运行
+  low: 0.3                     # flaky 判定下界（失败率 >= 30%）
+  high: 0.7                    # flaky 判定上界（失败率 <= 70%）
+  min_runs: 3                  # 最少样本数（不足不判定）

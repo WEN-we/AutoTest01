@@ -1,7 +1,13 @@
 """
-Selenium Web驱动封装
-支持Chrome、Firefox、Edge浏览器
-配置与代码分离，从ui_config.yaml读取配置
+Selenium 驱动生命周期封装（大厂分层规范：驱动层只负责"启动/退出"，元素操作统一在 PO 基类）
+
+职责边界：
+- SeleniumDriver（本文件）        ：浏览器生命周期管理（启动/配置/退出），配置从 ui_config.yaml 读取
+- SeleniumBasePage（page_objects/web/selenium_base_page.py）：元素定位与页面操作（唯一操作封装）
+- 用例层通过 fixture 获取 driver，再注入 PO 使用（依赖注入）
+
+升级记录（2026-08-22）：移除原 SeleniumDriver 中与 SeleniumBasePage 重复的元素操作方法
+（find_element/click/input_text 等约 30 个），消除约 90% 代码重复。
 """
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
@@ -10,18 +16,12 @@ from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.edge.options import Options as EdgeOptions
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
-from utils.tools.path_manager import get_config_path
-import os
 
 
 class SeleniumDriver:
-    """Selenium Web驱动封装类"""
+    """Selenium Web驱动生命周期封装（Chrome/Firefox/Edge）"""
 
     BROWSER_MAP = {
         'chrome': (webdriver.Chrome, ChromeOptions, ChromeService),
@@ -114,200 +114,16 @@ class SeleniumDriver:
             self.driver.quit()
             log.info("Selenium浏览器已关闭")
 
-    def get(self, url: str):
-        """访问URL"""
-        log.info(f"访问URL: {url}")
-        self.driver.get(url)
-
-    def find_element(self, locator: tuple, timeout: int = None):
-        """查找单个元素
-        
-        Args:
-            locator: 定位器元组，如 (By.ID, 'username') 或 ('id', 'username')
-            timeout: 超时时间
-        """
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_element_located(locator)
-            )
-            return element
-        except TimeoutException:
-            log.error(f"元素定位超时: {locator}")
-            raise
-
-    def find_elements(self, locator: tuple, timeout: int = None):
-        """查找多个元素"""
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        try:
-            elements = WebDriverWait(self.driver, timeout).until(
-                EC.presence_of_all_elements_located(locator)
-            )
-            return elements
-        except TimeoutException:
-            log.warning(f"元素定位超时(返回空列表): {locator}")
-            return []
-
-    def _normalize_locator(self, locator: tuple) -> tuple:
-        """标准化定位器"""
-        by, value = locator
-        if isinstance(by, str):
-            by_map = {
-                'id': By.ID,
-                'name': By.NAME,
-                'class': By.CLASS_NAME,
-                'class_name': By.CLASS_NAME,
-                'tag': By.TAG_NAME,
-                'tag_name': By.TAG_NAME,
-                'link': By.LINK_TEXT,
-                'link_text': By.LINK_TEXT,
-                'partial_link': By.PARTIAL_LINK_TEXT,
-                'partial_link_text': By.PARTIAL_LINK_TEXT,
-                'css': By.CSS_SELECTOR,
-                'css_selector': By.CSS_SELECTOR,
-                'xpath': By.XPATH,
-            }
-            by = by_map.get(by.lower(), by)
-        return (by, value)
-
-    def click(self, locator: tuple, timeout: int = None):
-        """点击元素"""
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.element_to_be_clickable(locator)
-            )
-            element.click()
-            log.info(f"点击元素: {locator}")
-        except TimeoutException:
-            log.error(f"元素不可点击: {locator}")
-            raise
-
-    def input_text(self, locator: tuple, text: str, clear: bool = True, timeout: int = None):
-        """输入文本"""
-        element = self.find_element(locator, timeout)
-        if clear:
-            element.clear()
-        element.send_keys(text)
-        log.info(f"输入文本: {locator} <- '{text}'")
-
-    def get_text(self, locator: tuple, timeout: int = None) -> str:
-        """获取元素文本"""
-        element = self.find_element(locator, timeout)
-        text = element.text
-        log.info(f"获取文本: {locator} -> '{text}'")
-        return text
-
-    def get_attribute(self, locator: tuple, attribute: str, timeout: int = None) -> str:
-        """获取元素属性"""
-        element = self.find_element(locator, timeout)
-        return element.get_attribute(attribute)
-
-    def is_displayed(self, locator: tuple, timeout: int = None) -> bool:
-        """判断元素是否可见"""
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.visibility_of_element_located(locator)
-            )
-            return element.is_displayed()
-        except TimeoutException:
-            return False
-
-    def wait_for_element(self, locator: tuple, timeout: int = None):
-        """等待元素可见"""
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        WebDriverWait(self.driver, timeout).until(
-            EC.visibility_of_element_located(locator)
-        )
-        log.info(f"元素可见: {locator}")
-
-    def wait_for_element_clickable(self, locator: tuple, timeout: int = None):
-        """等待元素可点击"""
-        timeout = timeout or self.timeout
-        locator = self._normalize_locator(locator)
-        WebDriverWait(self.driver, timeout).until(
-            EC.element_to_be_clickable(locator)
-        )
-        log.info(f"元素可点击: {locator}")
-
-    def switch_to_frame(self, locator: tuple = None, index: int = None, name: str = None):
-        """切换到iframe"""
-        if locator:
-            frame = self.find_element(locator)
-            self.driver.switch_to.frame(frame)
-        elif index is not None:
-            self.driver.switch_to.frame(index)
-        elif name:
-            self.driver.switch_to.frame(name)
-        log.info(f"切换到iframe: {locator or index or name}")
-
-    def switch_to_default_content(self):
-        """切换回主文档"""
-        self.driver.switch_to.default_content()
-        log.info("切换回主文档")
-
-    def execute_script(self, script: str, *args):
-        """执行JavaScript脚本"""
-        return self.driver.execute_script(script, *args)
-
-    def take_screenshot(self, filename: str):
-        """截图"""
-        self.driver.save_screenshot(filename)
-        log.info(f"截图保存: {filename}")
-
-    def get_current_url(self) -> str:
-        """获取当前URL"""
-        return self.driver.current_url
-
-    def get_title(self) -> str:
-        """获取页面标题"""
-        return self.driver.title
-
-    def refresh(self):
-        """刷新页面"""
-        self.driver.refresh()
-        log.info("页面已刷新")
-
-    def back(self):
-        """后退"""
-        self.driver.back()
-        log.info("页面后退")
-
-    def forward(self):
-        """前进"""
-        self.driver.forward()
-        log.info("页面前进")
-
-    def add_cookie(self, name: str, value: str, domain: str = None, path: str = '/'):
-        """添加Cookie"""
-        cookie = {'name': name, 'value': value, 'path': path}
-        if domain:
-            cookie['domain'] = domain
-        self.driver.add_cookie(cookie)
-        log.info(f"添加Cookie: {name}={value}")
-
-    def get_cookies(self) -> list:
-        """获取所有Cookie"""
-        return self.driver.get_cookies()
-
-    def delete_all_cookies(self):
-        """删除所有Cookie"""
-        self.driver.delete_all_cookies()
-        log.info("已删除所有Cookie")
-
 
 if __name__ == "__main__":
-    driver = SeleniumDriver()
-    d = driver.start_driver()
-    d.get("https://www.baidu.com")
-    driver.input_text(('id', 'kw'), 'selenium')
-    driver.click(('id', 'su'))
-    import time
-    time.sleep(2)
-    driver.quit_driver()
+    # 演示：驱动生命周期（SeleniumDriver）与元素操作（SeleniumBasePage）职责分离
+    from page_objects.web.selenium_base_page import SeleniumBasePage
+
+    sd = SeleniumDriver()
+    driver = sd.start_driver()
+    page = SeleniumBasePage(driver)
+    page.goto_url("https://www.baidu.com", "百度首页")
+    page.input_text(('id', 'kw'), 'selenium', '搜索框')
+    page.click(('id', 'su'), '搜索按钮')
+    page.wait_for_visible(('css', '#content_left'), timeout=10)
+    sd.quit_driver()

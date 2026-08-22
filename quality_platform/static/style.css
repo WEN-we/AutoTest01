@@ -1,0 +1,54 @@
+:root {
+  --bg: #0f1115;
+  --surface: #1a1d24;
+  --surface2: #232733;
+  --border: #2e3440;
+  --text: #e6e8ec;
+  --muted: #9aa2b1;
+  --accent: #378add;
+  --red: #e24b4a;
+  --green: #639922;
+  --amber: #ef9f27;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: "Microsoft YaHei", system-ui, sans-serif; font-size: 14px; }
+.topnav { display: flex; align-items: center; gap: 18px; padding: 12px 28px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.topnav .brand { font-weight: 500; color: var(--accent); margin-right: 12px; }
+.topnav a { color: var(--muted); text-decoration: none; padding: 4px 10px; border-radius: 6px; }
+.topnav a.active, .topnav a:hover { color: var(--text); background: var(--surface2); }
+.container { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+h1 { font-size: 18px; font-weight: 500; margin-bottom: 16px; }
+h2 { font-size: 15px; font-weight: 500; margin: 24px 0 10px; }
+.hint { color: var(--muted); font-size: 12px; margin-left: 8px; }
+.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+.card .num { font-size: 26px; font-weight: 500; color: var(--accent); }
+.card .lbl { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.tbl { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 10px; overflow: hidden; }
+.tbl th, .tbl td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; }
+.tbl th { background: var(--surface2); color: var(--muted); font-weight: 500; }
+.tbl td.msg { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pass { color: var(--green); }
+.fail { color: var(--red); }
+.skip { color: var(--amber); }
+.btn { background: var(--accent); color: #fff; border: 0; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.toolbar { margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
+.run-form { display: flex; gap: 10px; margin-bottom: 8px; }
+input[type="text"] { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; width: 360px; }
+.analysis { background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.analysis b { color: var(--amber); }
+.cases { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 600px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; line-height: 1.6; }
+a.shot { color: var(--accent); }
+.errbox { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: Consolas, monospace; font-size: 12px; white-space: pre-wrap; max-height: 300px; overflow: auto; }
+select { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 13px; }
+.gate { border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; font-size: 15px; font-weight: 500; }
+.gate-pass { background: rgba(99,145,34,0.18); border: 1px solid var(--green); color: var(--green); }
+.gate-warn { background: rgba(239,159,39,0.18); border: 1px solid var(--amber); color: var(--amber); }
+.gate-fail { background: rgba(226,75,74,0.18); border: 1px solid var(--red); color: var(--red); }
+.gate-none { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+.gate small { font-weight: 400; color: inherit; opacity: 0.85; }
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
+.chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+.chart-box h2 { margin-top: 0; }

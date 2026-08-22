@@ -30,6 +30,10 @@
 | ✅ 数据驱动测试 | 测试数据与用例分离，支持 YAML 格式，便于维护与扩展 |
 | ✅ 统一驱动管理 | 全平台驱动自动初始化、自动销毁，降低维护成本 |
 | ✅ 可视化报告 | 集成 Allure Report，清晰展示测试结果、用例覆盖率及失败原因 |
+| ✅ 失败即证据 | 用例失败自动截图 + 错误详情，落盘 `reports/screenshots/` 并 attach 到 Allure |
+| ✅ 失败自动重试 | `--reruns=1` 应对偶发网络/渲染波动，重试后最终失败才截图 |
+| ✅ AI 工具链 | 失败智能分析（LLM 归因 + 规则降级）、flaky 识别、AI 用例生成建议 |
+| ✅ 质量工程平台 | 质量看板（通过率/flaky 率/趋势）+ 失败分析 + 一键执行 + 用例清单 |
 | ✅ 持续集成 | 支持 GitHub Actions 自动触发测试、生成报告，适配 Jenkins 流水线 |
 | ✅ 高可复用性 | 工具类与业务逻辑解耦，页面对象层（PO模式）统一管理，适配业务快速迭代 |
 | ✅ 灵活执行 | 支持按模块、按类型执行用例，支持冒烟测试、回归测试，支持失败重跑 |
@@ -77,16 +81,19 @@ AutoTest01/                     # repo 根（默认分支: master）
 ├─ bat/
 │  └─ run_allure.bat            # Allure 报告相关 batch 脚本
 ├─ docs/                        # 项目文档
-├─ agents/                      # AI Agent 智能体模块
-├─ ai_agents/                   # AI Agent 核心模块
-├─ ai_page_objects/
+├─ utils/
 │  ├─ __init__.py
-│  ├─ base/                     # AI 相关 page object 基础
-│  └─ web/                      # AI web page objects
+│  ├─ drivers/                  # 驱动相关工具/封装（只负责生命周期）
+│  ├─ ai/                       # AI 工具链（大厂 AI 时代测开）
+│  │  ├─ llm_client.py          # 轻量 LLM 客户端（通义/DeepSeek/OpenAI 兼容）
+│  │  ├─ failure_analyzer.py    # 失败智能分析（LLM 归因 + 规则降级）
+│  │  ├─ flaky_detector.py      # flaky 用例识别（失败率 30%~70%）
+│  │  └─ test_generator.py      # AI 用例生成建议（描述 → pytest 骨架）
+│  └─ tools/                    # 工具集合（日志/配置/路径/API客户端）
 ├─ page_objects/
 │  ├─ __init__.py
 │  ├─ android/
-│  ├─ base/
+│  ├─ base/                     # 通用 PO 基类（截图/URL校验/日志）
 │  ├─ harmony/
 │  ├─ ios/
 │  ├─ linux_gui/
@@ -94,10 +101,20 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  └─ windows/                  # 各平台的 page object 目录（按平台分）
 ├─ service_objects/
 │  ├─ __init__.py
-│  ├─ base_service.py
+│  ├─ base_service.py           # 服务层基类（步骤日志/摘要）
+│  ├─ ec_login_service.py       # 服务层示例（电商登录业务流）
 │  └─ linux_service.py          # 服务层封装（例如启动/管理服务）
+├─ quality_platform/            # 质量工程平台（大厂测开形态：看板+失败分析+执行）
+│  ├─ app.py                    # Flask 入口（页面 + REST API）
+│  ├─ models.py                 # SQLite 数据层（executions/case_results/ai_analysis）
+│  ├─ services/
+│  │  ├─ test_executor.py       # pytest 异步执行 + JUnit 解析入库
+│  │  └─ ai_integration.py      # AI 能力接入（失败归因/flaky 检测）
+│  ├─ templates/                # 看板/失败分析/执行中心/用例清单
+│  ├─ static/                   # 前端资源（Chart.js 趋势图）
+│  └─ data/                     # SQLite 数据库（gitignore，运行时生成）
 ├─ config/
-│  ├─ ai_config.yaml
+│  ├─ ai_tools.yaml             # AI 工具链配置（模型/超参，Key 走环境变量）
 │  ├─ app_config.yaml
 │  ├─ env_config.yaml
 │  ├─ harmony_config.yaml
@@ -105,18 +122,16 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ perf_config.yaml
 │  ├─ ui_config.yaml
 │  └─ windows_config.yaml       # 各类运行/环境/平台配置文件（yaml）
-├─ local_web_login/             # 本地登录后端服务（示例/测试用）
+├─ local_web_login/             # 本地登录后端服务（被测系统 SUT）
 ├─ test_data/
-│  ├─ ai/
 │  ├─ api/
 │  └─ ui/                       # 测试用的数据（按类别）
 ├─ tests/
 │  ├─ __init__.py
-│  ├─ conftest.py               # pytest 固件/夹具
-│  ├─ test_ai/
+│  ├─ conftest.py               # pytest 固件/夹具 + 失败自动截图 hook
 │  ├─ test_android/
 │  ├─ test_api/
-│  ├─ test_ecommerce/            # 电商平台测试用例（UI + API）
+│  ├─ test_ecommerce/           # 电商平台测试用例（UI + API）
 │  ├─ test_harmony/
 │  ├─ test_ios/
 │  ├─ test_linux/
@@ -127,16 +142,7 @@ AutoTest01/                     # repo 根（默认分支: master）
 │  ├─ test_ui/
 │  ├─ test_whitebox/
 │  └─ test_windows/             # 各类测试集（按平台/类型分）
-├─ tools/
-│  └─ get_mouse_pos.py          # 小工具脚本
-├─ utils/
-│  ├─ __init__.py
-│  ├─ drivers/                  # 驱动相关工具/封装
-│  └─ tools/                    # 工具集合
-└─ web_platform/                # 图形化测试管理平台（Flask 后端 + 前端）
-   ├─ backend/
-   ├─ frontend/
-   └─ scripts/                  # 平台运维脚本（重置密码等）
+└─ web_platform/                # （已删除，由 quality_platform 替代）
 ```
 
 ---
@@ -269,7 +275,7 @@ allure serve reports/allure-results
 - **工作流文件**：`.github/workflows/pre-release-test.yml`（发布前验证）和 `.github/workflows/post-release-validation.yml`（发布后验证）
 - **开启 GitHub Pages**：设置 → Pages → 源选择 gh-pages 分支
 - **触发条件**：每次 push 到 master 分支或提交 PR 时，自动执行测试、生成 Allure 报告并上传
-- **测试内容**：Web UI 测试、API 测试、AI 自主测试、性能监控
+- **测试内容**：Web UI 测试、API 测试、性能监控
 
 #### CI 数据库密码说明
 
@@ -288,7 +294,6 @@ CI 工作流中的 MySQL 服务容器与数据库初始化脚本（init_database
 - **`pre-release-test.yml`**（发布前验证）：
   - Web 端 UI 测试（Playwright + 本地登录服务）
   - Web 端 API 测试
-  - AI 自主测试（需配置 API 密钥，无密钥自动跳过）
   - 合并生成 Allure 报告并发布到 GitHub Pages
 
 - **`post-release-validation.yml`**（发布后验证）：

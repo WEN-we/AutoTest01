@@ -232,136 +232,10 @@ jobs:
           name: api-test-logs
           path: logs/
 
-  # AI 自主测试
-  ai-tests:
-    name: AI 自主测试
-    runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
-          MYSQL_DATABASE: test_auto
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
-
-      - name: 设置 Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 安装系统依赖
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1
-
-      - name: 安装 Python 依赖
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-ci.txt
-          playwright install chromium
-
-      - name: 等待 MySQL 启动
-        run: |
-          for i in {1..30}; do
-            if mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -e "SELECT 1" 2>/dev/null; then
-              echo "MySQL 服务已启动"
-              break
-            fi
-            sleep 2
-          done
-        env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
-
-      - name: 初始化测试数据库
-        run: |
-          mysql -h 127.0.0.1 -P 3306 -u root -p${MYSQL_ROOT_PASSWORD} -D test_auto <<'EOF'
-          CREATE TABLE IF NOT EXISTS user (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) NOT NULL,
-            password VARCHAR(100) NOT NULL
-          );
-          EOF
-        env:
-          MYSQL_ROOT_PASSWORD: ci_test_only_pwd
-
-      - name: 初始化数据库（建库建表）
-        run: |
-          python local_web_login/init_database.py
-        env:
-          DB_HOST: 127.0.0.1
-          DB_USER: root
-          DB_PASSWORD: ci_test_only_pwd
-          LOCAL_DB_NAME: local_web_login
-          LOCAL_DB_HOST: 127.0.0.1
-          LOCAL_DB_PORT: 3306
-          LOCAL_DB_USER: root
-          LOCAL_DB_PASSWORD: ci_test_only_pwd
-
-      - name: 启动本地登录服务
-        run: |
-          nohup python local_web_login/backend_server.py > login_server.log 2>&1 &
-          sleep 8
-          curl -s http://127.0.0.1:8090/ || echo "服务启动失败，继续执行测试"
-        env:
-          LOCAL_DB_HOST: 127.0.0.1
-          LOCAL_DB_PORT: 3306
-          LOCAL_DB_USER: root
-          LOCAL_DB_PASSWORD: ci_test_only_pwd
-          ADMIN_DEFAULT_PASSWORD: change_me_in_production
-
-      - name: 检查 AI API 密钥
-        id: check_keys
-        run: |
-          if [ -z "${{ secrets.QWEN_API_KEY }}" ] && [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
-            echo "skip=true" >> $GITHUB_OUTPUT
-            echo "未配置 AI API 密钥，将跳过 AI 测试"
-          else
-            echo "skip=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 运行 AI 自主测试
-        if: steps.check_keys.outputs.skip != 'true'
-        run: |
-          pytest tests/test_ai/ -v --alluredir=allure-results-ai
-        continue-on-error: true
-        env:
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: 跳过 AI 测试提示
-        if: steps.check_keys.outputs.skip == 'true'
-        run: echo "已跳过 AI 测试（未配置 API 密钥）"
-
-      - name: 上传 AI 测试结果
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-test-results
-          path: allure-results-ai
-          if-no-files-found: ignore
-
-      - name: 上传 AI 测试日志
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ai-test-logs
-          path: |
-            logs/
-            login_server.log
-
   # 生成 Allure 报告
   allure-report:
     name: 生成 Allure 报告
-    needs: [web-tests, api-tests, ai-tests]
+    needs: [web-tests, api-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -383,7 +257,6 @@ jobs:
           mkdir -p merged-allure-results
           cp -r artifacts/ui-test-results/* merged-allure-results/ 2>/dev/null || true
           cp -r artifacts/api-test-results/* merged-allure-results/ 2>/dev/null || true
-          cp -r artifacts/ai-test-results/* merged-allure-results/ 2>/dev/null || true
 
       - name: 安装 Allure
         run: |

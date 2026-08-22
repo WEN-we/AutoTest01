@@ -55,7 +55,7 @@ class PathManager:
     
     def get_web_platform_path(self, *args):
         """获取web平台路径"""
-        return self.get_path('web_platform', *args)
+        return self.get_path('quality_platform', *args)
     
     def get_web_platform_backend_path(self, *args):
         """获取web平台后端路径"""
@@ -63,7 +63,7 @@ class PathManager:
     
     def get_web_platform_frontend_path(self, *args):
         """获取web平台前端路径"""
-        return self.get_web_platform_path('frontend', *args)
+        return self.get_web_platform_path('templates', *args)
     
     def get_web_platform_config_path(self, *args):
         """获取web平台配置路径"""

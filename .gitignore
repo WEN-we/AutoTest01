@@ -40,12 +40,8 @@ Claude_Code_Prompt.txt
 certs/
 # RSA 密钥
 keys/
-# 用户上传文件
-web_platform/backend/uploads/
-# 重置密码脚本与密码测试脚本（含敏感操作）
-web_platform/scripts/reset_password*.py
-web_platform/scripts/reset_admin_password.py
-web_platform/scripts/test_password.py
+# 质量工程平台运行数据（SQLite 数据库，本地生成不入库）
+quality_platform/data/
 
 # Claude / AI 工具个人配置
 .claude/

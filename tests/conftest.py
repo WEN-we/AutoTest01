@@ -17,6 +17,79 @@ import pytest
 
 from utils.tools.logger import logger
 
+# ==============================
+# 0. 失败自动截图 + Allure 附件（大厂稳定性治理标配：失败即证据）
+# ==============================
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _find_driver_from_item(item) -> object | None:
+    """从用例 fixture 中提取可用的 driver/page（兼容 Selenium WebDriver 与 Playwright Page）。"""
+    for name in ("selenium_driver", "web_driver", "ui_driver", "android_driver", "ios_driver"):
+        driver = item.funcargs.get(name)
+        if driver is not None:
+            return driver
+    return None
+
+
+def _capture_screenshot_png(driver) -> bytes | None:
+    """尝试截取当前页面 PNG（Selenium WebDriver / Playwright Page 均兼容）。"""
+    try:
+        if hasattr(driver, "get_screenshot_as_png"):
+            return driver.get_screenshot_as_png()
+        if hasattr(driver, "screenshot"):
+            return driver.screenshot()
+    except Exception as exc:  # 截图失败不阻断用例执行
+        logger.warning(f"截图失败（{type(driver).__name__}）：{exc}")
+    return None
+
+
+def _attach_failure_evidence(item, report) -> None:
+    """失败时：截图落盘 reports/screenshots/（供 CI 归档）+ attach 到 Allure（报告内直接可见）。"""
+    driver = _find_driver_from_item(item)
+    if driver is None:
+        return
+
+    png = _capture_screenshot_png(driver)
+    if not png:
+        return
+
+    # 1) 落盘，便于 CI 上传归档
+    screenshots_dir = os.path.join(PROJECT_ROOT, "reports", "screenshots")
+    os.makedirs(screenshots_dir, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    fpath = os.path.join(screenshots_dir, f"{ts}_{item.name}.png")
+    with open(fpath, "wb") as f:
+        f.write(png)
+    logger.info(f"失败截图已保存：{fpath}")
+
+    # 2) attach 到 Allure
+    try:
+        import allure
+        from allure_commons.types import AttachmentType
+
+        allure.attach(png, name="失败截图", attachment_type=AttachmentType.PNG)
+        if report.longrepr:
+            allure.attach(str(report.longrepr), name="失败详情", attachment_type=AttachmentType.TEXT)
+    except Exception as exc:
+        logger.warning(f"Allure 附件写入失败：{exc}")
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item: pytest.Item, call):
+    """
+    失败自动截图（大厂稳定性治理标配）。
+
+    说明：
+    - 仅在 call 阶段（非 setup/teardown）且【最终失败】时截图；
+    - 与 pytest-rerunfailures 配合：重试中的失败 report.outcome='rerun'，
+      report.failed 为 False，不会重复截图；只有重试耗尽后的最终失败才截图。
+    """
+    outcome = yield
+    report = outcome.get_result()
+    if report.when == "call" and report.failed:
+        _attach_failure_evidence(item, report)
+
 
 def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
@@ -102,8 +175,6 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(pytest.mark.harmony)
         elif "/tests/test_ecommerce/" in path:
             item.add_marker(pytest.mark.ecommerce)
-        elif "/tests/test_ai/" in path:
-            item.add_marker(pytest.mark.ai)
         elif "/tests/test_performance/" in path:
             item.add_marker(pytest.mark.performance)
         elif "/tests/test_selenium/" in path:
@@ -310,7 +381,6 @@ def _detect_test_type_from_items(items) -> str:
         'test_harmony': 'harmony',
         'test_service': 'service',
         'test_performance': 'performance',
-        'test_ai': 'ai',
         'test_whitebox': 'whitebox',
     }
     for key, test_type in type_map.items():

@@ -13,11 +13,18 @@ import time
 
 
 class SeleniumBasePage:
-    """Selenium基础页面类"""
+    """Selenium基础页面类（唯一元素操作封装，驱动生命周期见 utils/drivers/selenium_driver.py）"""
 
-    def __init__(self, driver):
+    def __init__(self, driver, timeout: int = None):
         self.driver = driver
-        self.timeout = 10
+        # 超时统一从 ui_config.yaml 读取（配置与代码分离），可显式覆盖
+        if timeout is None:
+            try:
+                from utils.tools.config_reader import ConfigReader
+                timeout = ConfigReader.get_ui_config().get("timeout", 10)
+            except Exception:
+                timeout = 10
+        self.timeout = timeout
 
     def _normalize_locator(self, locator: tuple) -> tuple:
         """标准化定位器"""

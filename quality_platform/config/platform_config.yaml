@@ -1,0 +1,23 @@
+# 质量工程平台配置
+# 对标大厂（字节/腾讯）质量门禁与度量参数
+
+# 质量门禁（Quality Gate）：最近一次完成的执行按此规则判定
+gate:
+  enabled: true
+  min_pass_rate: 80.0        # 通过率低于此值 → FAIL（门禁不过）
+  warn_pass_rate: 90.0       # 通过率低于此值 → WARN
+  max_fail_count: 5          # 失败用例数超过此值 → FAIL
+  max_flaky_rate: 0.3        # flaky 用例占比超过此值 → WARN
+
+# 质量分权重（综合评分 0~100）
+quality_score:
+  pass_rate_weight: 0.6      # 通过率权重
+  stability_weight: 0.3      # 稳定性权重（flaky 越少越高）
+  coverage_weight: 0.1       # 执行覆盖率权重（已执行用例数占比）
+
+# 执行环境变量（注入 pytest 子进程，覆盖被测服务地址；大厂"执行配置"）
+# 支持 ${ENV_VAR} 透传宿主环境变量，如 ${DEEPSEEK_API_KEY}
+exec_env:
+  TEST_API_URL: "http://127.0.0.1:8090/api"
+  TEST_UI_URL: "http://127.0.0.1:8090"
+  HEADLESS: "true"

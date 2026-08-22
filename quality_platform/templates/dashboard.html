@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}质量看板 · 质量工程平台{% endblock %}
+{% block content %}
+<h1>质量看板 <span class="hint">对标大厂：门禁 / 金字塔 / flaky 治理 / 失败聚类</span></h1>
+
+<div id="gate-banner" class="gate gate-none">质量门禁：计算中...</div>
+
+<div class="cards">
+  <div class="card"><div class="num" id="k-score">-</div><div class="lbl">质量分</div></div>
+  <div class="card"><div class="num" id="k-total">-</div><div class="lbl">累计用例</div></div>
+  <div class="card"><div class="num" id="k-passrate">-</div><div class="lbl">通过率</div></div>
+  <div class="card"><div class="num" id="k-flaky">-</div><div class="lbl">疑似 flaky</div></div>
+  <div class="card"><div class="num" id="k-stablefail">-</div><div class="lbl">稳定失败</div></div>
+  <div class="card"><div class="num" id="k-runs">-</div><div class="lbl">执行次数</div></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-box">
+    <h2>最近执行趋势</h2>
+    <canvas id="trendChart" height="140"></canvas>
+  </div>
+  <div class="chart-box">
+    <h2>测试金字塔（用例类型分布）</h2>
+    <canvas id="pyramidChart" height="140"></canvas>
+  </div>
+</div>
+<div class="hint" id="k-env"></div>
+
+<h2>最近执行</h2>
+<table class="tbl">
+  <thead><tr><th>#</th><th>测试路径</th><th>总数</th><th>通过</th><th>失败</th><th>通过率</th><th>耗时</th><th>开始时间</th><th>状态</th><th></th></tr></thead>
+  <tbody id="runs-tbody"></tbody>
+</table>
+{% endblock %}

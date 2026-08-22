@@ -77,12 +77,10 @@ AutoTest01/                     # Repository root (default branch: master)
 ├─ bat/
 │  └─ run_allure.bat            # Allure report related batch scripts
 ├─ docs/                        # Project documentation
-├─ agents/                      # AI Agent module
-├─ ai_agents/                   # AI Agent core module
-├─ ai_page_objects/
-│  ├─ __init__.py
-│  ├─ base/                     # AI related page object base
-│  └─ web/                      # AI web page objects
+├─ utils/
+│  ├─ ai/                       # AI toolchain (LLM failure analysis / flaky detection / case generation)
+│  ├─ drivers/                  # Driver lifecycle only
+│  └─ tools/                    # Common tools (logger/config/path/api client)
 ├─ page_objects/
 │  ├─ __init__.py
 │  ├─ android/
@@ -97,7 +95,6 @@ AutoTest01/                     # Repository root (default branch: master)
 │  ├─ base_service.py
 │  └─ linux_service.py          # Service layer encapsulation (e.g., start/manage services)
 ├─ config/
-│  ├─ ai_config.yaml
 │  ├─ app_config.yaml
 │  ├─ env_config.yaml
 │  ├─ harmony_config.yaml
@@ -113,7 +110,6 @@ AutoTest01/                     # Repository root (default branch: master)
 ├─ tests/
 │  ├─ __init__.py
 │  ├─ conftest.py               # pytest fixtures
-│  ├─ test_ai/
 │  ├─ test_android/
 │  ├─ test_api/
 │  ├─ test_ecommerce/            # E-commerce platform test cases (UI + API)
@@ -133,7 +129,7 @@ AutoTest01/                     # Repository root (default branch: master)
 │  ├─ __init__.py
 │  ├─ drivers/                  # Driver-related utilities/wrappers
 │  └─ tools/                    # Tool collection
-└─ web_platform/                # Graphical test management platform (Flask backend + frontend)
+└─ web_platform/                # Quality engineering platform (Flask backend + frontend)
    ├─ backend/
    ├─ frontend/
    └─ scripts/                  # Platform maintenance scripts (password reset, etc.)

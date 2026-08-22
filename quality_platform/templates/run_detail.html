@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}执行详情 · 质量工程平台{% endblock %}
+{% block content %}
+<h1>执行详情 {% if execution %}<span class="hint">#{{ execution.id }} · {{ execution.test_path }}</span>{% endif %}</h1>
+{% if not execution %}
+  <p class="hint">执行不存在。</p>
+{% else %}
+<div class="cards">
+  <div class="card"><div class="num">{{ execution.total }}</div><div class="lbl">用例总数</div></div>
+  <div class="card"><div class="num pass">{{ execution.passed }}</div><div class="lbl">通过</div></div>
+  <div class="card"><div class="num fail">{{ execution.failed }}</div><div class="lbl">失败</div></div>
+  <div class="card"><div class="num skip">{{ execution.skipped }}</div><div class="lbl">跳过</div></div>
+  <div class="card"><div class="num">{{ execution.duration if execution.duration else "-" }}s</div><div class="lbl">耗时</div></div>
+</div>
+<h2>用例结果</h2>
+<table class="tbl">
+  <thead><tr><th>用例</th><th>状态</th><th>耗时</th><th>错误类型</th><th>错误信息</th><th>截图</th></tr></thead>
+  <tbody id="detail-tbody" data-exec="{{ execution.id }}"></tbody>
+</table>
+{% endif %}
+{% endblock %}

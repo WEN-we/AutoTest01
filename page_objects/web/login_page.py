@@ -72,7 +72,14 @@ class LoginPage(BasePage):
         if captcha:
             self.page.fill(self.EC_CAPTCHA_INPUT, captcha)
         self.page.click(self.EC_LOGIN_BUTTON)
-        self.page.wait_for_timeout(2000)
+        # 显式等待登录结果（错误提示出现或网络空闲），替代固定等待（大厂规范：禁止 sleep 硬等待）
+        try:
+            self.page.wait_for_selector(self.ERROR_TIP, state="visible", timeout=5000)
+        except Exception:
+            try:
+                self.page.wait_for_load_state("networkidle", timeout=5000)
+            except Exception:
+                pass
 
     def check_remember_me(self):
         """勾选记住我复选框"""

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}执行中心 · 质量工程平台{% endblock %}
+{% block content %}
+<h1>执行中心 <span class="hint">参数化执行：并发 / 失败重试 / 超时 / 标记</span></h1>
+<div class="run-form">
+  <input type="text" id="test-path" placeholder="测试路径，如 tests/test_smoke/" value="tests/test_smoke/">
+  <input type="number" id="opt-parallel" placeholder="并发(0=串行)" value="0" style="width:120px" title="pytest-xdist worker 数">
+  <input type="number" id="opt-reruns" placeholder="重试(0=不重试)" value="1" style="width:120px" title="失败自动重试次数">
+  <input type="number" id="opt-timeout" placeholder="超时秒(0=不限)" value="60" style="width:120px" title="单用例超时">
+  <input type="text" id="opt-marker" placeholder="标记(如 smoke)" value="" style="width:120px" title="pytest -m 过滤">
+  <button id="btn-run" class="btn">触发执行</button>
+</div>
+<div id="run-msg" class="hint"></div>
+
+<h2>执行历史</h2>
+<table class="tbl">
+  <thead><tr><th>#</th><th>测试路径</th><th>总数</th><th>通过</th><th>失败</th><th>通过率</th><th>耗时</th><th>开始时间</th><th>状态</th><th></th></tr></thead>
+  <tbody id="history-tbody"></tbody>
+</table>
+
+<h2>定时任务（nightly 回归）</h2>
+<div class="run-form">
+  <input type="text" id="sched-name" placeholder="任务名" value="每日回归" style="width:120px">
+  <select id="sched-kind" style="width:110px">
+    <option value="daily">每天定时</option>
+    <option value="interval">每N小时</option>
+  </select>
+  <input type="text" id="sched-cron" placeholder="时间(22:00)或小时(6)" value="22:00" style="width:120px">
+  <input type="text" id="sched-path" placeholder="测试路径" value="tests/test_smoke/" style="width:220px">
+  <button id="btn-sched" class="btn">创建定时任务</button>
+</div>
+<table class="tbl">
+  <thead><tr><th>#</th><th>任务名</th><th>类型</th><th>调度</th><th>测试路径</th><th>重试</th><th>状态</th><th>上次执行</th><th>操作</th></tr></thead>
+  <tbody id="sched-tbody"></tbody>
+</table>
+{% endblock %}
