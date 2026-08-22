@@ -28,7 +28,7 @@ from quality_platform.models import db
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 SCREENSHOT_DIR = PROJECT_ROOT / "reports" / "screenshots"
-JUNIT_TMP = PROJECT_ROOT / "reports" / "platform" / "junit.xml"
+JUNIT_TMP = PROJECT_ROOT / "reports" / "platform"  # 目录，junit 文件按 exec_id 隔离（防并发覆盖）
 PLATFORM_CONFIG = PROJECT_ROOT / "quality_platform" / "config" / "platform_config.yaml"
 _ENV_VAR = re.compile(r"^\$\{(\w+)\}$")
 
@@ -78,8 +78,11 @@ class TestExecutor:
              parallel: int = 0, timeout: int = 0, marker: str = ""):
         started = time.time()
         try:
-            JUNIT_TMP.parent.mkdir(parents=True, exist_ok=True)
-            cmd = self._build_command(test_path, reruns, parallel, timeout, marker)
+            # junit 文件按 exec_id 隔离，避免并发执行互相覆盖（大厂执行隔离）
+            junit_file = JUNIT_TMP / f"junit_{exec_id}.xml"
+            junit_file.parent.mkdir(parents=True, exist_ok=True)
+            cmd = self._build_command(test_path, reruns, parallel, timeout, marker,
+                                      junit_file)
             log.info(f"[平台] 执行测试：{' '.join(cmd)}")
             env = {**os.environ, **_load_exec_env()}  # 注入执行环境变量（覆盖被测服务地址）
             proc = subprocess.run(
@@ -87,7 +90,7 @@ class TestExecutor:
                 encoding="utf-8", errors="replace",
                 timeout=self.default_timeout, env=env,
             )
-            results = self._parse_junit(JUNIT_TMP) if JUNIT_TMP.exists() else []
+            results = self._parse_junit(junit_file) if junit_file.exists() else []
             total = len(results)
             passed = sum(1 for r in results if r["status"] == "passed")
             failed = sum(1 for r in results if r["status"] in ("failed", "error"))
@@ -116,10 +119,10 @@ class TestExecutor:
 
     # ---------- 命令构建（大厂执行参数化） ----------
     def _build_command(self, test_path: str, reruns: int, parallel: int,
-                       timeout: int, marker: str) -> list[str]:
+                       timeout: int, marker: str, junit_file: Path = None) -> list[str]:
         # 使用当前解释器（sys.executable），确保与平台同 Python 环境、依赖一致
         cmd = [sys.executable, "-m", "pytest", str(test_path),
-               f"--junitxml={JUNIT_TMP}",
+               f"--junitxml={junit_file or JUNIT_TMP}",
                "--alluredir", str(PROJECT_ROOT / "reports" / "allure-results"),
                "-q"]
         if reruns > 0:

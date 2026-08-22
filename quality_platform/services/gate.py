@@ -102,9 +102,11 @@ def test_pyramid() -> dict:
     for r in records:
         nodeid = r.get("nodeid", "")
         kind = "other"
+        # 兼容两种 nodeid 格式：路径式（tests/test_api/x.py::...）与 junit classname 点分式（tests.test_api.x.TestX::...）
         for key in ("test_api", "test_ui", "test_smoke", "test_selenium",
-                    "test_android", "test_ecommerce", "test_performance", "test_whitebox"):
-            if f"/{key}/" in nodeid or f"{key}/" in nodeid:
+                    "test_android", "test_ecommerce", "test_performance",
+                    "test_whitebox", "test_service"):
+            if f"/{key}/" in nodeid or f".{key}." in nodeid:
                 kind = key.replace("test_", "")
                 break
         dist[kind] = dist.get(kind, 0) + 1

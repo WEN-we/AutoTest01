@@ -207,3 +207,33 @@ user_smoken_login_api:
 #      password: ""
 #    expected_code: 200
 #    expected_msg: "密码不能为空"
+
+# ====================== 本地 SUT 登录接口（local_web_login，本地稳定可跑） ======================
+# 说明：仅覆盖"参数校验"场景（不依赖数据库）；云班课外部用例见上方 user_login_api
+user_local_login_api:
+  - case_name: 本地-空用户名登录
+    method: POST
+    url: "/api/login"
+    json:
+      username: ""
+      password: "Test@1234"
+    expected_code: 400
+    errorMessage: "用户名和密码不能为空"
+
+  - case_name: 本地-空密码登录
+    method: POST
+    url: "/api/login"
+    json:
+      username: "test"
+      password: ""
+    expected_code: 400
+    errorMessage: "用户名和密码不能为空"
+
+  - case_name: 本地-用户名密码都为空
+    method: POST
+    url: "/api/login"
+    json:
+      username: ""
+      password: ""
+    expected_code: 400
+    errorMessage: "用户名和密码不能为空"

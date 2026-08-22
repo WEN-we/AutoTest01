@@ -21,21 +21,21 @@ class TestLogin:
 
     def test_login_empty_username(self, client):
         """测试空用户名"""
-        response = client.post('/login', json={'username': '', 'password': 'test'})
+        response = client.post('/api/login', json={'username': '', 'password': 'test'})
         assert response.status_code == 400
-        assert response.json == {"code": 400, "message": "参数不能为空"}
+        assert response.json == {"code": 400, "message": "用户名和密码不能为空"}
 
     def test_login_empty_password(self, client):
         """测试空密码"""
-        response = client.post('/login', json={'username': 'test', 'password': ''})
+        response = client.post('/api/login', json={'username': 'test', 'password': ''})
         assert response.status_code == 400
-        assert response.json == {"code": 400, "message": "参数不能为空"}
+        assert response.json == {"code": 400, "message": "用户名和密码不能为空"}
 
     def test_login_empty_both(self, client):
         """测试用户名和密码都为空"""
-        response = client.post('/login', json={'username': '', 'password': ''})
+        response = client.post('/api/login', json={'username': '', 'password': ''})
         assert response.status_code == 400
-        assert response.json == {"code": 400, "message": "参数不能为空"}
+        assert response.json == {"code": 400, "message": "用户名和密码不能为空"}
 
     @patch('local_web_login.backend_server.User.verify_password')
     @patch('local_web_login.local_db.pymysql')

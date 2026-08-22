@@ -1,15 +1,16 @@
 import pytest
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
-from utils.tools.db_util import Database
 from utils.tools.api_client import APIClient
 
-test_data = ConfigReader.read_yaml("test_data/api/api_test_data.yaml")["user_login_api"]
+# 本地 SUT（local_web_login）登录接口用例集：
+# - 参数校验用例（空用户名/密码）不依赖数据库，本地稳定可跑
+# - 云班课外部用例（user_login_api 段）保留在 yaml，需外部网络环境
+test_data = ConfigReader.read_yaml("test_data/api/api_test_data.yaml")["user_local_login_api"]
 
 
 class TestUserApi:
     def setup_class(self):
-        self.db = Database()
         self.api_client = APIClient()
         # 关闭代理，本地必加
         self.api_client.session.trust_env = False
@@ -17,12 +18,12 @@ class TestUserApi:
     @pytest.mark.parametrize("case", test_data)
     def test_user_login(self, case):
         log.info(f"执行用例：{case['case_name']}")
-        username = case["json"]["account"]
+        payload = case["json"]
 
         # 发送请求
         response = self.api_client.post(
             url=case["url"],
-            json=case["json"]
+            json=payload
         )
 
         # 1. 状态码断言（严格匹配，企业标准）
@@ -38,15 +39,7 @@ class TestUserApi:
 
         # 3. 成功用例：必须做的断言（企业标准）
         else:
-            assert res_json["status"] is True, "登录成功业务状态错误"
-            assert res_json.get("token") is not None, "登录成功未返回token"
-            assert res_json.get("user") is not None, "登录成功未返回用户信息"
-            # 🔥 修复：账号字段是 phoneNumber，不是 account
-            assert res_json["user"]["phoneNumber"] == username, "返回账号与登录账号不一致"
-
-        # 4. 企业标准：只有登录成功，才校验数据库
-        # if res_json.get("status") is True:
-        #     user = self.db.query_one(f"SELECT * FROM user WHERE username='{username}'")
-        #     assert user is not None, f"用户【{username}】不存在"
+            assert res_json.get("code") == 200, "登录成功业务状态错误"
+            assert res_json.get("data", {}).get("token") is not None, "登录成功未返回token"
 
         log.info(f"✅ 用例通过：{case['case_name']}")
