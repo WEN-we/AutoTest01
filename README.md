@@ -261,6 +261,35 @@ pytest -m android
 pytest tests/test_api/test_user_api.py -v
 ```
 
+---
+
+## 质量工程平台（大厂测开形态）
+
+一键启动平台（质量看板 + 失败分析 + 执行中心 + 定时回归）：
+
+```bash
+# 启动被测服务（SUT，可选，跑 Web/API 用例时需要）
+python local_web_login/backend_server.py
+
+# 启动质量工程平台（端口 8081，需 Flask：pip install -r requirements.txt）
+python -m quality_platform.app
+# 浏览器打开 http://127.0.0.1:8081
+```
+
+平台能力一览：
+
+| 页面 | 能力 |
+| :--- | :--- |
+| 看板 `/` | 质量门禁（PASS/WARN/FAIL 卡发布）、质量分、通过率/flaky 率、执行趋势、测试金字塔、环境信息 |
+| 失败分析 `/failures` | 失败截图证据、AI 归因（LLM/规则）、失败指纹聚类（同根因）、flaky 识别 |
+| 执行中心 `/runs` | 参数化执行（并发/重试/超时/marker）、执行详情、定时任务（nightly 回归） |
+| 用例清单 `/cases` | pytest 实时收集用例 |
+
+配置：`quality_platform/config/platform_config.yaml`（门禁阈值、质量分权重、执行环境变量）。
+AI 能力：配置环境变量 `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`（通义/DeepSeek/OpenAI 兼容）后自动启用 LLM 归因，未配置自动降级规则引擎。
+
+---
+
 ### 6. 查看 Allure 可视化报告
 ```bash
 allure serve reports/allure-results
