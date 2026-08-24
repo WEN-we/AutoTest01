@@ -5,6 +5,10 @@ pytest-xdist>=3.3.1
 allure-pytest>=2.15.3
 pytest-html>=4.2.0
 pytest-timeout>=2.3.1
+pytest-cov>=4.1
+
+# 质量工程平台部署（生产级 WSGI）
+waitress>=3.0
 
 # Web 自动化
 playwright>=1.40
@@ -18,6 +22,9 @@ requests-toolbelt>=1.0.0
 # 数据与配置
 pyyaml>=6.0
 python-dotenv>=1.0
+
+# 视觉回归（截图基线对比）
+Pillow>=10.0
 
 # 数据库测试
 pymysql>=1.0.0
