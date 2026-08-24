@@ -5,15 +5,21 @@
   <div class="login-card">
     <h1>质量工程平台</h1>
     <p class="hint">请登录后使用（默认管理员 admin / admin123）</p>
-    <input type="text" id="login-user" placeholder="用户名" style="width:100%;margin-bottom:10px">
-    <input type="password" id="login-pass" placeholder="密码" style="width:100%;margin-bottom:14px">
-    <button class="btn" id="btn-login" style="width:100%">登 录</button>
+    <form id="login-form">
+      <input type="text" id="login-user" placeholder="用户名" autocomplete="username" style="width:100%;margin-bottom:10px">
+      <input type="password" id="login-pass" placeholder="密码" autocomplete="current-password" style="width:100%;margin-bottom:14px">
+      <button type="submit" class="btn" id="btn-login" style="width:100%">登 录</button>
+    </form>
     <div id="login-msg" class="hint" style="margin-top:10px"></div>
   </div>
 </div>
 <script>
-document.getElementById("btn-login").onclick = async () => {
+// form + submit：支持回车提交（原先仅按钮点击可登录）
+document.getElementById("login-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("btn-login");
   const msg = document.getElementById("login-msg");
+  btn.disabled = true;
   try {
     const resp = await fetch("/api/login", {
       method: "POST",
@@ -24,9 +30,10 @@ document.getElementById("btn-login").onclick = async () => {
       }),
     });
     const d = await resp.json();
-    if (resp.ok) { location.href = "/"; }
-    else { msg.textContent = d.error || "登录失败"; }
-  } catch (e) { msg.textContent = "登录失败：" + e.message; }
+    if (resp.ok) { location.href = "/"; return; }
+    msg.textContent = d.error || "登录失败";
+  } catch (err) { msg.textContent = "登录失败：" + err.message; }
+  btn.disabled = false;
 };
 </script>
 {% endblock %}

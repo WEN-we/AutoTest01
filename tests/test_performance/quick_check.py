@@ -1,14 +1,15 @@
 # 快速测试 Locust 连接
-# 注意：此文件为 locust 性能测试脚本，不应被 pytest 收集
-# 文件名以 test_ 开头会被 pytest 自动收集，但顶层 requests 调用会导致阻塞
-# 因此将顶层请求移入 main 块中，仅 locust 直接运行时执行
+# 注意：此文件为 locust 性能测试脚本，不是 pytest 用例
+# 文件名刻意不以 test_ 开头，避免 pytest 误收集：
+#   pytest 环境会先加载 requests/urllib3，再导入 locust 时 gevent 后置
+#   monkey-patch ssl 会触发 RecursionError（requests 必须晚于 locust 导入）
 
-import requests
 from locust import HttpUser, task, between
 
 
 def quick_test_connection():
     """快速测试连接性，仅在直接运行时执行"""
+    import requests  # 局部导入：确保不早于 locust（gevent patch 顺序）
     try:
         response = requests.post(
             "http://localhost:8090/api/login",
@@ -37,4 +38,4 @@ class TestUser(HttpUser):
 
 if __name__ == "__main__":
     quick_test_connection()
-    print("运行此测试: locust -f test_quick.py --headless -u 1 -r 1 --run-time 1s --host http://localhost:8090")
+    print("运行此测试: locust -f quick_check.py --headless -u 1 -r 1 --run-time 1s --host http://localhost:8090")
