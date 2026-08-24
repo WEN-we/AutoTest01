@@ -182,7 +182,13 @@ jobs:
 
       - name: 运行 Web 端 UI 测试
         run: |
-          pytest tests/test_ui/ -v --alluredir=allure-results-ui --junitxml=reports/platform/junit-ui.xml
+          set +e
+          pytest tests/test_ui/ -v --alluredir=allure-results-ui --junitxml=reports/platform/junit-ui.xml > ui_pytest.txt 2>&1
+          ec=$?
+          grep -E "FAILED|ERROR|passed|failed|Timeout|Error" ui_pytest.txt | tail -30 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit $ec
         continue-on-error: true
         env:
           HEADLESS: true
@@ -291,7 +297,13 @@ jobs:
 
       - name: 运行 API 测试
         run: |
-          pytest tests/test_api/ -v --alluredir=allure-results-api --junitxml=reports/platform/junit-api.xml
+          set +e
+          pytest tests/test_api/ -v --alluredir=allure-results-api --junitxml=reports/platform/junit-api.xml > api_pytest.txt 2>&1
+          ec=$?
+          grep -E "FAILED|ERROR|passed|failed|Timeout|Error" api_pytest.txt | tail -30 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          exit $ec
         continue-on-error: true
         env:
           # 注意：TEST_API_URL 必须为根地址（不含 /api），测试数据 url 会拼接路径；
