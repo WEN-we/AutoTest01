@@ -48,11 +48,16 @@ jobs:
 
       - name: 运行平台单元测试 + 覆盖率门禁（低于 70% 阻断）
         run: |
-          pytest tests/test_platform/ -v \
+          set +e
+          pytest tests/test_platform/ -q \
             --cov=quality_platform --cov=utils/ai \
             --cov-report=term --cov-report=xml:coverage.xml \
             --cov-fail-under=70 \
-            --junitxml=reports/platform/junit-unit.xml
+            --junitxml=reports/platform/junit-unit.xml > pytest_out.txt 2>&1
+          ec=$?
+          echo "## 平台单元测试退出码: $ec" >> $GITHUB_STEP_SUMMARY
+          grep -E "FAILED|ERROR|TOTAL|Required test coverage|[0-9]+ passed|[0-9]+ failed" pytest_out.txt | tail -25 >> $GITHUB_STEP_SUMMARY || true
+          exit $ec
 
       - name: 上传覆盖率报告
         if: always()
@@ -177,9 +182,14 @@ jobs:
 
       - name: 质量门禁检查（UI，失败阻止发布）
         run: |
+          set +e
           python quality_platform/scripts/gate_check.py \
             --junit-xml reports/platform/junit-ui.xml \
-            --min-pass-rate 80 --max-fail 5
+            --min-pass-rate 80 --max-fail 5 > gate_out.txt 2>&1
+          ec=$?
+          echo "## UI 门禁退出码: $ec" >> $GITHUB_STEP_SUMMARY
+          tail -20 gate_out.txt >> $GITHUB_STEP_SUMMARY
+          exit $ec
 
       - name: 上传 UI 测试结果
         if: always()
