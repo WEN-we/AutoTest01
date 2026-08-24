@@ -57,6 +57,10 @@ jobs:
           ec=$?
           echo "## 平台单元测试退出码: $ec" >> $GITHUB_STEP_SUMMARY
           grep -E "FAILED|ERROR|TOTAL|Required test coverage|[0-9]+ passed|[0-9]+ failed" pytest_out.txt | tail -25 >> $GITHUB_STEP_SUMMARY || true
+          # 关键行写入 annotations（check-runs API 可读，便于远程定位失败）
+          grep -E "FAILED|ERROR|TOTAL|Required test coverage|passed|failed" pytest_out.txt | tail -25 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
           exit $ec
 
       - name: 上传覆盖率报告
@@ -189,6 +193,9 @@ jobs:
           ec=$?
           echo "## UI 门禁退出码: $ec" >> $GITHUB_STEP_SUMMARY
           tail -20 gate_out.txt >> $GITHUB_STEP_SUMMARY
+          tail -20 gate_out.txt | while IFS= read -r line; do
+            echo "::error::$line"
+          done
           exit $ec
 
       - name: 上传 UI 测试结果
