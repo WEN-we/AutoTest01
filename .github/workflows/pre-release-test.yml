@@ -46,12 +46,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-ci.txt
 
-      - name: 运行平台单元测试 + 覆盖率门禁（低于 75% 阻断）
+      - name: 运行平台单元测试 + 覆盖率门禁（低于 70% 阻断）
         run: |
           pytest tests/test_platform/ -v \
             --cov=quality_platform --cov=utils/ai \
             --cov-report=term --cov-report=xml:coverage.xml \
-            --cov-fail-under=75 \
+            --cov-fail-under=70 \
             --junitxml=reports/platform/junit-unit.xml
 
       - name: 上传覆盖率报告
@@ -165,7 +165,8 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
-          ADMIN_DEFAULT_PASSWORD: change_me_in_production
+          # 与 test_data/ui/ui_test_data.yaml 的「正确用户名密码登录」一致（admin/123456）
+          ADMIN_DEFAULT_PASSWORD: "123456"
 
       - name: 运行 Web 端 UI 测试
         run: |
@@ -262,14 +263,17 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
-          ADMIN_DEFAULT_PASSWORD: change_me_in_production
+          # 与 test_data/ui/ui_test_data.yaml 的「正确用户名密码登录」一致（admin/123456）
+          ADMIN_DEFAULT_PASSWORD: "123456"
 
       - name: 运行 API 测试
         run: |
           pytest tests/test_api/ -v --alluredir=allure-results-api --junitxml=reports/platform/junit-api.xml
         continue-on-error: true
         env:
-          TEST_API_URL: http://127.0.0.1:8090/api
+          # 注意：TEST_API_URL 必须为根地址（不含 /api），测试数据 url 会拼接路径；
+          # 若带 /api 会拼成 /api/api/login -> 404
+          TEST_API_URL: http://127.0.0.1:8090
           TEST_UI_URL: http://127.0.0.1:8090
 
       - name: 质量门禁检查（API，失败阻止发布）

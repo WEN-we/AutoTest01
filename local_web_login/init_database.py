@@ -208,6 +208,38 @@ def create_default_admin():
         conn.close()
 
 
+def create_test_user():
+    """创建测试用户 qa_test（CI/本地自动化用例依赖，幂等）。
+
+    测试用例 tests/test_api/ 的「本地-正确登录/错误密码」依赖该账号：
+    - 正确登录: qa_test / Test@1234 -> 200 + token
+    - 错误密码: qa_test / wrong-pass -> 400「用户名或密码错误」
+    """
+    conn = pymysql.connect(**DB_CONFIG)
+
+    try:
+        with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("SELECT * FROM `user` WHERE username = 'qa_test'")
+            if cursor.fetchone():
+                print("测试用户 qa_test 已存在")
+                return
+
+            test_pwd = os.getenv("TEST_USER_PASSWORD", "Test@1234")
+            hashed = bcrypt.hashpw(test_pwd.encode('utf-8'), bcrypt.gensalt())
+            cursor.execute(
+                """INSERT INTO `user` (username, password, email, role, created_at)
+                   VALUES (%s, %s, %s, %s, NOW())""",
+                ("qa_test", hashed.decode('utf-8'), "qa_test@local.dev", "user")
+            )
+            conn.commit()
+            print("测试用户 qa_test 创建成功（密码从 TEST_USER_PASSWORD 读取，默认 Test@1234）")
+    except Exception as e:
+        conn.rollback()
+        print(f"创建测试用户失败: {e}")
+    finally:
+        conn.close()
+
+
 def create_sample_data():
     """创建示例数据"""
     conn = pymysql.connect(**DB_CONFIG)
@@ -263,12 +295,14 @@ def init_database():
     create_database()
     create_tables()
     create_default_admin()
+    create_test_user()
     create_sample_data()
 
     print("\n数据库初始化完成!")
     print("\n请使用以下凭据登录:")
     print("  用户名: admin")
     print("  密码: (请查看环境变量 ADMIN_DEFAULT_PASSWORD 的值)")
+    print("  测试用户: qa_test / Test@1234（自动化用例用，可用 TEST_USER_PASSWORD 覆盖）")
 
 
 if __name__ == '__main__':
