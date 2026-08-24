@@ -86,6 +86,15 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    provider      TEXT NOT NULL,                      -- deepseek/qwen/doubao/ollama/custom
+    base_url      TEXT NOT NULL,
+    api_key_enc   TEXT DEFAULT '',                    -- Fernet 加密存储（PLATFORM_SECRET 派生密钥）
+    model         TEXT NOT NULL,
+    enabled       INTEGER DEFAULT 0,                  -- 1 启用（ai 调用优先走此配置）/ 0 停用
+    updated_at    TEXT
+);
 """
 
 
@@ -325,6 +334,36 @@ class _Database:
         with self._conn() as conn:
             rows = conn.execute(sql, args).fetchall()
             return [dict(r) for r in rows]
+
+    # ---------- ai_settings（AI 配置，管理员维护） ----------
+    def get_ai_settings(self) -> dict | None:
+        """读取 AI 配置（单行表，取最新一条）。"""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM ai_settings ORDER BY id DESC LIMIT 1"
+            ).fetchone()
+            return dict(row) if row else None
+
+    def save_ai_settings(self, provider: str, base_url: str, api_key_enc: str,
+                         model: str, enabled: bool) -> int:
+        """保存 AI 配置（存在则更新最新一条，否则插入）。返回配置 id。"""
+        now = datetime.now().isoformat(timespec="seconds")
+        existing = self.get_ai_settings()
+        with self._conn() as conn:
+            if existing:
+                conn.execute(
+                    "UPDATE ai_settings SET provider=?, base_url=?, api_key_enc=?, "
+                    "model=?, enabled=?, updated_at=? WHERE id=?",
+                    (provider, base_url, api_key_enc, model, 1 if enabled else 0,
+                     now, existing["id"]),
+                )
+                return existing["id"]
+            cur = conn.execute(
+                "INSERT INTO ai_settings (provider, base_url, api_key_enc, model, "
+                "enabled, updated_at) VALUES (?,?,?,?,?,?)",
+                (provider, base_url, api_key_enc, model, 1 if enabled else 0, now),
+            )
+            return cur.lastrowid
 
 
 db = _Database()

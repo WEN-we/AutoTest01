@@ -513,6 +513,93 @@ function applyCaseFilter() {
   pre.textContent = list.join("\n");
 }
 
+/* ---------- AI 配置（管理员） ---------- */
+async function loadAiConfig() {
+  try {
+    const d = await getJSON("/api/ai/config");
+    window._aiPresets = d.presets || {};
+    const sel = document.getElementById("ai-provider-select");
+    if (sel) {
+      sel.innerHTML = Object.entries(window._aiPresets).map(([k, v]) =>
+        `<option value="${k}">${esc(v.label)}</option>`).join("");
+    }
+    // 状态卡
+    const act = d.active;
+    document.getElementById("ai-status").textContent = act ? "已启用" : "未配置(规则兜底)";
+    document.getElementById("ai-status").className = "num " + (act ? "pass" : "skip");
+    if (d.configured && d.settings) {
+      const s = d.settings;
+      document.getElementById("ai-provider").textContent = s.provider;
+      document.getElementById("ai-model").textContent = s.model;
+      document.getElementById("ai-key").textContent = s.api_key_masked || "(空/本地模型)";
+      if (sel) sel.value = s.provider;
+      document.getElementById("ai-base-url").value = s.base_url;
+      document.getElementById("ai-model-input").value = s.model;
+      document.getElementById("ai-enabled").checked = s.enabled;
+    } else {
+      document.getElementById("ai-provider").textContent = "-";
+      document.getElementById("ai-model").textContent = "-";
+      document.getElementById("ai-key").textContent = "-";
+      if (sel) applyAiPreset(Object.keys(window._aiPresets)[0]);
+    }
+    // 服务商说明表
+    const tb = document.getElementById("presets-tbody");
+    if (tb) {
+      tb.innerHTML = Object.entries(window._aiPresets).map(([k, v]) => `
+        <tr><td>${esc(v.label)}</td><td>${esc(v.base_url || "-")}</td>
+        <td>${esc(v.model || "-")}</td><td>${v.need_key ? "是" : "否"}</td></tr>`).join("");
+    }
+  } catch (e) { console.error(e); }
+}
+
+function applyAiPreset(provider) {
+  const p = (window._aiPresets || {})[provider];
+  if (!p) return;
+  document.getElementById("ai-base-url").value = p.base_url || "";
+  document.getElementById("ai-model-input").value = p.model || "";
+}
+
+async function saveAiConfig(e) {
+  if (e) e.preventDefault();
+  const msg = document.getElementById("ai-msg");
+  msg.textContent = "保存中...";
+  try {
+    const body = {
+      provider: document.getElementById("ai-provider-select").value,
+      base_url: document.getElementById("ai-base-url").value,
+      api_key: document.getElementById("ai-api-key").value,
+      model: document.getElementById("ai-model-input").value,
+      enabled: document.getElementById("ai-enabled").checked,
+    };
+    const d = await getJSON("/api/ai/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    document.getElementById("ai-api-key").value = "";  // 已落库，清空输入
+    msg.textContent = "✅ 已保存（" + (d.active ? "启用中" : "未启用") + "）";
+    loadAiConfig();
+  } catch (err) { msg.textContent = "❌ " + err.message; }
+}
+
+async function testAiConfig() {
+  const msg = document.getElementById("ai-msg");
+  msg.textContent = "测试中（最长 60s）...";
+  try {
+    const body = {
+      base_url: document.getElementById("ai-base-url").value,
+      api_key: document.getElementById("ai-api-key").value,
+      model: document.getElementById("ai-model-input").value,
+    };
+    const d = await getJSON("/api/ai/config/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    msg.textContent = (d.ok ? "✅ " : "❌ ") + d.message;
+  } catch (err) { msg.textContent = "❌ " + err.message; }
+}
+
 /* ---------- 初始化 ---------- */
 let _filterTimer = null;
 document.addEventListener("DOMContentLoaded", () => {
@@ -524,6 +611,15 @@ document.addEventListener("DOMContentLoaded", () => {
     loadFailures();
     const btn = document.getElementById("btn-flaky");
     if (btn) btn.onclick = detectFlaky;
+  }
+  if (document.getElementById("ai-provider-select")) {
+    loadAiConfig();
+    const sel = document.getElementById("ai-provider-select");
+    if (sel) sel.onchange = () => applyAiPreset(sel.value);
+    const form = document.getElementById("ai-config-form");
+    if (form) form.onsubmit = saveAiConfig;
+    const tbtn = document.getElementById("btn-ai-test");
+    if (tbtn) tbtn.onclick = testAiConfig;
   }
   if (document.getElementById("history-tbody")) {
     loadHistory();

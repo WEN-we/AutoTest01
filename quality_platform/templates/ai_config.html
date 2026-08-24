@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}AI 配置 - 质量工程平台{% endblock %}
+{% block content %}
+<h1>AI 配置 <span class="hint">管理员维护 LLM 通道：云端密钥或本地模型，保存即生效</span></h1>
+
+<div class="cards" style="margin-bottom:14px">
+  <div class="card"><div class="num" id="ai-status">-</div><div class="lbl">当前通道</div></div>
+  <div class="card"><div class="num" id="ai-provider">-</div><div class="lbl">服务商</div></div>
+  <div class="card"><div class="num" id="ai-model">-</div><div class="lbl">模型</div></div>
+  <div class="card"><div class="num" id="ai-key">-</div><div class="lbl">API Key</div></div>
+</div>
+
+<div class="panel">
+  <h2>配置 LLM 通道</h2>
+  <form id="ai-config-form">
+    <label class="flabel">服务商
+      <select id="ai-provider-select"></select>
+    </label>
+    <label class="flabel">Base URL（OpenAI 兼容）
+      <input type="text" id="ai-base-url" placeholder="https://api.deepseek.com/v1">
+    </label>
+    <label class="flabel">API Key <span class="hint">（留空 = 不修改；Ollama 本地模型可留空）</span>
+      <input type="password" id="ai-api-key" placeholder="sk-..." autocomplete="new-password">
+    </label>
+    <label class="flabel">模型名
+      <input type="text" id="ai-model-input" placeholder="deepseek-chat / qwen-plus / qwen2.5:7b">
+    </label>
+    <label class="flabel" style="flex-direction:row;align-items:center;gap:8px">
+      <input type="checkbox" id="ai-enabled" checked> 启用该配置（AI 归因/用例生成优先走此通道）
+    </label>
+    <div class="toolbar">
+      <button type="submit" class="btn">保存配置</button>
+      <button type="button" class="btn" id="btn-ai-test">测试连接</button>
+      <span id="ai-msg" class="hint"></span>
+    </div>
+  </form>
+</div>
+
+<div class="panel" style="margin-top:14px">
+  <h2>服务商说明</h2>
+  <table class="tbl">
+    <thead><tr><th>服务商</th><th>Base URL</th><th>默认模型</th><th>是否需要 Key</th></tr></thead>
+    <tbody id="presets-tbody"></tbody>
+  </table>
+</div>
+{% endblock %}

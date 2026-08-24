@@ -170,6 +170,12 @@ def page_audit():
     return render_template("audit.html")
 
 
+@app.route("/ai-config")
+@admin_required
+def page_ai_config():
+    return render_template("ai_config.html")
+
+
 # ==============================
 # API：看板
 # ==============================
@@ -314,6 +320,84 @@ def api_failures_analyze(case_result_id):
 @login_required
 def api_flaky():
     return jsonify(ai.detect_flaky())
+
+
+# ==============================
+# API：AI 配置（管理员维护密钥 / 本地模型）
+# ==============================
+@app.route("/api/ai/config")
+@admin_required
+def api_ai_config_get():
+    """读取当前 AI 配置（api_key 脱敏返回）。"""
+    from quality_platform.services import ai_config
+
+    row = db.get_ai_settings()
+    if not row:
+        return jsonify({"configured": False, "presets": ai_config.PROVIDER_PRESETS,
+                        "active": ai_config.get_active_config()})
+    return jsonify({
+        "configured": True,
+        "settings": {
+            "provider": row["provider"],
+            "base_url": row["base_url"],
+            "api_key_masked": ai_config.mask_key(ai_config.decrypt_key(row.get("api_key_enc") or "")),
+            "model": row["model"],
+            "enabled": bool(row["enabled"]),
+        },
+        "presets": ai_config.PROVIDER_PRESETS,
+        "active": ai_config.get_active_config(),
+    })
+
+
+@app.route("/api/ai/config", methods=["PUT"])
+@admin_required
+def api_ai_config_put():
+    """保存 AI 配置。api_key 传空表示不修改（保留原值）。"""
+    from quality_platform.services import ai_config
+
+    data = request.get_json(silent=True) or {}
+    provider = (data.get("provider") or "").strip()
+    base_url = (data.get("base_url") or "").strip().rstrip("/")
+    model = (data.get("model") or "").strip()
+    enabled = bool(data.get("enabled", True))
+    if not provider or not base_url or not model:
+        return jsonify({"error": "provider/base_url/model 均不能为空"}), 400
+
+    existing = db.get_ai_settings()
+    old_enc = (existing or {}).get("api_key_enc") or ""
+    new_key = (data.get("api_key") or "").strip()
+    if new_key:
+        api_key_enc = ai_config.encrypt_key(new_key)
+    else:
+        api_key_enc = old_enc  # 未传新 key 则保留原密文
+
+    cfg_id = db.save_ai_settings(provider, base_url, api_key_enc, model, enabled)
+    _audit("ai_config_save", target=str(cfg_id),
+           detail=f"{provider}/{model} enabled={enabled}", ok=True)
+    return jsonify({"ok": True, "config_id": cfg_id,
+                    "active": ai_config.get_active_config()})
+
+
+@app.route("/api/ai/config/test", methods=["POST"])
+@admin_required
+def api_ai_config_test():
+    """用提交的配置试连（不落库），返回连通结果。"""
+    from quality_platform.services import ai_config
+
+    data = request.get_json(silent=True) or {}
+    base_url = (data.get("base_url") or "").strip().rstrip("/")
+    api_key = (data.get("api_key") or "").strip()
+    model = (data.get("model") or "").strip()
+    if not base_url or not model:
+        return jsonify({"error": "base_url/model 不能为空"}), 400
+    # 试连时若未传 key，尝试用已保存配置的 key
+    if not api_key:
+        row = db.get_ai_settings()
+        if row:
+            api_key = ai_config.decrypt_key(row.get("api_key_enc") or "")
+    _audit("ai_config_test", detail=f"{model} @ {base_url}")
+    result = ai_config.test_connection(base_url, api_key, model)
+    return jsonify(result)
 
 
 # ==============================
