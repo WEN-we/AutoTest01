@@ -1,6 +1,7 @@
 import time
 from page_objects.web.base_page import BasePage
 from utils.tools.config_reader import ConfigReader
+from utils.tools.logger import log
 
 class LoginPage(BasePage):
     """教务系统登录页面对象"""
@@ -12,7 +13,8 @@ class LoginPage(BasePage):
     USERNAME_INPUT = "#username"
     PASSWORD_INPUT = "#password"
     LOGIN_BUTTON = "#loginBtn"  # 定位不变
-    ERROR_TIP = ".d-flex"
+    # 本地测试平台登录页错误提示（Bootstrap toast，页面无 .d-flex 类）
+    ERROR_TIP = "#toastMessage"
 
     # 电商平台登录页面定位器
     EC_USER_LOGIN_TAB = "text='用户登录'"
@@ -22,6 +24,8 @@ class LoginPage(BasePage):
     EC_REMEMBER_ME_CHECKBOX = "input[type='checkbox']"
     EC_LOGIN_BUTTON = "button:has-text('登录')"
     EC_REGISTER_LINK = "text='立即注册'"
+    # 电商平台错误提示（区别于本地 SUT 的 #toastMessage）
+    EC_ERROR_TIP = ".showMsg"
 
     def __init__(self, page):
         super().__init__(page)
@@ -41,7 +45,16 @@ class LoginPage(BasePage):
         time.sleep(2)
 
     def get_error_tip(self):
-        self.wait_for_element(self.ERROR_TIP)
+        # 等待 toast 出现且文本非空（toast 显示动画完成后才可见）
+        try:
+            self.wait_for_element(self.ERROR_TIP, timeout=8000)
+            self.page.wait_for_function(
+                """el => el && el.textContent.trim().length > 0""",
+                arg=self.page.query_selector(self.ERROR_TIP),
+                timeout=8000,
+            )
+        except Exception as exc:
+            log.warning(f"错误提示元素等待超时：{exc}")
         return self.get_text(self.ERROR_TIP, "页面错误提示")
 
     def get_alert_text(self):
@@ -74,7 +87,7 @@ class LoginPage(BasePage):
         self.page.click(self.EC_LOGIN_BUTTON)
         # 显式等待登录结果（错误提示出现或网络空闲），替代固定等待（大厂规范：禁止 sleep 硬等待）
         try:
-            self.page.wait_for_selector(self.ERROR_TIP, state="visible", timeout=5000)
+            self.page.wait_for_selector(self.EC_ERROR_TIP, state="visible", timeout=5000)
         except Exception:
             try:
                 self.page.wait_for_load_state("networkidle", timeout=5000)
