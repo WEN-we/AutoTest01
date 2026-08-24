@@ -47,9 +47,20 @@ class TestUserUI:
             assert expected_alert in alert_text, f"弹窗断言失败：预期[{expected_alert}]，实际[{alert_text}]"
             log.info(f"✅ 空值场景：弹窗校验成功 → {alert_text}")
 
-        # 情况2：用户名密码都不为空（错误账号）→ 只校验页面文字
+        # 情况2：用户名密码都不为空
         else:
-            assert expected_result in error_tip, f"页面提示断言失败：预期[{expected_result}]，实际[{error_tip}]"
-            log.info(f"✅ 错误账号场景：页面提示校验成功 → {error_tip}")
+            if expected_result == "":
+                # 正确登录：SUT 成功返回后 1 秒跳转 /dashboard（错误 toast 不存在）
+                try:
+                    ui_driver.wait_for_url("**/dashboard", timeout=6000)
+                except Exception:
+                    pass
+                assert "/dashboard" in ui_driver.url, \
+                    f"正确登录未跳转仪表盘：当前 {ui_driver.url}"
+                log.info("✅ 正确登录场景：已跳转仪表盘")
+            else:
+                assert expected_result in error_tip, \
+                    f"页面提示断言失败：预期[{expected_result}]，实际[{error_tip}]"
+                log.info(f"✅ 错误账号场景：页面提示校验成功 → {error_tip}")
 
         log.info(f"✅ 用例执行成功：{case['case_name']}")
