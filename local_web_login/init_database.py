@@ -229,7 +229,8 @@ def create_test_user():
             cursor.execute(
                 """INSERT INTO `user` (username, password, email, role, created_at)
                    VALUES (%s, %s, %s, %s, NOW())""",
-                ("qa_test", hashed.decode('utf-8'), "qa_test@local.dev", "user")
+                # 注意：user.role 为 enum('admin','tester','viewer')，无 'user' 值，用 'tester'
+                ("qa_test", hashed.decode('utf-8'), "qa_test@local.dev", "tester")
             )
             conn.commit()
             print("测试用户 qa_test 创建成功（密码从 TEST_USER_PASSWORD 读取，默认 Test@1234）")

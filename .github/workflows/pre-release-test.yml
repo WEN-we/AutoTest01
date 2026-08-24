@@ -192,6 +192,10 @@ jobs:
         continue-on-error: true
         env:
           HEADLESS: true
+          # 必须显式注入：ui_config 的 login_url={base_ui_url} 由 env_config 解析，
+          # 缺 TEST_UI_URL 会落到云班课默认域名（外部不可达）导致全部登录用例失败
+          TEST_API_URL: http://127.0.0.1:8090
+          TEST_UI_URL: http://127.0.0.1:8090
 
       - name: 质量门禁检查（UI，失败阻止发布）
         run: |
