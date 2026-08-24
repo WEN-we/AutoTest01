@@ -10,7 +10,12 @@
       <input type="password" id="login-pass" placeholder="密码" autocomplete="current-password" style="width:100%;margin-bottom:14px">
       <button type="submit" class="btn" id="btn-login" style="width:100%">登 录</button>
     </form>
-    <div id="login-msg" class="hint" style="margin-top:10px"></div>
+    <div id="login-msg" class="hint" style="margin-top:10px">
+      {% if sso_error %}<span class="fail">{{ sso_error }}</span>{% endif %}
+    </div>
+    <p class="hint" style="margin-top:12px">
+      SSO 单点登录：<code>/sso/login?token=&lt;令牌&gt;</code>（受信任系统签发）
+    </p>
   </div>
 </div>
 <script>

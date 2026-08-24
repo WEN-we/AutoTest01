@@ -396,3 +396,22 @@ def verify_user(username: str, password: str) -> dict | None:
         if _bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
             return user
         return None
+
+
+def get_user_by_username(username: str) -> dict | None:
+    """按用户名查用户（SSO 免密登录用，不校验密码）。"""
+    with db._conn() as conn:
+        row = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        return dict(row) if row else None
+
+
+def create_sso_user(username: str, role: str = "user") -> dict:
+    """创建 SSO 免密用户（首次单点登录自动开户，幂等）。"""
+    with db._conn() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO users (username, password_hash, role, created_at) "
+            "VALUES (?,?,?,?)",
+            (username, "", role, datetime.now().isoformat(timespec="seconds")),
+        )
+        row = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+        return dict(row)

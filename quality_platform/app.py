@@ -37,7 +37,8 @@ from pathlib import Path
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
-from quality_platform.models import db, ensure_admin, verify_user
+from quality_platform.models import (create_sso_user, db, ensure_admin,
+                                     get_user_by_username, verify_user)
 from quality_platform.services.ai_integration import ai
 from quality_platform.services.failure_clustering import cluster_failures
 from quality_platform.services.gate import evaluate_gate, quality_score, test_pyramid
@@ -115,6 +116,53 @@ def api_logout():
     session.clear()
     db.insert_audit(username, "logout", ip=request.remote_addr)
     return jsonify({"ok": True})
+
+
+# ==============================
+# 轻量 SSO 单点登录（信任令牌，PLATFORM_SECRET 签名）
+# ==============================
+@app.route("/sso/login")
+def sso_login():
+    """外部系统携带 SSO 令牌跳转：验签 -> 建立会话 -> 进入平台。
+
+    用法：<a href="/sso/login?token=xxx">单点登录</a>
+    令牌由受信任系统用 PLATFORM_SECRET 签发（见 POST /api/sso/token 演示）。
+    """
+    from quality_platform.services import sso
+
+    token = request.args.get("token", "")
+    identity = sso.verify_token(token) if token else None
+    if not identity:
+        db.insert_audit("anonymous", "sso_login", detail="令牌无效或已过期",
+                        ip=request.remote_addr, ok=False)
+        return render_template("login.html", sso_error="SSO 令牌无效或已过期"), 401
+
+    # 首次登录自动开户（SSO 为可信身份源）；admin 角色由签发方授予
+    user = get_user_by_username(identity["username"])
+    if not user:
+        user = create_sso_user(identity["username"], identity["role"])
+    session["user"] = {"id": user["id"], "username": user["username"],
+                       "role": user["role"]}
+    db.insert_audit(user["username"], "sso_login", detail="单点登录成功",
+                    ip=request.remote_addr, ok=True)
+    return redirect(url_for("page_dashboard"))
+
+
+@app.route("/api/sso/token", methods=["POST"])
+@admin_required
+def api_sso_issue():
+    """（管理员）为外部系统签发一次性 SSO 令牌，用于集成联调/演示。"""
+    from quality_platform.services import sso
+
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    role = (data.get("role") or "user").strip()
+    ttl = int(data.get("ttl", sso.DEFAULT_TTL))
+    if not username:
+        return jsonify({"error": "username 不能为空"}), 400
+    result = sso.issue_token(username, role, ttl=ttl)
+    _audit("sso_issue", target=username, detail=f"role={role} ttl={ttl}s")
+    return jsonify({"ok": True, **result})
 
 
 def _current_user() -> dict:
