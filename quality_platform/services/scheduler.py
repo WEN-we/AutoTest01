@@ -48,7 +48,8 @@ class Scheduler:
     def start(self):
         if self._thread and self._thread.is_alive():
             return
-        db._conn().executescript(_SCHEMA_SCHEDULES)
+        with db._conn() as conn:
+            conn.executescript(_SCHEMA_SCHEDULES)
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         log.info("[平台] 定时调度器已启动")

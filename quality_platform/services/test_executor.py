@@ -2,15 +2,18 @@
 质量工程平台 - 测试执行服务
 
 职责（大厂平台"一键执行 + 结果入库"链路）：
-1. 触发：后台线程运行 pytest（--junitxml 结构化结果 + --alluredir 报告 + 可选并发/重试）
-2. 解析：JUnit XML -> 用例结果（nodeid/状态/错误信息）
-3. 入库：executions + case_results
-4. 证据：失败用例自动关联 reports/screenshots/ 下最新截图
+1. 排队：线程池（默认 2 个 worker）+ 无界队列，提交即返回，超出并发自动排队
+2. 执行：后台运行 pytest（--junitxml 结构化结果 + --alluredir 报告 + 可选并发/重试）
+3. 解析：JUnit XML -> 用例结果（nodeid/状态/错误信息）
+4. 入库：executions + case_results
+5. 证据：失败用例自动关联 reports/screenshots/ 下最新截图
+6. 治理：支持取消（排队中直接取消 / 运行中 kill 子进程）与整体超时强杀
 
 用法：
-    from quality_platform.services.test_executor import TestExecutor
-    executor = TestExecutor()
+    from quality_platform.services.test_executor import executor
     executor.run_async("tests/test_api/", reruns=1, parallel=2)
+    executor.cancel(exec_id)
+    executor.queue_status()
 """
 import os
 import re
@@ -18,8 +21,9 @@ import subprocess
 import sys
 import threading
 import time
-import xml.etree.ElementTree as ET
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
+import xml.etree.ElementTree as ET
 
 import yaml
 
@@ -47,36 +51,101 @@ def _load_exec_env() -> dict:
         return {}
 
 
+def _load_auto_analysis_cfg() -> dict:
+    """读取失败自动归因配置（auto_analysis 段）。"""
+    defaults = {"enabled": True, "max_cases": 10}
+    try:
+        cfg = yaml.safe_load(PLATFORM_CONFIG.read_text(encoding="utf-8")) \
+            .get("auto_analysis", {})
+        return {**defaults, **cfg}
+    except Exception:
+        return defaults
+
+
 class TestExecutor:
-    """pytest 执行器（异步线程 + JUnit 解析 + 参数化执行）"""
+    """pytest 执行器（线程池队列 + JUnit 解析 + 取消/超时治理）"""
 
-    def __init__(self, default_timeout: int = 1800):
+    def __init__(self, default_timeout: int = 1800, max_workers: int = 2):
         self.default_timeout = default_timeout
+        self.max_workers = max_workers
+        self._pool = ThreadPoolExecutor(max_workers=max_workers,
+                                        thread_name_prefix="qa-exec")
+        self._futures: dict[int, Future] = {}
+        self._cancels: set[int] = set()      # 请求取消的 exec_id（含排队中与运行中）
+        self._lock = threading.Lock()
 
+    # ---------- 对外接口 ----------
     def run_async(self, test_path: str, reruns: int = 0, parallel: int = 0,
                   timeout: int = 0, marker: str = "") -> int:
         """
-        异步执行测试，立即返回 execution_id。
+        提交执行任务（排队），立即返回 execution_id。
         reruns:   失败重试次数（大厂标准 1~2 次）
         parallel: 并发 worker 数（0 = 串行；>1 走 pytest-xdist）
         timeout:  单用例超时秒数（0 = 不限制，走 pytest-timeout）
         marker:   pytest 标记过滤（如 smoke / api）
         """
         exec_id = db.insert_execution(test_path)
-        thread = threading.Thread(
-            target=self._run,
-            args=(exec_id, test_path),
-            kwargs={"reruns": reruns, "parallel": parallel,
-                    "timeout": timeout, "marker": marker},
-            daemon=True,
+        future = self._pool.submit(
+            self._run, exec_id, test_path,
+            reruns=reruns, parallel=parallel, timeout=timeout, marker=marker,
         )
-        thread.start()
+        with self._lock:
+            self._futures[exec_id] = future
+        queued = self.queue_status()["queued"]
+        log.info(f"[平台] 任务已提交：exec={exec_id} path={test_path} 排队中={queued}")
         return exec_id
+
+    def cancel(self, exec_id: int) -> dict:
+        """取消执行：排队中直接移出队列；运行中 kill 子进程（结果标记 cancelled）。"""
+        with self._lock:
+            future = self._futures.get(exec_id)
+            if future is None:
+                return {"ok": False, "reason": "任务不存在或已结束"}
+            if future.cancel():  # 尚未开始，直接从队列移除
+                self._futures.pop(exec_id, None)
+                db.finish_execution(exec_id, 0, 0, 0, 0, 0.0)
+                self._mark_status(exec_id, "cancelled")
+                log.info(f"[平台] 任务已取消（未开始）：exec={exec_id}")
+                return {"ok": True, "state": "cancelled_before_start"}
+            # 已在运行：置取消标记，_run 的等待循环会 kill 子进程
+            self._cancels.add(exec_id)
+        log.info(f"[平台] 已请求取消（运行中，将终止子进程）：exec={exec_id}")
+        return {"ok": True, "state": "cancelling"}
+
+    def recover_orphans(self) -> int:
+        """
+        启动恢复：把上次进程退出时遗留的 running 记录标记为 interrupted。
+        （执行线程随进程消亡，但 DB 状态未回收 → 僵尸"运行中"记录，看板/门禁统计被污染）
+        """
+        try:
+            with db._conn() as conn:
+                cur = conn.execute(
+                    "UPDATE executions SET status='interrupted', "
+                    "finished_at=datetime('now','localtime') WHERE status='running'")
+                if cur.rowcount:
+                    log.info(f"[平台] 启动恢复：{cur.rowcount} 条僵尸 running 记录已标记为 interrupted")
+                return cur.rowcount
+        except Exception as exc:
+            log.warning(f"[平台] 启动恢复失败：{exc}")
+            return 0
+
+    def queue_status(self) -> dict:
+        """队列状态：运行中 / 排队中 / 待取消数。"""
+        with self._lock:
+            futures = list(self._futures.values())
+            cancelling = len(self._cancels)
+        running = sum(1 for f in futures if f.running())
+        done = sum(1 for f in futures if f.done())
+        queued = max(len(futures) - running - done, 0)
+        return {"max_workers": self.max_workers, "running": running,
+                "queued": queued, "cancelling": cancelling}
 
     # ---------- 内部实现 ----------
     def _run(self, exec_id: int, test_path: str, reruns: int = 0,
              parallel: int = 0, timeout: int = 0, marker: str = ""):
         started = time.time()
+        cancelled = False
+        timed_out = False
         try:
             # junit 文件按 exec_id 隔离，避免并发执行互相覆盖（大厂执行隔离）
             junit_file = JUNIT_TMP / f"junit_{exec_id}.xml"
@@ -85,11 +154,7 @@ class TestExecutor:
                                       junit_file)
             log.info(f"[平台] 执行测试：{' '.join(cmd)}")
             env = {**os.environ, **_load_exec_env()}  # 注入执行环境变量（覆盖被测服务地址）
-            proc = subprocess.run(
-                cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True,
-                encoding="utf-8", errors="replace",
-                timeout=self.default_timeout, env=env,
-            )
+            cancelled, timed_out, _ = self._run_subprocess(cmd, env, exec_id)
             results = self._parse_junit(junit_file) if junit_file.exists() else []
             total = len(results)
             passed = sum(1 for r in results if r["status"] == "passed")
@@ -103,19 +168,95 @@ class TestExecutor:
                                       r["duration"], r["error_type"],
                                       r["error_message"], r.get("screenshot", ""))
 
-            db.finish_execution(exec_id, total, passed, failed, skipped,
-                                round(time.time() - started, 2))
+            duration = round(time.time() - started, 2)
+            db.finish_execution(exec_id, total, passed, failed, skipped, duration)
+            if cancelled:
+                self._mark_status(exec_id, "cancelled")
+            elif timed_out:
+                self._mark_status(exec_id, "timeout")
             log.info(f"[平台] 执行完成：exec={exec_id} total={total} "
-                     f"passed={passed} failed={failed} skipped={skipped}")
-            # 完成通知（webhook，失败不阻塞主流程）
-            try:
-                from quality_platform.services.notifier import send_execution_summary
-                send_execution_summary(exec_id)
-            except Exception as exc:
-                log.warning(f"[平台] 通知异常：{exc}")
+                     f"passed={passed} failed={failed} skipped={skipped} "
+                     f"cancelled={cancelled} timeout={timed_out}")
+            # 智能闭环：失败用例自动 AI 归因（LLM 不可用自动降级规则；失败不影响主流程）
+            if not cancelled and failed > 0:
+                self._auto_analyze(exec_id)
+            # 完成通知（webhook，失败不阻塞主流程；消息中带归因结论）
+            if not cancelled:
+                try:
+                    from quality_platform.services.notifier import send_execution_summary
+                    send_execution_summary(exec_id)
+                except Exception as exc:
+                    log.warning(f"[平台] 通知异常：{exc}")
         except Exception as exc:
             log.error(f"[平台] 执行异常：{exc}")
             db.finish_execution(exec_id, 0, 0, 0, 0, round(time.time() - started, 2))
+        finally:
+            with self._lock:
+                self._futures.pop(exec_id, None)
+                self._cancels.discard(exec_id)
+
+    def _run_subprocess(self, cmd: list[str], env: dict, exec_id: int,
+                        poll_seconds: float = 2.0) -> tuple[bool, bool, tuple]:
+        """运行子进程，支持运行中取消（kill）与整体超时强杀。"""
+        proc = subprocess.Popen(
+            cmd, cwd=str(PROJECT_ROOT),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, encoding="utf-8", errors="replace", env=env,
+        )
+        cancelled = timed_out = False
+        deadline = time.time() + self.default_timeout
+        out = err = ""
+        while True:
+            try:
+                out, err = proc.communicate(timeout=poll_seconds)
+                break
+            except subprocess.TimeoutExpired:
+                with self._lock:
+                    want_cancel = exec_id in self._cancels
+                if want_cancel:
+                    proc.kill()
+                    out, err = proc.communicate()
+                    cancelled = True
+                    break
+                if time.time() > deadline:
+                    log.warning(f"[平台] 执行超时（>{self.default_timeout}s），强制终止：exec={exec_id}")
+                    proc.kill()
+                    out, err = proc.communicate()
+                    timed_out = True
+                    break
+        return cancelled, timed_out, (out, err)
+
+    def _mark_status(self, exec_id: int, status: str):
+        """补充标记终态（cancelled/timeout），保留统计字段。"""
+        try:
+            with db._conn() as conn:
+                conn.execute("UPDATE executions SET status=? WHERE id=?", (status, exec_id))
+        except Exception as exc:
+            log.warning(f"[平台] 标记状态失败：exec={exec_id} {status} {exc}")
+
+    def _auto_analyze(self, exec_id: int):
+        """
+        执行完成后对失败用例批量自动归因（大厂智能闭环：执行 → 自动归因 → 推送）。
+        - 条数上限 auto_analysis.max_cases（控制 LLM 调用成本，超出部分人工点按钮分析）
+        - LLM 未配置/失败自动降级规则引擎（FailureAnalyzer 内建）
+        - 任何异常只记日志，不影响执行结果入库与通知
+        """
+        cfg = _load_auto_analysis_cfg()
+        if not cfg.get("enabled", True):
+            return
+        try:
+            from quality_platform.services.ai_integration import ai
+            failed_rows = [r for r in db.list_case_results(exec_id)
+                           if r["status"] in ("failed", "error")]
+            limit = int(cfg.get("max_cases", 10))
+            for row in failed_rows[:limit]:
+                ai.analyze_failure(row["id"])  # 带缓存：已分析的直接跳过
+            analyzed = min(len(failed_rows), limit)
+            if failed_rows:
+                log.info(f"[平台] 自动归因完成：exec={exec_id} "
+                         f"{analyzed}/{len(failed_rows)} 条失败已分析（LLM/规则自动降级）")
+        except Exception as exc:
+            log.warning(f"[平台] 自动归因失败（不影响执行结果）：{exc}")
 
     # ---------- 命令构建（大厂执行参数化） ----------
     def _build_command(self, test_path: str, reruns: int, parallel: int,

@@ -11,6 +11,12 @@
   <button id="btn-run" class="btn">触发执行</button>
 </div>
 <div id="run-msg" class="hint"></div>
+<div id="queue-banner" class="hint">执行队列：加载中...</div>
+
+<div class="toolbar admin-only" style="margin-top:10px">
+  <button class="btn" id="btn-impact">精准执行（按 git 变更选测试集）</button>
+  <span id="impact-result" class="hint"></span>
+</div>
 
 <h2>执行历史</h2>
 <table class="tbl">
@@ -29,6 +35,7 @@
   <input type="text" id="sched-path" placeholder="测试路径" value="tests/test_smoke/" style="width:220px">
   <button id="btn-sched" class="btn">创建定时任务</button>
 </div>
+<div id="sched-msg" class="hint"></div>
 <table class="tbl">
   <thead><tr><th>#</th><th>任务名</th><th>类型</th><th>调度</th><th>测试路径</th><th>重试</th><th>状态</th><th>上次执行</th><th>操作</th></tr></thead>
   <tbody id="sched-tbody"></tbody>
