@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 from utils.tools.config_reader import ConfigReader
 from utils.tools.logger import log
+import os
 
 
 class UIDriver:
@@ -12,12 +13,19 @@ class UIDriver:
         self.context = None
         self.page = None
 
+    def _headless(self) -> bool:
+        """无头模式判定：环境变量 HEADLESS 优先（CI 标准），未设置时读 yaml。"""
+        env = os.getenv("HEADLESS")
+        if env is not None:
+            return env.strip().lower() in ("1", "true", "yes", "on")
+        return bool(self.ui_config.get("headless", False))
+
     def start_driver(self):
         """启动浏览器"""
         playwright = sync_playwright().start()
         # 启动浏览器
         self.browser = getattr(playwright, self.ui_config["browser"]).launch(
-            headless=self.ui_config["headless"],
+            headless=self._headless(),
             args=[f"--window-size={self.ui_config['window_size']}"],
         )
         # 创建上下文
