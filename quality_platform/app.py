@@ -663,6 +663,10 @@ def api_report_export():
 # ==============================
 # 启动
 # ==============================
+# 模块加载即初始化：import 模式（test_client / WSGI 加载）同样预置管理员，避免全新库无账号
+ensure_admin()  # 幂等：预置默认管理员 admin/admin123（首次启动自动创建）
+
+
 def main():
     db.init_db()
     ensure_admin()
