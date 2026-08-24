@@ -125,8 +125,26 @@ def _mark_flaky(item: pytest.Item, report) -> None:
         logger.warning(f"flaky 记录写入失败：{exc}")
 
 
+def pytest_runtest_setup(item: pytest.Item):
+    """把当前用例 nodeid 注入自愈定位器（事件可溯源到具体用例）"""
+    try:
+        from utils.tools import self_heal
+        self_heal.set_current_nodeid(item.nodeid)
+    except Exception:
+        pass
+
+
 def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _importable(module: str) -> bool:
+    """判断模块是否已安装（不实际导入，避免副作用）"""
+    import importlib.util
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
 
 
 def _enabled(target: str) -> bool:
@@ -166,11 +184,19 @@ def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
 
     # Windows：只在 Windows 下默认收集；其他平台需显式 ENABLE_WINDOWS=1
     if _path_has(("tests/test_windows",), p):
-        return sys.platform != "win32" and not _enabled("windows")
+        if sys.platform != "win32" and not _enabled("windows"):
+            return True
+        # GUI 自动化依赖（pyautogui/pygetwindow）缺失时跳过收集，
+        # 避免 ImportError 打断整套收集（requirements-ci 精简集不含桌面 GUI 依赖）
+        if not (_importable("pyautogui") and _importable("pygetwindow")):
+            return True
 
     # Linux GUI：只在 Linux 下默认收集；其他平台需显式 ENABLE_LINUX=1
     if _path_has(("tests/test_linux",), p):
-        return sys.platform != "linux" and not _enabled("linux")
+        if sys.platform != "linux" and not _enabled("linux"):
+            return True
+        if not _importable("pyautogui"):
+            return True
 
     # Service：通常需要 SSH/服务端环境，默认不开启
     if _path_has(("tests/test_service",), p) and not _enabled("service"):
@@ -215,6 +241,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
             item.add_marker(pytest.mark.selenium)
         elif "/tests/test_whitebox/" in path:
             item.add_marker(pytest.mark.whitebox)
+        elif "/tests/test_platform/" in path:
+            item.add_marker(pytest.mark.platform)
 
 # ==============================
 # 1. Web 自动化驱动
@@ -435,6 +463,7 @@ def _detect_test_type_from_items(items) -> str:
         'test_service': 'service',
         'test_performance': 'performance',
         'test_whitebox': 'whitebox',
+        'test_platform': 'platform',
     }
     for key, test_type in type_map.items():
         if f'/tests/{key}/' in first_path or f'\\tests\\{key}\\' in first_path:
