@@ -57,9 +57,12 @@ jobs:
           ec=$?
           echo "## 平台单元测试退出码: $ec" >> $GITHUB_STEP_SUMMARY
           grep -E "FAILED|ERROR|TOTAL|Required test coverage|[0-9]+ passed|[0-9]+ failed" pytest_out.txt | tail -25 >> $GITHUB_STEP_SUMMARY || true
-          # 关键行写入 annotations（check-runs API 可读，便于远程定位失败）
-          grep -E "FAILED|ERROR|TOTAL|Required test coverage|passed|failed" pytest_out.txt | tail -25 | while IFS= read -r line; do
+          # 失败行 -> error annotation；成功统计 -> notice annotation（避免成功数据被误标为 error）
+          grep -E "FAILED|ERROR" pytest_out.txt | tail -25 | while IFS= read -r line; do
             echo "::error::$line"
+          done
+          grep -E "TOTAL|Required test coverage|passed|failed" pytest_out.txt | tail -10 | while IFS= read -r line; do
+            echo "::notice::$line"
           done
           exit $ec
 
@@ -185,8 +188,11 @@ jobs:
           set +e
           pytest tests/test_ui/ -v --alluredir=allure-results-ui --junitxml=reports/platform/junit-ui.xml > ui_pytest.txt 2>&1
           ec=$?
-          grep -E "FAILED|ERROR|passed|failed|Timeout|Error" ui_pytest.txt | tail -30 | while IFS= read -r line; do
+          grep -E "FAILED|ERROR|Timeout|Error" ui_pytest.txt | tail -30 | while IFS= read -r line; do
             echo "::error::$line"
+          done
+          grep -E "passed|failed" ui_pytest.txt | tail -5 | while IFS= read -r line; do
+            echo "::notice::$line"
           done
           exit $ec
         continue-on-error: true
@@ -206,8 +212,11 @@ jobs:
           ec=$?
           echo "## UI 门禁退出码: $ec" >> $GITHUB_STEP_SUMMARY
           tail -20 gate_out.txt >> $GITHUB_STEP_SUMMARY
-          tail -20 gate_out.txt | while IFS= read -r line; do
+          grep -E "FAIL|❌" gate_out.txt | tail -10 | while IFS= read -r line; do
             echo "::error::$line"
+          done
+          grep -E "PASS|✅" gate_out.txt | tail -10 | while IFS= read -r line; do
+            echo "::notice::$line"
           done
           exit $ec
 
@@ -304,8 +313,11 @@ jobs:
           set +e
           pytest tests/test_api/ -v --alluredir=allure-results-api --junitxml=reports/platform/junit-api.xml > api_pytest.txt 2>&1
           ec=$?
-          grep -E "FAILED|ERROR|passed|failed|Timeout|Error" api_pytest.txt | tail -30 | while IFS= read -r line; do
+          grep -E "FAILED|ERROR|Timeout|Error" api_pytest.txt | tail -30 | while IFS= read -r line; do
             echo "::error::$line"
+          done
+          grep -E "passed|failed" api_pytest.txt | tail -5 | while IFS= read -r line; do
+            echo "::notice::$line"
           done
           exit $ec
         continue-on-error: true
