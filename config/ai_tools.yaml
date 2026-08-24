@@ -10,6 +10,7 @@ llm:
   model: "qwen-plus"          # 可用 qwen-plus / deepseek-chat / gpt-4o-mini 等
   api_key: ""                  # 留空则走环境变量 LLM_API_KEY
   timeout: 60                  # 单次请求超时（秒）
+  retries: 3                   # 网络/429/5xx 自动重试次数（指数退避 1s/2s/4s；4xx 不重试）
 
 # 失败分析参数
 failure_analysis:

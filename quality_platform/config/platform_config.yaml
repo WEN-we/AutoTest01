@@ -32,3 +32,11 @@ exec_env:
 notify:
   enabled: true
   webhook_url: ""            # 留空则关闭通知
+
+# 失败自动归因（智能闭环：执行完成 → 失败用例自动 AI 归因 → 通知带结论）
+# - enabled: 关闭后失败页需人工点"AI 归因"按钮
+# - max_cases: 单次执行最多自动归因的失败条数（控制 LLM 调用成本）
+# - LLM 未配置时自动降级为规则引擎归因（关键词分类）
+auto_analysis:
+  enabled: true
+  max_cases: 10

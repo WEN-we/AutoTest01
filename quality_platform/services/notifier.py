@@ -37,10 +37,12 @@ def _load_notify_cfg() -> dict:
 
 
 def _build_payload(execution: dict, failures: list[dict]) -> dict:
-    """钉钉/企微通用 markdown 格式。"""
+    """钉钉/企微通用 markdown 格式（失败用例带自动归因结论）。"""
     pass_rate = round(execution["passed"] / max(execution["total"], 1) * 100, 1)
     fail_lines = "\n".join(
-        f"- {f['nodeid']}（{f.get('error_type') or '未知'}）" for f in failures[:5]
+        f"- {f['nodeid']}（{f.get('error_type') or '未知'}）"
+        + (f" → **{f.get('ana_category')}**" if f.get("ana_category") else "")
+        for f in failures[:5]
     ) or "- 无"
     text = (
         f"## 测试执行完成 #{execution['id']}\n"
@@ -48,7 +50,7 @@ def _build_payload(execution: dict, failures: list[dict]) -> dict:
         f"- 结果：通过 {execution['passed']}/{execution['total']}（{pass_rate}%），"
         f"失败 {execution['failed']}，跳过 {execution['skipped']}\n"
         f"- 耗时：{execution['duration']}s\n"
-        f"### 失败用例\n{fail_lines}"
+        f"### 失败用例（自动归因）\n{fail_lines}"
     )
     return {
         "msgtype": "markdown",

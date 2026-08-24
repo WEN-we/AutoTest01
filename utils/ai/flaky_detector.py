@@ -9,11 +9,10 @@ Flaky 用例识别器（大厂 flaky 治理闭环第一步：识别）
 用法（喂入历史运行记录）：
     from utils.ai.flaky_detector import FlakyDetector
     detector = FlakyDetector()
-    records = [{"nodeid": "test_x", "status": "failed"}, ...]   # 最近 N 次全部记录
+    records = [{"nodeid": "test_x", "status": "failed"}, ...]   # 按时间倒序（最新在前）
     report = detector.detect(records)
     # report = {"flaky": [{"nodeid": ..., "run_count": 10, "fail_rate": 0.5}], "summary": {...}}
 """
-from collections import Counter
 from typing import Iterable
 
 
@@ -28,7 +27,7 @@ class FlakyDetector:
     def detect(self, records: Iterable[dict], min_runs: int = 3) -> dict:
         """
         records: 每条 {"nodeid": str, "status": "passed"|"failed"|"skipped"}，
-                 建议按时间倒序或正序均可（内部只计数）。
+                 必须按时间倒序传入（最新在前）；每个用例只统计窗口内最近 window 条。
         返回: {"flaky": [...], "stable_fail": [...], "summary": {...}}
         """
         stat: dict[str, dict] = {}
@@ -37,6 +36,8 @@ class FlakyDetector:
             if not nodeid:
                 continue
             s = stat.setdefault(nodeid, {"total": 0, "fail": 0})
+            if s["total"] >= self.window:
+                continue  # 已取满窗口内最近 window 条，旧记录不参与统计
             s["total"] += 1
             if r.get("status") == "failed":
                 s["fail"] += 1

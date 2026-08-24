@@ -8,6 +8,8 @@
     2. config/ai_tools.yaml 中的 llm 段
     3. 内置默认值（OpenAI 官方）
 - API Key 一律从环境变量/配置文件读取，绝不硬编码进代码
+- 重试策略：网络错误 / 429 / 5xx 自动重试（指数退避，默认 3 次）；
+  4xx（鉴权失败、参数错误）不重试，快速失败
 
 用法：
     from utils.ai.llm_client import LLMClient
@@ -15,17 +17,21 @@
     reply = client.chat("分析这条失败原因：...")
 """
 import os
+import time
 
 import requests
 
 from utils.tools.logger import log
 from utils.tools.config_reader import ConfigReader
 
-DEFAULT_TIMEOUT = 60  # 秒
+DEFAULT_TIMEOUT = 60      # 秒
+DEFAULT_RETRIES = 3       # 可重试错误的最大尝试次数（含首次）
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}   # 限流/服务端错误 → 重试
+BACKOFF_BASE = 1.0        # 退避基数（秒）：1s / 2s / 4s ...
 
 
 class LLMClient:
-    """OpenAI 兼容 LLM 客户端"""
+    """OpenAI 兼容 LLM 客户端（带重试与指数退避）"""
 
     def __init__(self, base_url: str = None, api_key: str = None, model: str = None):
         cfg = self._load_config()
@@ -35,6 +41,7 @@ class LLMClient:
         self.model = (model or os.getenv("LLM_MODEL") or cfg.get("model")
                       or "gpt-4o-mini")
         self.timeout = cfg.get("timeout", DEFAULT_TIMEOUT)
+        self.retries = int(cfg.get("retries", DEFAULT_RETRIES))
         self._chat_url = f"{self.base_url.rstrip('/')}/chat/completions"
 
     @staticmethod
@@ -50,9 +57,23 @@ class LLMClient:
         """是否已配置 API Key（无 Key 时工具链应降级为规则分析）"""
         return bool(self.api_key)
 
+    @staticmethod
+    def _is_retryable(exc: Exception) -> bool:
+        """判定是否可重试：网络层异常 或 HTTP 429/5xx"""
+        if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+            return True
+        if isinstance(exc, requests.HTTPError):
+            status = getattr(exc.response, "status_code", None)
+            return status in RETRYABLE_STATUS
+        return False
+
     def chat(self, prompt: str, system: str = "You are a senior QA engineer.",
              temperature: float = 0.2, max_tokens: int = 1200) -> str:
-        """发起单轮对话，返回回复文本。未配置 Key 或调用失败时抛异常。"""
+        """
+        发起单轮对话，返回回复文本。
+        - 未配置 Key 或调用失败（重试耗尽）时抛异常
+        - 网络/429/5xx 按 retries 指数退避重试；4xx 快速失败
+        """
         if not self.api_key:
             raise RuntimeError("未配置 LLM_API_KEY / LLM_BASE_URL，请检查环境变量或 config/ai_tools.yaml")
         payload = {
@@ -68,13 +89,27 @@ class LLMClient:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
-        log.debug(f"LLM 请求 -> {self.model} @ {self.base_url}")
-        resp = requests.post(self._chat_url, json=payload, headers=headers, timeout=self.timeout)
-        resp.raise_for_status()
-        try:
-            return resp.json()["choices"][0]["message"]["content"].strip()
-        except (KeyError, IndexError) as exc:
-            raise RuntimeError(f"LLM 响应格式异常：{resp.text[:200]}") from exc
+
+        last_exc: Exception | None = None
+        for attempt in range(1, self.retries + 1):
+            try:
+                log.debug(f"LLM 请求 -> {self.model} @ {self.base_url}（第 {attempt} 次）")
+                resp = requests.post(self._chat_url, json=payload, headers=headers,
+                                     timeout=self.timeout)
+                resp.raise_for_status()
+                try:
+                    return resp.json()["choices"][0]["message"]["content"].strip()
+                except (KeyError, IndexError) as exc:
+                    raise RuntimeError(f"LLM 响应格式异常：{resp.text[:200]}") from exc
+            except Exception as exc:
+                last_exc = exc
+                if not self._is_retryable(exc) or attempt == self.retries:
+                    raise
+                wait = BACKOFF_BASE * (2 ** (attempt - 1))
+                log.warning(f"LLM 调用失败（第 {attempt}/{self.retries} 次），"
+                            f"{wait}s 后重试：{exc}")
+                time.sleep(wait)
+        raise last_exc  # 理论不可达（循环内必 return 或 raise）
 
     def try_chat(self, prompt: str, system: str = "You are a senior QA engineer.") -> str:
         """容错版：失败返回空串（供上层降级）"""

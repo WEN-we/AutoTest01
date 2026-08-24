@@ -70,6 +70,9 @@ class FailureAnalyzer:
 
     # ---------- LLM 模式 ----------
     def _build_context(self, nodeid, error_message, traceback, screenshot, log_tail) -> str:
+        # traceback 缺失时回退用 error_message 尾部（JUnit 的 error_message 自带完整失败文本）
+        if not traceback and error_message:
+            traceback = error_message
         parts = [f"测试用例: {nodeid or '未知'}"]
         if error_message:
             parts.append(f"错误信息: {error_message[:500]}")
@@ -87,10 +90,13 @@ class FailureAnalyzer:
             raw = self.llm.chat(context, system=_SYSTEM_PROMPT)
             raw_clean = raw.strip().strip("```json").strip("```").strip()
             start, end = raw_clean.find("{"), raw_clean.rfind("}")
-            data = json.loads(raw_clean[start:end + 1]) if start >= 0 else {}
-            category = data.get("category", "未知")
+            if start < 0 or end <= start:
+                raise ValueError("LLM 回复中未找到 JSON")
+            data = json.loads(raw_clean[start:end + 1])
+            if not isinstance(data, dict) or "category" not in data:
+                raise ValueError("LLM 回复 JSON 结构不完整")
             return {
-                "category": category,
+                "category": data.get("category", "未知"),
                 "confidence": float(data.get("confidence", 0.5)),
                 "suggestion": data.get("suggestion", ""),
                 "key_evidence": data.get("key_evidence", ""),
