@@ -8,6 +8,11 @@ venv/
 env/
 .venv/
 
+# 覆盖率产物
+.coverage
+coverage.xml
+htmlcov/
+
 # 日志目录
 logs/
 
