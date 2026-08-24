@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}审计日志 · 质量工程平台{% endblock %}
+{% block content %}
+<h1>审计日志 <span class="hint">所有写操作留痕：谁 · 何时 · 对什么 · 成败（仅管理员可见）</span></h1>
+
+<div class="toolbar">
+  <select id="audit-action" style="width:160px">
+    <option value="">全部动作</option>
+    <option value="login">登录</option>
+    <option value="logout">登出</option>
+    <option value="run_start">触发执行</option>
+    <option value="run_cancel">取消执行</option>
+    <option value="case_add">新增用例</option>
+    <option value="case_update">更新用例</option>
+    <option value="case_delete">删除用例</option>
+    <option value="case_import">导入用例</option>
+    <option value="sched_add">创建调度</option>
+    <option value="sched_delete">删除调度</option>
+    <option value="sched_toggle">启停调度</option>
+    <option value="impact_run">精准执行</option>
+  </select>
+  <input type="text" id="audit-user" placeholder="按用户过滤..." style="width:160px">
+  <button class="btn" id="btn-audit-refresh">刷新</button>
+  <span id="audit-count" class="hint"></span>
+</div>
+
+<table class="tbl">
+  <thead><tr><th>#</th><th>时间</th><th>用户</th><th>动作</th><th>对象</th><th>详情</th><th>IP</th><th>结果</th></tr></thead>
+  <tbody id="audit-tbody"></tbody>
+</table>
+
+<script>
+const ACTION_LABELS = {
+  login: "登录", logout: "登出",
+  run_start: "触发执行", run_cancel: "取消执行",
+  case_add: "新增用例", case_update: "更新用例", case_delete: "删除用例", case_import: "导入用例",
+  sched_add: "创建调度", sched_delete: "删除调度", sched_toggle: "启停调度",
+  impact_run: "精准执行",
+};
+
+async function loadAudit() {
+  const tbody = document.getElementById("audit-tbody");
+  const action = document.getElementById("audit-action").value;
+  const username = (document.getElementById("audit-user").value || "").trim();
+  try {
+    const params = new URLSearchParams();
+    if (action) params.set("action", action);
+    if (username) params.set("username", username);
+    const d = await getJSON("/api/audit?" + params.toString());
+    document.getElementById("audit-count").textContent = "共 " + (d.logs || []).length + " 条";
+    tbody.innerHTML = (d.logs || []).map(l => `
+      <tr>
+        <td>${l.id}</td>
+        <td>${esc(l.created_at || "")}</td>
+        <td>${esc(l.username)}</td>
+        <td>${esc(ACTION_LABELS[l.action] || l.action)}</td>
+        <td>${esc(l.target || "-")}</td>
+        <td class="msg" title="${esc(l.detail || "")}">${esc((l.detail || "").slice(0, 50))}</td>
+        <td>${esc(l.ip || "-")}</td>
+        <td class="${l.ok ? "pass" : "fail"}">${l.ok ? "成功" : "失败"}</td>
+      </tr>`).join("") || '<tr><td colspan="8" style="text-align:center;color:#9aa2b1">暂无审计记录</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="8">加载失败：${esc(e.message)}</td></tr>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadAudit();
+  document.getElementById("btn-audit-refresh").onclick = loadAudit;
+  document.getElementById("audit-action").onchange = loadAudit;
+  let t = null;
+  document.getElementById("audit-user").oninput = () => {
+    clearTimeout(t);
+    t = setTimeout(loadAudit, 300);
+  };
+});
+</script>
+{% endblock %}

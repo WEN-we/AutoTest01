@@ -19,14 +19,18 @@ API（写操作需登录，GET 读也需登录）：
     GET  /api/dashboard · /api/runs · /api/runs/<id> · /api/failures · /api/failures/<id>
     POST /api/failures/<id>/analyze · GET /api/flaky · GET /api/schedules
     POST /api/runs {"test_path","reruns","parallel","timeout","marker"}
+    GET  /api/queue · POST /api/runs/<id>/cancel（取消执行）
     GET/POST/DELETE /api/cases/manage · PUT/DELETE /api/cases/<id> · POST /api/cases/import
     GET/POST /api/schedules · DELETE /api/schedules/<id> · POST /api/schedules/<id>/toggle
     GET  /api/report/export
+    （标注 admin 的删除/修改/取消类接口需要管理员角色，RBAC：user 只读+触发执行）
 """
 import os
 import platform
+import secrets
 import subprocess
 import sys
+import time
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
@@ -45,7 +49,13 @@ PLATFORM_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__, template_folder=str(PLATFORM_DIR / "templates"),
             static_folder=str(PLATFORM_DIR / "static"))
-app.secret_key = os.getenv("PLATFORM_SECRET", "quality-platform-dev-secret-change-me")
+# 密钥优先取环境变量；未配置时每次启动随机生成（会话不跨重启保留，但绝不使用固定弱密钥）
+_secret = os.getenv("PLATFORM_SECRET", "")
+if not _secret:
+    _secret = secrets.token_hex(32)
+    print("[安全提示] 未设置 PLATFORM_SECRET，本次启动使用随机会话密钥（重启后需重新登录）；"
+          "生产环境请在环境变量/.env 中固定配置")
+app.secret_key = _secret
 
 
 # ==============================
@@ -59,6 +69,19 @@ def login_required(view):
             if request.path.startswith("/api/"):
                 return jsonify({"error": "未登录"}), 401
             return redirect(url_for("page_login"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def admin_required(view):
+    """管理操作保护（RBAC：删除/修改共享资源仅 admin；未登录先 401）"""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = session.get("user")
+        if not user:
+            return jsonify({"error": "未登录"}), 401
+        if user.get("role") != "admin":
+            return jsonify({"error": "需要管理员权限"}), 403
         return view(*args, **kwargs)
     return wrapped
 
@@ -77,20 +100,32 @@ def api_login():
     password = data.get("password") or ""
     user = verify_user(username, password)
     if not user:
+        db.insert_audit(username, "login", detail="认证失败",
+                        ip=request.remote_addr, ok=False)
         return jsonify({"error": "用户名或密码错误"}), 401
     session["user"] = {"id": user["id"], "username": user["username"],
                        "role": user["role"]}
+    db.insert_audit(user["username"], "login", ip=request.remote_addr)
     return jsonify({"ok": True, "user": session["user"]})
 
 
 @app.route("/api/logout", methods=["POST"])
 def api_logout():
+    username = (session.get("user") or {}).get("username", "anonymous")
     session.clear()
+    db.insert_audit(username, "logout", ip=request.remote_addr)
     return jsonify({"ok": True})
 
 
 def _current_user() -> dict:
     return session.get("user", {})
+
+
+def _audit(action: str, target: str = "", detail: str = "", ok: bool = True):
+    """统一审计埋点（当前会话用户 + 来源 IP）"""
+    username = (session.get("user") or {}).get("username", "anonymous")
+    db.insert_audit(username, action, target=target, detail=detail,
+                    ip=request.remote_addr, ok=ok)
 
 
 # ==============================
@@ -127,6 +162,12 @@ def page_run_detail(exec_id):
 @login_required
 def page_cases():
     return render_template("cases.html")
+
+
+@app.route("/audit")
+@admin_required
+def page_audit():
+    return render_template("audit.html")
 
 
 # ==============================
@@ -202,6 +243,7 @@ def api_run_start():
         timeout=int(data.get("timeout", 0) or 0),
         marker=(data.get("marker") or "").strip(),
     )
+    _audit("run_start", target=str(exec_id), detail=test_path)
     return jsonify({"execution_id": exec_id, "status": "running"}), 202
 
 
@@ -213,6 +255,23 @@ def api_run_detail(exec_id):
         return jsonify({"error": "执行不存在"}), 404
     results = db.list_case_results(exec_id)
     return jsonify({"execution": execution, "cases": results})
+
+
+@app.route("/api/runs/<int:exec_id>/cancel", methods=["POST"])
+@admin_required
+def api_run_cancel(exec_id):
+    """取消执行（排队中移出队列；运行中终止子进程）。"""
+    result = executor.cancel(exec_id)
+    _audit("run_cancel", target=str(exec_id),
+           detail=result.get("state", ""), ok=result.get("ok", False))
+    return jsonify(result)
+
+
+@app.route("/api/queue")
+@login_required
+def api_queue():
+    """执行队列状态：并发上限/运行中/排队中/待取消。"""
+    return jsonify(executor.queue_status())
 
 
 # ==============================
@@ -234,11 +293,11 @@ def api_failures_clusters():
 @app.route("/api/failures/<int:case_result_id>")
 @login_required
 def api_failure_detail(case_result_id):
-    for f in db.recent_failures(500):
-        if f["id"] == case_result_id:
-            f["analysis"] = db.get_analysis(case_result_id)
-            return jsonify(f)
-    return jsonify({"error": "失败记录不存在"}), 404
+    case = db.get_case_result(case_result_id)
+    if not case:
+        return jsonify({"error": "失败记录不存在"}), 404
+    case["analysis"] = db.get_analysis(case_result_id)
+    return jsonify(case)
 
 
 @app.route("/api/failures/<int:case_result_id>/analyze", methods=["POST"])
@@ -281,60 +340,74 @@ def api_cases_add():
         description=data.get("description", ""),
         status=data.get("status", "active"),
     )
+    _audit("case_add", target=str(case_id), detail=nodeid)
     return jsonify({"case_id": case_id}), 201
 
 
 @app.route("/api/cases/<int:case_id>", methods=["PUT"])
-@login_required
+@admin_required
 def api_cases_update(case_id):
     data = request.get_json(silent=True) or {}
     ok = db.update_case(case_id, **data)
+    _audit("case_update", target=str(case_id),
+           detail=str(data.get("status", "")), ok=ok)
     return jsonify({"ok": ok})
 
 
 @app.route("/api/cases/<int:case_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def api_cases_delete(case_id):
     ok = db.delete_case(case_id)
+    _audit("case_delete", target=str(case_id), ok=ok)
     return jsonify({"ok": ok})
 
 
 @app.route("/api/cases/import", methods=["POST"])
-@login_required
+@admin_required
 def api_cases_import():
     """从 pytest collect 结果一键导入用例库。"""
     try:
-        from utils.tools.logger import log as _log
-        proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", "tests/test_smoke/", "tests/test_api/", "tests/test_whitebox/"],
-            cwd=str(PROJECT_ROOT), capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=60,
-        )
-        _log.info(f"[平台] collect 完成：rc={proc.returncode} stdout={len(proc.stdout)} 字符")
-        nodeids = [ln for ln in proc.stdout.splitlines()
-                   if "::" in ln and not ln.startswith("no tests ran")]
+        nodeids = _collect_test_nodeids(force=True)
         result = db.import_cases(nodeids)
+        _audit("case_import", detail=f"新增{result['imported']}/更新{result['updated']}")
         return jsonify({"imported": result["imported"], "updated": result["updated"],
                         "total": len(nodeids)})
     except Exception as exc:
         import traceback as _tb
         _tb.print_exc()
+        _audit("case_import", detail=str(exc)[:200], ok=False)
         return jsonify({"error": str(exc)}), 500
 
 
 # ==============================
-# API：用例清单（pytest 实时收集）
+# API：用例清单（pytest 实时收集，带 TTL 缓存）
 # ==============================
+_COLLECT_TTL = 300  # 缓存 5 分钟，避免每次请求同步阻塞跑 pytest collect
+_collect_cache: dict = {"ts": 0.0, "nodeids": []}
+
+
+def _collect_test_nodeids(force: bool = False) -> list[str]:
+    """运行 pytest --collect-only 收集用例 nodeid（结果缓存 _COLLECT_TTL 秒）。"""
+    if not force and (time.time() - _collect_cache["ts"]) < _COLLECT_TTL:
+        return _collect_cache["nodeids"]
+    proc = subprocess.run(
+        [sys.executable, "-m", "pytest", "--collect-only", "-q",
+         "tests/test_smoke/", "tests/test_api/", "tests/test_whitebox/"],
+        cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+        encoding="utf-8", errors="replace", timeout=60,
+    )
+    nodeids = [ln for ln in proc.stdout.splitlines()
+               if "::" in ln and not ln.startswith("no tests ran")]
+    _collect_cache["ts"] = time.time()
+    _collect_cache["nodeids"] = nodeids
+    return nodeids
+
+
 @app.route("/api/cases")
 @login_required
 def api_cases():
     try:
-        proc = subprocess.run(
-            [sys.executable, "-m", "pytest", "--collect-only", "-q", "tests/test_smoke/", "tests/test_api/", "tests/test_whitebox/"],
-            cwd=str(PROJECT_ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
-        )
-        lines = [ln for ln in proc.stdout.splitlines()
-                 if "::" in ln and not ln.startswith("no tests ran")]
+        lines = _collect_test_nodeids()
         return jsonify({"cases": lines[:1000], "count": len(lines)})
     except Exception as exc:
         return jsonify({"error": str(exc), "cases": []}), 500
@@ -368,22 +441,70 @@ def api_schedules_add():
             reruns=int(data.get("reruns", 1) or 0),
             parallel=int(data.get("parallel", 0) or 0),
         )
+    _audit("sched_add", target=str(sched_id),
+           detail=f"{kind} {data.get('cron_value', '')} {data.get('test_path', '')}")
     return jsonify({"schedule_id": sched_id}), 201
 
 
 @app.route("/api/schedules/<int:sched_id>", methods=["DELETE"])
-@login_required
+@admin_required
 def api_schedules_delete(sched_id):
     scheduler.delete(sched_id)
+    _audit("sched_delete", target=str(sched_id))
     return jsonify({"ok": True})
 
 
 @app.route("/api/schedules/<int:sched_id>/toggle", methods=["POST"])
-@login_required
+@admin_required
 def api_schedules_toggle(sched_id):
     data = request.get_json(silent=True) or {}
     scheduler.toggle(sched_id, bool(data.get("enabled", True)))
+    _audit("sched_toggle", target=str(sched_id),
+           detail=f"enabled={bool(data.get('enabled', True))}")
     return jsonify({"ok": True})
+
+
+# ==============================
+# API：精准测试（变更影响面分析）
+# ==============================
+@app.route("/api/impact")
+@login_required
+def api_impact():
+    """分析 git 变更 → 建议执行的测试集（精准测试，可解释：每个测试集附带选中原因）"""
+    from quality_platform.services.impact_analysis import analyze_changes
+    base = request.args.get("base", "HEAD~1")
+    return jsonify(analyze_changes(base=base))
+
+
+@app.route("/api/impact/run", methods=["POST"])
+@admin_required
+def api_impact_run():
+    """按影响面分析结果一键执行建议测试集（admin）。"""
+    from quality_platform.services.impact_analysis import analyze_changes
+    report = analyze_changes(base=request.get_json(silent=True).get("base", "HEAD~1")
+                             if request.get_json(silent=True) else "HEAD~1")
+    targets = report["suggested_tests"]
+    if not targets:
+        return jsonify({"error": "无建议测试集（无变更或未收集到变更）"}), 400
+    exec_ids = []
+    for test_path in targets:
+        exec_ids.append(executor.run_async(test_path, reruns=1))
+    _audit("impact_run", detail=f"{len(exec_ids)} 个测试集：{','.join(targets)}")
+    return jsonify({"execution_ids": exec_ids, "targets": targets}), 202
+
+
+# ==============================
+# API：审计日志（仅 admin）
+# ==============================
+@app.route("/api/audit")
+@admin_required
+def api_audit():
+    """审计日志查询（admin 专属：谁在什么时间对什么做了什么、成败）"""
+    return jsonify({"logs": db.list_audit(
+        limit=int(request.args.get("limit", 200) or 200),
+        action=request.args.get("action", ""),
+        username=request.args.get("username", ""),
+    )})
 
 
 # ==============================
@@ -413,10 +534,18 @@ def api_report_export():
 def main():
     db.init_db()
     ensure_admin()
+    executor.recover_orphans()   # 启动恢复：回收上次进程退出遗留的僵尸 running 记录
     scheduler.start()
     port = int(os.getenv("PLATFORM_PORT", "8081"))
     print(f"质量工程平台已启动：http://127.0.0.1:{port}（admin / admin123）")
-    app.run(host="127.0.0.1", port=port, debug=False)
+    # 优先 waitress（生产级 WSGI，Windows 友好）；未安装时降级 Flask 开发服务器
+    try:
+        from waitress import serve
+        print("WSGI 服务器：waitress（生产级，4 线程）")
+        serve(app, host="127.0.0.1", port=port, threads=4)
+    except ImportError:
+        print("[提示] 未安装 waitress，降级使用 Flask 开发服务器（生产环境请：pip install waitress）")
+        app.run(host="127.0.0.1", port=port, debug=False)
 
 
 if __name__ == "__main__":

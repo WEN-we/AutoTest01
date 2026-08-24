@@ -1,9 +1,23 @@
-/* 质量工程平台前端交互 */
+/* 质量工程平台前端交互
+ * 约定：
+ * - window._user 由 base.html 服务端注入（全站可用）：{id, username, role}
+ * - admin-only 操作（取消执行/删除/启停/导入）：按钮仅对 admin 渲染，与后端 RBAC 对齐
+ * - 执行历史状态：finished/running/cancelled/timeout 全量展示，运行中可取消
+ */
+
+function isAdmin() {
+  return (window._user && window._user.role) === "admin";
+}
 
 async function getJSON(url, options) {
   const resp = await fetch(url, options);
   if (resp.status === 401) { location.href = "/login"; throw new Error("未登录"); }
-  if (!resp.ok) throw new Error(await resp.text());
+  if (!resp.ok) {
+    // 优先解析后端标准错误结构 {"error": "..."}，避免把原始 JSON 文本甩给用户
+    let msg = "HTTP " + resp.status;
+    try { const d = await resp.json(); if (d && d.error) msg = d.error; } catch (_) { /* ignore */ }
+    throw new Error(msg);
+  }
   return resp.json();
 }
 
@@ -13,16 +27,32 @@ function esc(s) {
   return div.innerHTML;
 }
 
-function statusClass(s) {
+/* ---------- 执行状态徽章 ---------- */
+const RUN_STATUS = {
+  finished:  ["pass", "完成"],
+  running:   ["run",  "运行中"],
+  cancelled: ["skip", "已取消"],
+  interrupted: ["skip", "中断(服务重启)"],
+  timeout:   ["fail", "超时终止"],
+};
+
+function statusBadge(status) {
+  const [cls, label] = RUN_STATUS[status] || ["skip", status];
+  return `<span class="${cls}">${label}</span>`;
+}
+
+function caseStatusClass(s) {
   if (s === "passed") return "pass";
   if (s === "failed" || s === "error") return "fail";
+  if (s === "cancelled") return "skip";
   return "skip";
 }
 
-function renderRuns(runs, tbodyId) {
+function renderRuns(runs, tbodyId, opts) {
   const tbody = document.getElementById(tbodyId);
   if (!tbody) return;
-  tbody.innerHTML = runs.map(r => `
+  const withCancel = opts && opts.cancel;
+  tbody.innerHTML = (runs || []).map(r => `
     <tr>
       <td>${r.id}</td>
       <td>${esc(r.test_path)}</td>
@@ -32,12 +62,16 @@ function renderRuns(runs, tbodyId) {
       <td>${r.total ? Math.round(r.passed / r.total * 100) : 0}%</td>
       <td>${r.duration ? r.duration + "s" : "-"}</td>
       <td>${esc(r.started_at || "")}</td>
-      <td class="${r.status === "finished" ? "pass" : "skip"}">${r.status}</td>
-      <td><a href="/runs/${r.id}">详情</a></td>
+      <td>${statusBadge(r.status)}</td>
+      <td>
+        <a href="/runs/${r.id}">详情</a>
+        ${withCancel && isAdmin() && r.status === "running"
+          ? ` <button class="btn btn-danger" onclick="cancelRun(${r.id})">取消</button>` : ""}
+      </td>
     </tr>`).join("") || '<tr><td colspan="10" style="text-align:center;color:#9aa2b1">暂无执行记录</td></tr>';
 }
 
-/* ---------- 登录 / 登出 ---------- */
+/* ---------- 登录 / 登出（全站导航） ---------- */
 function initNav() {
   const userEl = document.getElementById("nav-user");
   const logoutEl = document.getElementById("btn-logout");
@@ -48,10 +82,16 @@ function initNav() {
     logoutEl.style.display = "";
     logoutEl.onclick = async (e) => {
       e.preventDefault();
-      await getJSON("/api/logout", { method: "POST" });
+      try { await getJSON("/api/logout", { method: "POST" }); } catch (_) { /* ignore */ }
       location.href = "/login";
     };
   }
+}
+
+/* 非 admin 隐藏管理按钮（模板中标注 .admin-only 的元素） */
+function applyAcl() {
+  if (isAdmin()) return;
+  document.querySelectorAll(".admin-only").forEach(el => { el.style.display = "none"; });
 }
 
 /* ---------- 看板 ---------- */
@@ -70,10 +110,21 @@ function renderGate(gate) {
     gate.rules.map(r => `${r.name} ${r.actual}${r.unit}${r.violated ? " ✗" : ""}`).join(" / ") + "</small>";
 }
 
+function renderChart(canvasId, build) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (typeof Chart === "undefined") {
+    // 图表库未加载（理论上本地化后不会发生）——降级为文字提示而非静默白屏
+    canvas.outerHTML = '<div class="hint">图表组件未加载</div>';
+    return;
+  }
+  build(canvas);
+}
+
 async function loadDashboard() {
   try {
     const d = await getJSON("/api/dashboard");
-    window._user = d.user;
+    window._user = d.user || window._user;
     initNav();
     renderGate(d.gate);
     document.getElementById("k-score").textContent = d.quality_score.score;
@@ -84,18 +135,15 @@ async function loadDashboard() {
     document.getElementById("k-runs").textContent = d.summary.run_count;
     if (document.getElementById("k-env")) {
       const e = d.env;
-      document.getElementById("k-env").textContent =
-        `Python ${e.python} · ${e.host}`;
+      document.getElementById("k-env").textContent = `Python ${e.python} · ${e.host}`;
     }
     renderRuns(d.executions, "runs-tbody");
-    const labels = d.trend.map(r => "#" + r.id);
-    const rates = d.trend.map(r => r.pass_rate);
-    new Chart(document.getElementById("trendChart"), {
+    renderChart("trendChart", (canvas) => new Chart(canvas, {
       type: "line",
       data: {
-        labels,
+        labels: d.trend.map(r => "#" + r.id),
         datasets: [{
-          label: "通过率 %", data: rates, borderColor: "#378add",
+          label: "通过率 %", data: d.trend.map(r => r.pass_rate), borderColor: "#378add",
           backgroundColor: "rgba(55,138,221,0.15)", fill: true, tension: 0.3,
         }],
       },
@@ -106,10 +154,10 @@ async function loadDashboard() {
           y: { min: 0, max: 100, ticks: { color: "#9aa2b1" } },
         },
       },
-    });
+    }));
     const dist = d.pyramid.distribution || {};
     const entries = Object.entries(dist).sort((a, b) => b[1] - a[1]);
-    new Chart(document.getElementById("pyramidChart"), {
+    renderChart("pyramidChart", (canvas) => new Chart(canvas, {
       type: "doughnut",
       data: {
         labels: entries.map(e => e[0]),
@@ -121,11 +169,20 @@ async function loadDashboard() {
       options: {
         plugins: { legend: { position: "right", labels: { color: "#9aa2b1" } } },
       },
-    });
+    }));
   } catch (e) { console.error(e); }
 }
 
 /* ---------- 失败分析 ---------- */
+function analysisHtml(f) {
+  // 后端在 /api/failures 中联表返回已缓存的归因（ana_* 字段）
+  if (f.ana_category) {
+    const pct = Math.round((f.ana_confidence || 0) * 100);
+    return `<div class="analysis"><b>[${esc(f.ana_category)}]</b> 置信度 ${pct}%（${f.ana_source === "llm" ? "LLM" : "规则"}）<br>${esc(f.ana_suggestion || "")}</div>`;
+  }
+  return '<span class="hint">未分析</span>';
+}
+
 async function loadFailures() {
   const tbody = document.getElementById("failures-tbody");
   const cbody = document.getElementById("clusters-tbody");
@@ -137,21 +194,21 @@ async function loadFailures() {
         <tr>
           <td>${c.id}</td>
           <td class="fail">${esc(c.error_type)}</td>
-          <td class="msg" title="${esc(c.fingerprint)}">${esc(c.fingerprint.slice(0, 70))}</td>
+          <td class="msg" title="${esc(c.fingerprint)}">${esc(String(c.fingerprint).slice(0, 70))}</td>
           <td><b>${c.count}</b></td>
           <td class="msg">${esc(c.sample_nodeid)}</td>
         </tr>`).join("") || '<tr><td colspan="5" style="text-align:center;color:#9aa2b1">暂无失败，无需聚类</td></tr>';
     }
     if (!tbody) return;
-    tbody.innerHTML = d.failures.map(f => `
+    tbody.innerHTML = (d.failures || []).map(f => `
       <tr>
         <td>${esc(f.nodeid)}</td>
         <td class="fail">${esc(f.error_type || "")}</td>
         <td class="msg" title="${esc(f.error_message || "")}">${esc((f.error_message || "").slice(0, 60))}</td>
-        <td>${f.screenshot ? `<a class="shot" href="/${f.screenshot}" target="_blank">截图</a>` : "-"}</td>
-        <td><div id="ana-${f.id}">${f.analysis_html || '<span class="hint">未分析</span>'}</div></td>
+        <td>${f.screenshot ? `<a class="shot" href="/${esc(f.screenshot)}" target="_blank">截图</a>` : "-"}</td>
+        <td><div id="ana-${f.id}">${analysisHtml(f)}</div></td>
         <td>
-          <button class="btn" onclick="analyzeFailure(${f.id})">AI 归因</button>
+          <button class="btn" onclick="analyzeFailure(${f.id})">${f.ana_category ? "重新归因" : "AI 归因"}</button>
           <button class="btn" onclick="toggleDetail(${f.id})">详情</button>
         </td>
       </tr>
@@ -172,8 +229,9 @@ async function analyzeFailure(id) {
   box.innerHTML = '<span class="hint">分析中...</span>';
   try {
     const r = await getJSON(`/api/failures/${id}/analyze`, { method: "POST" });
-    box.innerHTML = `<div class="analysis"><b>[${esc(r.category)}]</b> 置信度 ${(r.confidence * 100).toFixed(0)}%（${r.source === "llm" ? "LLM" : "规则"}）<br>${esc(r.suggestion || "")}</div>`;
-  } catch (e) { box.innerHTML = '<span class="hint">分析失败</span>'; }
+    const pct = Math.round((r.confidence || 0) * 100);
+    box.innerHTML = `<div class="analysis"><b>[${esc(r.category)}]</b> 置信度 ${pct}%（${r.source === "llm" ? "LLM" : "规则"}）<br>${esc(r.suggestion || "")}</div>`;
+  } catch (e) { box.innerHTML = `<span class="hint">分析失败：${esc(e.message)}</span>`; }
 }
 
 /* ---------- flaky 检测 ---------- */
@@ -183,19 +241,68 @@ async function detectFlaky() {
   el.textContent = "检测中...";
   try {
     const r = await getJSON("/api/flaky");
-    const names = r.flaky.map(f => f.nodeid.split("::").pop() + "(" + Math.round(f.fail_rate * 100) + "%)").join("、");
+    const names = (r.flaky || []).map(f => f.nodeid.split("::").pop() + "(" + Math.round(f.fail_rate * 100) + "%)").join("、");
     el.textContent = `发现 ${r.summary.detected_flaky} 个 flaky：${names || "无"}；稳定失败 ${r.summary.stable_fail} 个`;
   } catch (e) { el.textContent = "检测失败：" + e.message; }
 }
 
 /* ---------- 执行中心 ---------- */
+async function loadQueue() {
+  const el = document.getElementById("queue-banner");
+  if (!el) return;
+  try {
+    const q = await getJSON("/api/queue");
+    el.innerHTML = `执行队列：运行中 <b>${q.running}</b> · 排队中 <b>${q.queued}</b> · 并发上限 ${q.max_workers}` +
+      (q.cancelling ? ` · <span class="fail">待取消 ${q.cancelling}</span>` : "");
+  } catch (e) { /* 队列状态失败不打扰用户 */ }
+}
+
 async function loadHistory() {
   const tbody = document.getElementById("history-tbody");
   if (!tbody) return;
   try {
     const d = await getJSON("/api/runs");
-    renderRuns(d.runs, "history-tbody");
+    renderRuns(d.runs, "history-tbody", { cancel: true });
   } catch (e) { console.error(e); }
+}
+
+async function cancelRun(id) {
+  if (!confirm(`确认取消执行 #${id}？\n运行中将终止测试子进程。`)) return;
+  try {
+    const r = await getJSON(`/api/runs/${id}/cancel`, { method: "POST" });
+    alert(r.state === "cancelled_before_start" ? "已取消（尚未开始）" : "已发送取消指令，状态稍后更新");
+    loadHistory();
+    loadQueue();
+  } catch (e) { alert("取消失败：" + e.message); }
+}
+
+/* ---------- 精准测试（git 变更 → 影响面分析 → 按建议集执行） ---------- */
+async function runImpact() {
+  const el = document.getElementById("impact-result");
+  if (!el) return;
+  el.textContent = "分析 git 变更中...";
+  try {
+    const d = await getJSON("/api/impact");
+    const tests = d.suggested_tests || [];
+    if (!tests.length) {
+      el.textContent = "无变更或未匹配到测试集（干净工作区）";
+      return;
+    }
+    const reasons = Object.entries(d.reasons || {})
+      .map(([dir, rs]) => `${dir}（${rs.length} 处变更）`).join("、");
+    if (!confirm(`本次变更 ${d.changed_files.length} 个文件，建议执行 ${tests.length} 个测试集：\n${tests.join("\n")}\n\n原因：${reasons}\n\n确认按建议集执行？`)) {
+      el.textContent = `已取消（建议 ${tests.length} 个测试集：${tests.join("、")}）`;
+      return;
+    }
+    const r = await getJSON("/api/impact/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    el.textContent = `已触发 ${r.execution_ids.length} 个执行（#${r.execution_ids.join(" #")}），见下方历史`;
+    loadHistory();
+    loadQueue();
+  } catch (e) { el.textContent = "精准执行失败：" + e.message; }
 }
 
 async function triggerRun() {
@@ -215,7 +322,9 @@ async function triggerRun() {
         marker: document.getElementById("opt-marker").value.trim(),
       }),
     });
-    setTimeout(() => { msg.textContent = "执行中，可在下方刷新查看（点详情看用例级结果）"; loadHistory(); }, 1500);
+    msg.textContent = "执行中，可在下方刷新查看（点详情看用例级结果）";
+    loadHistory();
+    loadQueue();
   } catch (e) { msg.textContent = "触发失败：" + e.message; }
 }
 
@@ -226,16 +335,16 @@ async function loadRunDetail() {
   const execId = tbody.dataset.exec;
   try {
     const d = await getJSON("/api/runs/" + execId);
-    tbody.innerHTML = d.cases.map(c => `
+    tbody.innerHTML = (d.cases || []).map(c => `
       <tr>
         <td>${esc(c.nodeid)}</td>
-        <td class="${statusClass(c.status)}">${c.status}</td>
+        <td class="${caseStatusClass(c.status)}">${c.status}</td>
         <td>${c.duration}s</td>
         <td class="${c.error_type ? "fail" : ""}">${esc(c.error_type || "")}</td>
         <td class="msg" title="${esc(c.error_message || "")}">${esc((c.error_message || "").slice(0, 60))}</td>
-        <td>${c.screenshot ? `<a class="shot" href="/${c.screenshot}" target="_blank">截图</a>` : "-"}</td>
+        <td>${c.screenshot ? `<a class="shot" href="/${esc(c.screenshot)}" target="_blank">截图</a>` : "-"}</td>
         <td><button class="btn" onclick="rerunCase('${esc(c.nodeid).replace(/'/g, "\\'")}')">重跑</button></td>
-      </tr>`).join("");
+      </tr>`).join("") || '<tr><td colspan="7" style="text-align:center;color:#9aa2b1">无用例结果</td></tr>';
   } catch (e) { tbody.innerHTML = '<tr><td colspan="7">加载失败：' + esc(e.message) + "</td></tr>"; }
 }
 
@@ -257,7 +366,7 @@ async function loadSchedules() {
   if (!tbody) return;
   try {
     const d = await getJSON("/api/schedules");
-    tbody.innerHTML = d.schedules.map(s => `
+    tbody.innerHTML = (d.schedules || []).map(s => `
       <tr>
         <td>${s.id}</td>
         <td>${esc(s.name)}</td>
@@ -267,16 +376,18 @@ async function loadSchedules() {
         <td>${s.reruns}</td>
         <td class="${s.enabled ? "pass" : "skip"}">${s.enabled ? "启用" : "停用"}</td>
         <td>${esc(s.last_run || "-")}</td>
-        <td>
+        <td>${isAdmin() ? `
           <button class="btn" onclick="toggleSched(${s.id}, ${s.enabled ? 0 : 1})">${s.enabled ? "停用" : "启用"}</button>
-          <button class="btn" onclick="delSched(${s.id})">删除</button>
+          <button class="btn btn-danger" onclick="delSched(${s.id})">删除</button>` : '<span class="hint">-</span>'}
         </td>
       </tr>`).join("") || '<tr><td colspan="9" style="text-align:center;color:#9aa2b1">暂无定时任务</td></tr>';
   } catch (e) { console.error(e); }
 }
 
 async function addSchedule() {
-  const msg = document.getElementById("run-msg");
+  const msg = document.getElementById("sched-msg");
+  const path = document.getElementById("sched-path").value.trim();
+  if (!path) { msg.textContent = "请输入测试路径"; return; }
   try {
     await getJSON("/api/schedules", {
       method: "POST",
@@ -285,7 +396,7 @@ async function addSchedule() {
         name: document.getElementById("sched-name").value.trim(),
         kind: document.getElementById("sched-kind").value,
         cron_value: document.getElementById("sched-cron").value.trim(),
-        test_path: document.getElementById("sched-path").value.trim(),
+        test_path: path,
         reruns: 1,
       }),
     });
@@ -295,17 +406,22 @@ async function addSchedule() {
 }
 
 async function toggleSched(id, enabled) {
-  await getJSON(`/api/schedules/${id}/toggle`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ enabled }),
-  });
-  loadSchedules();
+  try {
+    await getJSON(`/api/schedules/${id}/toggle`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    loadSchedules();
+  } catch (e) { alert("操作失败：" + e.message); }
 }
 
 async function delSched(id) {
-  await getJSON(`/api/schedules/${id}`, { method: "DELETE" });
-  loadSchedules();
+  if (!confirm(`确认删除定时任务 #${id}？该操作不可恢复。`)) return;
+  try {
+    await getJSON(`/api/schedules/${id}`, { method: "DELETE" });
+    loadSchedules();
+  } catch (e) { alert("删除失败：" + e.message); }
 }
 
 /* ---------- 用例管理（CRUD） ---------- */
@@ -315,7 +431,7 @@ async function loadManageCases() {
   try {
     const kw = (document.getElementById("case-filter").value || "").trim();
     const d = await getJSON("/api/cases/manage?keyword=" + encodeURIComponent(kw));
-    tbody.innerHTML = d.cases.map(c => `
+    tbody.innerHTML = (d.cases || []).map(c => `
       <tr>
         <td>${c.id}</td>
         <td class="msg" title="${esc(c.nodeid)}">${esc(c.nodeid)}</td>
@@ -323,9 +439,9 @@ async function loadManageCases() {
         <td>${esc(c.tags || "")}</td>
         <td>${esc(c.owner || "")}</td>
         <td class="${c.status === "active" ? "pass" : "skip"}">${c.status === "active" ? "启用" : "停用"}</td>
-        <td>
+        <td>${isAdmin() ? `
           <button class="btn" onclick="editCase(${c.id}, '${esc(c.status).replace(/'/g, "\\'")}')">${c.status === "active" ? "停用" : "启用"}</button>
-          <button class="btn" onclick="delCase(${c.id})">删除</button>
+          <button class="btn btn-danger" onclick="delCase(${c.id})">删除</button>` : '<span class="hint">-</span>'}
         </td>
       </tr>`).join("") || '<tr><td colspan="7" style="text-align:center;color:#9aa2b1">用例库为空，可点击"从 pytest 一键导入"</td></tr>';
   } catch (e) { console.error(e); }
@@ -358,18 +474,22 @@ async function showAddCase() {
 
 async function editCase(id, status) {
   const next = status === "active" ? "disabled" : "active";
-  await getJSON(`/api/cases/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status: next }),
-  });
-  loadManageCases();
+  try {
+    await getJSON(`/api/cases/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: next }),
+    });
+    loadManageCases();
+  } catch (e) { alert("操作失败：" + e.message); }
 }
 
 async function delCase(id) {
   if (!confirm("删除该用例记录？")) return;
-  await getJSON(`/api/cases/${id}`, { method: "DELETE" });
-  loadManageCases();
+  try {
+    await getJSON(`/api/cases/${id}`, { method: "DELETE" });
+    loadManageCases();
+  } catch (e) { alert("删除失败：" + e.message); }
 }
 
 /* ---------- 用例清单（collect 只读） ---------- */
@@ -387,13 +507,18 @@ async function loadCases() {
 
 function applyCaseFilter() {
   const pre = document.getElementById("cases-pre");
+  if (!pre) return;
   const kw = (document.getElementById("case-filter").value || "").trim();
   const list = kw ? (window._cases || []).filter(c => c.includes(kw)) : (window._cases || []);
   pre.textContent = list.join("\n");
 }
 
 /* ---------- 初始化 ---------- */
+let _filterTimer = null;
 document.addEventListener("DOMContentLoaded", () => {
+  initNav();      // 全站导航（window._user 由服务端注入）
+  applyAcl();     // 非 admin 隐藏管理按钮
+
   if (document.getElementById("trendChart")) loadDashboard();
   if (document.getElementById("failures-tbody")) {
     loadFailures();
@@ -402,16 +527,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (document.getElementById("history-tbody")) {
     loadHistory();
+    loadQueue();
     document.getElementById("btn-run").onclick = triggerRun;
     loadSchedules();
     const sbtn = document.getElementById("btn-sched");
     if (sbtn) sbtn.onclick = addSchedule;
+    const ibtn = document.getElementById("btn-impact");
+    if (ibtn) ibtn.onclick = runImpact;
+    // 有运行中任务时轮询刷新（页面不可见时暂停，避免无谓请求）
+    setInterval(() => {
+      if (document.visibilityState === "visible") { loadHistory(); loadQueue(); }
+    }, 10000);
   }
   if (document.getElementById("detail-tbody")) loadRunDetail();
   if (document.getElementById("manage-tbody")) {
     loadManageCases();
-    document.getElementById("case-filter").addEventListener("input", () => {
-      loadManageCases(); applyCaseFilter();
+    const filter = document.getElementById("case-filter");
+    if (filter) filter.addEventListener("input", () => {
+      applyCaseFilter();               // 客户端过滤立即生效
+      clearTimeout(_filterTimer);      // 服务端查询防抖 300ms
+      _filterTimer = setTimeout(loadManageCases, 300);
     });
   }
   if (document.getElementById("cases-pre")) loadCases();

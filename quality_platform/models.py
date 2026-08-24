@@ -75,6 +75,17 @@ CREATE TABLE IF NOT EXISTS cases (
     created_at    TEXT,
     updated_at    TEXT
 );
+CREATE TABLE IF NOT EXISTS audit_log (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL,                     -- 操作者（未登录失败尝试记为 anonymous）
+    action        TEXT NOT NULL,                     -- login/logout/run_start/cancel/case_add/...
+    target        TEXT DEFAULT '',                   -- 操作对象（exec_id/case_id/sched_id 等）
+    detail        TEXT DEFAULT '',                   -- 补充信息（失败原因等）
+    ip            TEXT DEFAULT '',
+    ok            INTEGER DEFAULT 1,                 -- 1 成功 / 0 失败（如登录失败）
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
 """
 
 
@@ -139,22 +150,43 @@ class _Database:
             )
 
     def list_case_results(self, exec_id: int) -> list[dict]:
+        """某次执行的用例结果（联表带上 AI 归因字段 ana_*，无归因为 NULL）。"""
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT * FROM case_results WHERE execution_id=?", (exec_id,)
+                "SELECT c.*, a.category AS ana_category, a.confidence AS ana_confidence, "
+                "a.suggestion AS ana_suggestion, a.source AS ana_source "
+                "FROM case_results c "
+                "LEFT JOIN ai_analysis a ON a.case_result_id = c.id "
+                "WHERE c.execution_id=? ORDER BY c.id",
+                (exec_id,),
             ).fetchall()
             return [dict(r) for r in rows]
 
     def recent_failures(self, limit: int = 100) -> list[dict]:
-        """最近失败用例（按执行批次倒序），带所属执行信息。"""
+        """最近失败用例（按执行批次倒序），带所属执行信息与 AI 归因（ana_*）。"""
         with self._conn() as conn:
             rows = conn.execute(
-                "SELECT c.*, e.started_at AS exec_time, e.id AS exec_id "
-                "FROM case_results c JOIN executions e ON c.execution_id = e.id "
+                "SELECT c.*, e.started_at AS exec_time, e.id AS exec_id, "
+                "a.category AS ana_category, a.confidence AS ana_confidence, "
+                "a.suggestion AS ana_suggestion, a.source AS ana_source "
+                "FROM case_results c "
+                "JOIN executions e ON c.execution_id = e.id "
+                "LEFT JOIN ai_analysis a ON a.case_result_id = c.id "
                 "WHERE c.status IN ('failed','error') ORDER BY c.id DESC LIMIT ?",
                 (limit,),
             ).fetchall()
             return [dict(r) for r in rows]
+
+    def get_case_result(self, case_result_id: int) -> dict | None:
+        """按主键查询单条用例结果（含所属执行信息），供失败详情/归因使用。"""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT c.*, e.started_at AS exec_time, e.id AS exec_id "
+                "FROM case_results c JOIN executions e ON c.execution_id = e.id "
+                "WHERE c.id=?",
+                (case_result_id,),
+            ).fetchone()
+            return dict(row) if row else None
 
     def recent_records(self, limit: int = 500) -> list[dict]:
         """最近用例结果（供 flaky 识别）"""
@@ -259,6 +291,40 @@ class _Database:
                 "SELECT * FROM ai_analysis WHERE case_result_id=?", (case_result_id,)
             ).fetchone()
             return dict(row) if row else None
+
+    # ---------- audit_log（审计日志） ----------
+    def insert_audit(self, username: str, action: str, target: str = "",
+                     detail: str = "", ip: str = "", ok: bool = True):
+        """记录审计事件。写日志失败绝不阻断业务主流程。"""
+        try:
+            with self._conn() as conn:
+                conn.execute(
+                    "INSERT INTO audit_log (username, action, target, detail, ip, ok, created_at) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (username or "anonymous", action, target or "", (detail or "")[:500],
+                     ip or "", 1 if ok else 0,
+                     datetime.now().isoformat(timespec="seconds")),
+                )
+        except Exception as exc:  # 审计失败不影响业务
+            import warnings
+            warnings.warn(f"审计日志写入失败：{exc}")
+
+    def list_audit(self, limit: int = 200, action: str = "",
+                   username: str = "") -> list[dict]:
+        """查询审计日志（admin 页面用，可按动作/用户过滤）。"""
+        sql = "SELECT * FROM audit_log WHERE 1=1"
+        args: list = []
+        if action:
+            sql += " AND action=?"
+            args.append(action)
+        if username:
+            sql += " AND username=?"
+            args.append(username)
+        sql += " ORDER BY id DESC LIMIT ?"
+        args.append(limit)
+        with self._conn() as conn:
+            rows = conn.execute(sql, args).fetchall()
+            return [dict(r) for r in rows]
 
 
 db = _Database()

@@ -5,15 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}质量工程平台{% endblock %}</title>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- 本地化 Chart.js：内网/国内网络环境不依赖 CDN，图表稳定可用 -->
+  <script src="/static/vendor/chart.umd.min.js"></script>
 </head>
 <body>
+  {# 服务端注入登录会话：全站页面统一可用（导航栏用户名/登出/按钮权限控制） #}
+  <script>window._user = {{ session.get('user') | tojson }};</script>
   <nav class="topnav">
     <span class="brand">质量工程平台</span>
     <a href="/" class="{{ 'active' if request.path == '/' }}">看板</a>
     <a href="/failures" class="{{ 'active' if request.path == '/failures' }}">失败分析</a>
     <a href="/runs" class="{{ 'active' if request.path == '/runs' }}">执行中心</a>
     <a href="/cases" class="{{ 'active' if request.path == '/cases' }}">用例</a>
+    {% if session.get('user', {}).get('role') == 'admin' %}
+    <a href="/audit" class="{{ 'active' if request.path == '/audit' }}">审计</a>
+    {% endif %}
     <span style="flex:1"></span>
     <span id="nav-user" class="hint"></span>
     <a href="#" id="btn-logout" style="display:none">登出</a>

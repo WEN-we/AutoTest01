@@ -31,12 +31,23 @@ h2 { font-size: 15px; font-weight: 500; margin: 24px 0 10px; }
 .pass { color: var(--green); }
 .fail { color: var(--red); }
 .skip { color: var(--amber); }
+.run { color: var(--accent); }
 .btn { background: var(--accent); color: #fff; border: 0; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .btn:hover { opacity: 0.85; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-danger { background: var(--red); }
 .toolbar { margin-bottom: 12px; display: flex; align-items: center; gap: 12px; }
 .run-form { display: flex; gap: 10px; margin-bottom: 8px; }
 input[type="text"] { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; width: 360px; }
+input[type="password"], input[type="number"] { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+input[type="number"] { width: 120px; }
+
+/* 登录页（原先类名未定义导致整页无样式） */
+.login-wrap { display: flex; justify-content: center; align-items: center; min-height: 70vh; }
+.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 36px 32px; width: 360px; }
+.login-card h1 { font-size: 20px; text-align: center; margin-bottom: 8px; }
+.login-card .hint { display: block; text-align: center; margin: 0 0 18px; }
+.login-card #login-msg { display: block; text-align: center; color: var(--red); }
 .analysis { background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
 .analysis b { color: var(--amber); }
 .cases { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; max-height: 600px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; line-height: 1.6; }
