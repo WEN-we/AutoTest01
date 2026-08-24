@@ -163,6 +163,9 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
+          # 与 test_data/ui/ui_test_data.yaml 正确登录用例一致（admin/123456）；
+          # admin 在此步骤创建，缺此变量会用默认密码致 UI「正确登录」用例失败
+          ADMIN_DEFAULT_PASSWORD: "123456"
 
       - name: 启动本地登录服务
         run: |
@@ -174,6 +177,9 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
+          # 与 test_data/ui/ui_test_data.yaml 正确登录用例一致（admin/123456）；
+          # admin 在此步骤创建，缺此变量会用默认密码致 UI「正确登录」用例失败
+          ADMIN_DEFAULT_PASSWORD: "123456"
           # 与 test_data/ui/ui_test_data.yaml 的「正确用户名密码登录」一致（admin/123456）
           ADMIN_DEFAULT_PASSWORD: "123456"
 
@@ -269,6 +275,9 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
+          # 与 test_data/ui/ui_test_data.yaml 正确登录用例一致（admin/123456）；
+          # admin 在此步骤创建，缺此变量会用默认密码致 UI「正确登录」用例失败
+          ADMIN_DEFAULT_PASSWORD: "123456"
 
       - name: 启动本地登录服务
         run: |
@@ -280,6 +289,9 @@ jobs:
           LOCAL_DB_PORT: 3306
           LOCAL_DB_USER: root
           LOCAL_DB_PASSWORD: ci_test_only_pwd
+          # 与 test_data/ui/ui_test_data.yaml 正确登录用例一致（admin/123456）；
+          # admin 在此步骤创建，缺此变量会用默认密码致 UI「正确登录」用例失败
+          ADMIN_DEFAULT_PASSWORD: "123456"
           # 与 test_data/ui/ui_test_data.yaml 的「正确用户名密码登录」一致（admin/123456）
           ADMIN_DEFAULT_PASSWORD: "123456"
 

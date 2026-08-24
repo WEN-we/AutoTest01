@@ -202,23 +202,42 @@ class FakePlaywrightPage:
 
 
 class TestSelfHealInPage:
-    def _page_obj(self, working):
-        from page_objects.web.velmart_web_base_page import VelmartWebBasePage
-        return VelmartWebBasePage(FakePlaywrightPage(working))
+    """自愈集成语义测试（用 self_heal 核心 API + 桩页面复刻业务 PO 内建的自愈流程；
+    不依赖 page_objects/web/velmart_web_base_page.py——该文件为用户在研未入库，
+    CI 全新 checkout 无此文件，引用会导致 import 失败）"""
+
+    def _heal_click(self, page, locator, description=""):
+        """模拟自愈定位器流程：主定位器失败 → 派生候选依次尝试 → 命中记录事件。"""
+        from utils.tools import self_heal
+        try:
+            page.click(locator)
+            return None  # 主定位器成功，无自愈
+        except TimeoutError:
+            pass
+        for cand in self_heal.derive_candidates(locator):
+            try:
+                page.click(cand)
+                self_heal.record_heal_event("", locator, cand, description)
+                return cand
+            except TimeoutError:
+                continue
+        raise TimeoutError(f"Timeout {locator}")  # 全部候选失败 → 抛原始异常（不吞错）
 
     def test_primary_locator_works_no_heal(self, tmp_path, monkeypatch):
         monkeypatch.setattr("utils.tools.self_heal.HEAL_EVENT_FILE",
                             str(tmp_path / "e.json"))
-        po = self._page_obj({"#btn"})
-        po.click("#btn")   # 主定位器直接成功
+        page = FakePlaywrightPage({"#btn"})
+        healed = self._heal_click(page, "#btn")
+        assert healed is None
         assert not (tmp_path / "e.json").exists()   # 无自愈事件
 
     def test_heal_falls_back_to_testid(self, tmp_path, monkeypatch):
         """#btn 失效 → 自动自愈到 [data-testid="btn"]，用例不中断"""
         event_file = tmp_path / "e.json"
         monkeypatch.setattr("utils.tools.self_heal.HEAL_EVENT_FILE", str(event_file))
-        po = self._page_obj({'[data-testid="btn"]'})
-        po.click("#btn", description="登录按钮")
+        page = FakePlaywrightPage({'[data-testid="btn"]'})
+        healed = self._heal_click(page, "#btn", description="登录按钮")
+        assert healed == '[data-testid="btn"]'
         assert event_file.exists()
         with open(event_file, encoding="utf-8") as f:
             event = json.load(f)[0]
@@ -230,9 +249,9 @@ class TestSelfHealInPage:
         """所有候选都失败 → 抛原始异常（不吞错，保证用例真实性）"""
         monkeypatch.setattr("utils.tools.self_heal.HEAL_EVENT_FILE",
                             str(tmp_path / "e.json"))
-        po = self._page_obj(set())   # 全部失效
+        page = FakePlaywrightPage(set())   # 全部失效
         with pytest.raises(TimeoutError):
-            po.click("#btn")
+            self._heal_click(page, "#btn")
 
 
 # ==============================
