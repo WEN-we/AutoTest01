@@ -286,6 +286,68 @@ def fixture_ui_driver(web_driver):
     yield web_driver
 
 
+@pytest.fixture(name="visual_check")
+def fixture_visual_check(web_driver):
+    """
+    视觉回归校验器（挂接 UI 用例执行流，打通 utils/tools/visual_diff.py）。
+
+    行为：
+    - 首次运行（无基线）：自动生成基线 reports/baselines/<name>.png 并通过（后续运行才对比）
+    - 有基线：截图对比，差异比例超过 threshold 即失败，差异图落盘 reports/visual_diffs/ 并 attach Allure
+    - 基线管理：人工确认页面正确后，删除/替换 reports/baselines/<name>.png 即完成基线更新
+
+    用法：
+        def test_login_page_visual(web_driver, visual_check):
+            web_driver.goto("http://127.0.0.1:8090/")
+            visual_check("login_page")          # 默认阈值 2%
+            visual_check("login_page_strict", threshold=0.01)
+    """
+
+    def _check(name: str, threshold: float = 0.02) -> dict:
+        from utils.tools import visual_diff
+
+        base_dir = os.path.join(PROJECT_ROOT, "reports", "baselines")
+        cur_dir = os.path.join(PROJECT_ROOT, "reports", "screenshots", "visual")
+        diff_dir = os.path.join(PROJECT_ROOT, "reports", "visual_diffs")
+        os.makedirs(cur_dir, exist_ok=True)
+        os.makedirs(diff_dir, exist_ok=True)
+
+        # 1) 截当前页面
+        png = _capture_screenshot_png(web_driver)
+        if not png:
+            raise RuntimeError(f"视觉回归失败：无法截取页面 {name} 的截图")
+        current = os.path.join(cur_dir, f"{name}_current.png")
+        with open(current, "wb") as f:
+            f.write(png)
+
+        # 2) 与基线对比（无基线 → 首次生成并通过）
+        baseline = os.path.join(base_dir, f"{name}.png")
+        result = visual_diff.compare_images(baseline, current, threshold=threshold)
+        if result.get("first_run"):
+            os.makedirs(base_dir, exist_ok=True)
+            visual_diff.update_baseline(current, baseline)
+            logger.info(f"视觉回归：基线已创建 {name}.png（下次运行开始对比）")
+            return result
+
+        # 3) 差异图 + Allure 附件（大厂：失败即证据）
+        if result.get("diff_image"):
+            try:
+                import allure
+                from allure_commons.types import AttachmentType
+
+                allure.attach.file(result["diff_image"], name=f"视觉差异 {name}",
+                                   attachment_type=AttachmentType.PNG)
+            except Exception:
+                pass
+        assert result["passed"], (
+            f"视觉回归失败：{name} 差异比例 {result.get('diff_ratio', 1):.2%}"
+            f"（阈值 {threshold:.0%}），差异图见 {result.get('diff_image')}"
+        )
+        return result
+
+    return _check
+
+
 @pytest.fixture(scope="session", name="selenium_driver")
 def fixture_selenium_driver():
     """
