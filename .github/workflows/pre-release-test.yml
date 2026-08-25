@@ -54,10 +54,20 @@ jobs:
 
       - name: 运行平台测试（PostgreSQL 后端，全量）
         run: |
+          set +e
           DB_TYPE=postgres \
           DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=quality_platform \
           DB_USER=postgres DB_PASSWORD=ci_pg_pwd \
-          pytest tests/test_platform/ -q --junitxml=reports/platform/junit-pg.xml
+          pytest tests/test_platform/ -q --junitxml=reports/platform/junit-pg.xml > pg_pytest.txt 2>&1
+          ec=$?
+          echo "## PG 后端测试退出码: $ec" >> $GITHUB_STEP_SUMMARY
+          grep -E "FAILED|ERROR|psycopg2|OperationalError|ProgrammingError" pg_pytest.txt | tail -30 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          grep -E "passed|failed" pg_pytest.txt | tail -3 | while IFS= read -r line; do
+            echo "::notice::$line"
+          done
+          exit $ec
 
       - name: 上传 PG 后端测试结果
         if: always()
