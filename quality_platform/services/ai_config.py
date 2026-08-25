@@ -42,6 +42,12 @@ PROVIDER_PRESETS = {
         "model": "doubao-1-5-pro-32k-250115",
         "need_key": True,
     },
+    "zhipu": {
+        "label": "智谱 GLM（OpenAI 兼容）",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "model": "glm-4-flash",
+        "need_key": True,
+    },
     "ollama": {
         "label": "Ollama 本地模型",
         "base_url": "http://127.0.0.1:11434/v1",
