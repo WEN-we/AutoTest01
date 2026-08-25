@@ -87,6 +87,21 @@ def admin_required(view):
     return wrapped
 
 
+def permission_required(perm: str):
+    """细粒度 RBAC 权限保护（admin/engineer/viewer 三级；未登录先 401，无权限 403）。"""
+    def decorator(view):
+        @wraps(view)
+        @login_required
+        def wrapped(*args, **kwargs):
+            from quality_platform.services.rbac import has_permission
+            user = session.get("user") or {}
+            if not has_permission(user.get("role"), perm):
+                return jsonify({"error": f"权限不足：需要 {perm} 权限"}), 403
+            return view(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
 @app.route("/login")
 def page_login():
     if session.get("user"):
@@ -213,13 +228,19 @@ def page_cases():
 
 
 @app.route("/audit")
-@admin_required
+@permission_required("audit")
 def page_audit():
     return render_template("audit.html")
 
 
+@app.route("/users")
+@permission_required("user_admin")
+def page_users():
+    return render_template("users.html")
+
+
 @app.route("/ai-config")
-@admin_required
+@permission_required("ai_config")
 def page_ai_config():
     return render_template("ai_config.html")
 
@@ -317,7 +338,7 @@ def api_runs():
 
 
 @app.route("/api/runs", methods=["POST"])
-@login_required
+@permission_required("run")
 def api_run_start():
     data = request.get_json(silent=True) or {}
     test_path = (data.get("test_path") or "").strip()
@@ -530,7 +551,7 @@ def api_cases_add():
 
 
 @app.route("/api/cases/<int:case_id>", methods=["PUT"])
-@admin_required
+@permission_required("case_edit")
 def api_cases_update(case_id):
     data = request.get_json(silent=True) or {}
     ok = db.update_case(case_id, **data)
@@ -540,7 +561,7 @@ def api_cases_update(case_id):
 
 
 @app.route("/api/cases/<int:case_id>", methods=["DELETE"])
-@admin_required
+@permission_required("case_edit")
 def api_cases_delete(case_id):
     ok = db.delete_case(case_id)
     _audit("case_delete", target=str(case_id), ok=ok)
@@ -548,7 +569,7 @@ def api_cases_delete(case_id):
 
 
 @app.route("/api/cases/import", methods=["POST"])
-@admin_required
+@permission_required("case_edit")
 def api_cases_import():
     """从 pytest collect 结果一键导入用例库。"""
     try:
@@ -682,14 +703,40 @@ def api_impact_run():
 # API：审计日志（仅 admin）
 # ==============================
 @app.route("/api/audit")
-@admin_required
+@permission_required("audit")
 def api_audit():
-    """审计日志查询（admin 专属：谁在什么时间对什么做了什么、成败）"""
+    """审计日志查询（admin/engineer：谁在什么时间对什么做了什么、成败）"""
     return jsonify({"logs": db.list_audit(
         limit=int(request.args.get("limit", 200) or 200),
         action=request.args.get("action", ""),
         username=request.args.get("username", ""),
     )})
+
+
+@app.route("/api/users")
+@permission_required("user_admin")
+def api_users():
+    """用户列表（RBAC 用户管理，仅 admin）。"""
+    from quality_platform.models import list_users
+    from quality_platform.services.rbac import role_label
+    users = list_users()
+    for u in users:
+        u["role_label"] = role_label(u["role"])
+    return jsonify({"users": users})
+
+
+@app.route("/api/users/<int:user_id>/role", methods=["PUT"])
+@permission_required("user_admin")
+def api_user_update_role(user_id):
+    """更新用户角色（RBAC，仅 admin；角色白名单 rbac.ROLES）。"""
+    from quality_platform.models import update_user_role
+    from quality_platform.services.rbac import ROLES
+    role = (request.get_json(silent=True) or {}).get("role", "").strip().lower()
+    if role not in ROLES:
+        return jsonify({"error": f"角色必须为 {ROLES}"}), 400
+    ok = update_user_role(user_id, role)
+    _audit("user_role", target=str(user_id), detail=f"role={role}", ok=ok)
+    return jsonify({"ok": ok})
 
 
 # ==============================

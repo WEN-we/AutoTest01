@@ -595,8 +595,24 @@ def get_user_by_username(username: str) -> dict | None:
         return dict(row) if row else None
 
 
-def create_sso_user(username: str, role: str = "user") -> dict:
-    """创建 SSO 免密用户（首次单点登录自动开户，幂等）。"""
+def list_users() -> list[dict]:
+    """用户列表（用户管理页用）。"""
+    with db._conn() as conn:
+        rows = conn.execute(
+            "SELECT id, username, role, created_at FROM users ORDER BY id").fetchall()
+        return [dict(r) for r in rows]
+
+
+def update_user_role(user_id: int, role: str) -> bool:
+    """更新用户角色（RBAC：admin 管理）。角色白名单在 rbac.ROLES。"""
+    with db._conn() as conn:
+        cur = conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
+        return cur.rowcount > 0
+
+
+def create_sso_user(username: str, role: str = "viewer") -> dict:
+    """创建 SSO 免密用户（首次单点登录自动开户，幂等）。
+    默认 viewer（最安全：新用户零权限起步，由 admin 在用户管理页授权）。"""
     with db._conn() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO users (username, password_hash, role, created_at) "

@@ -72,13 +72,27 @@ function renderRuns(runs, tbodyId, opts) {
 }
 
 /* ---------- 登录 / 登出（全站导航） ---------- */
+const ROLE_LABEL = { admin: "管理员", engineer: "测试工程师", viewer: "只读访客" };
+
+function currentRole() {
+  return (window._user && window._user.role) || "viewer";
+}
+
+/* 前端权限判断（镜像 quality_platform/services/rbac.py 矩阵） */
+function can(perm) {
+  const role = currentRole();
+  if (role === "admin") return true;
+  if (role === "engineer") return ["view", "run", "case_edit", "audit"].includes(perm);
+  return perm === "view";
+}
+
 function initNav() {
   const userEl = document.getElementById("nav-user");
   const logoutEl = document.getElementById("btn-logout");
   if (!userEl) return;
   const user = window._user;
   if (user && user.username) {
-    userEl.textContent = user.username + "（" + (user.role === "admin" ? "管理员" : "用户") + "）";
+    userEl.textContent = user.username + "（" + (ROLE_LABEL[user.role] || user.role || "只读访客") + "）";
     logoutEl.style.display = "";
     logoutEl.onclick = async (e) => {
       e.preventDefault();
@@ -90,7 +104,7 @@ function initNav() {
 
 /* 非 admin 隐藏管理按钮（模板中标注 .admin-only 的元素） */
 function applyAcl() {
-  if (isAdmin()) return;
+  if (can("user_admin")) return;
   document.querySelectorAll(".admin-only").forEach(el => { el.style.display = "none"; });
 }
 

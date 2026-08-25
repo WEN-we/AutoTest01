@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}用户管理 · 质量工程平台{% endblock %}
+{% block content %}
+<h1>用户管理 <span class="hint">RBAC：admin / engineer（测试工程师）/ viewer（只读访客）</span></h1>
+<table class="tbl">
+  <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead>
+  <tbody id="users-tbody"></tbody>
+</table>
+<script>
+async function loadUsers() {
+  const d = await getJSON("/api/users");
+  const tb = document.getElementById("users-tbody");
+  tb.innerHTML = "";
+  for (const u of d.users) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.id}</td><td>${u.username}</td>
+      <td>${u.role_label}</td><td>${u.created_at || "-"}</td>
+      <td>
+        <select data-uid="${u.id}" class="role-select" ${u.username === "admin" ? "disabled" : ""}>
+          <option value="admin" ${u.role === "admin" ? "selected" : ""}>管理员</option>
+          <option value="engineer" ${u.role === "engineer" ? "selected" : ""}>测试工程师</option>
+          <option value="viewer" ${u.role === "viewer" ? "selected" : ""}>只读访客</option>
+        </select>
+        <button class="btn btn-sm" data-save="${u.id}" style="${u.username === "admin" ? "display:none" : ""}">保存</button>
+      </td>`;
+    tb.appendChild(tr);
+  }
+  document.querySelectorAll("[data-save]").forEach(btn => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.save;
+      const role = document.querySelector(`select[data-uid="${uid}"]`).value;
+      await fetch("/api/users/" + uid + "/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      loadUsers();
+    };
+  });
+}
+loadUsers();
+</script>
+{% endblock %}

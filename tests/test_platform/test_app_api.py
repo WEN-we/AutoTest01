@@ -11,7 +11,8 @@ def client(monkeypatch):
     app.config["TESTING"] = True
     users = {
         "admin": {"id": 1, "username": "admin", "role": "admin"},
-        "alice": {"id": 2, "username": "alice", "role": "user"},
+        "alice": {"id": 2, "username": "alice", "role": "engineer"},
+        "bob": {"id": 3, "username": "bob", "role": "viewer"},
     }
 
     def fake_verify_user(username, password):
@@ -58,7 +59,7 @@ class TestAuth:
         c, users = client
         resp = _login(c, "alice")
         assert resp.status_code == 200
-        assert resp.get_json()["user"]["role"] == "user"
+        assert resp.get_json()["user"]["role"] == "engineer"
 
     def test_login_wrong_password(self, client):
         c, _ = client
@@ -79,28 +80,42 @@ class TestAuth:
 
 
 class TestRBAC:
-    """user 角色只读 + 触发执行；删除/修改/取消类操作仅 admin"""
+    """viewer 只读；删除/修改/取消类操作仅 admin；engineer 可管理用例"""
 
-    def test_user_cannot_delete_case(self, client):
+    def test_viewer_cannot_delete_case(self, client):
         c, _ = client
-        _login(c, "alice")
+        _login(c, "bob")
         assert c.delete("/api/cases/1").status_code == 403
 
-    def test_user_cannot_update_case(self, client):
+    def test_viewer_cannot_update_case(self, client):
         c, _ = client
-        _login(c, "alice")
+        _login(c, "bob")
         resp = c.put("/api/cases/1", json={"name": "x"})
         assert resp.status_code == 403
 
-    def test_user_cannot_cancel_run(self, client):
+    def test_viewer_cannot_cancel_run(self, client):
         c, _ = client
-        _login(c, "alice")
+        _login(c, "bob")
         assert c.post("/api/runs/1/cancel").status_code == 403
 
-    def test_user_cannot_import_cases(self, client):
+    def test_viewer_cannot_import_cases(self, client):
+        c, _ = client
+        _login(c, "bob")
+        assert c.post("/api/cases/import").status_code == 403
+
+    def test_engineer_can_manage_case(self, client):
+        """engineer 拥有 case_edit 权限（用例库增删改）。"""
         c, _ = client
         _login(c, "alice")
-        assert c.post("/api/cases/import").status_code == 403
+        assert c.put("/api/cases/1", json={"name": "x"}).status_code == 200
+        assert c.delete("/api/cases/1").status_code == 200
+
+    def test_engineer_cannot_user_admin(self, client):
+        """engineer 不可用户管理/AI 配置（仅 admin）。"""
+        c, _ = client
+        _login(c, "alice")
+        assert c.get("/api/users").status_code == 403
+        assert c.put("/api/ai/config", json={}).status_code == 403
 
     def test_admin_can_delete_case(self, client):
         c, _ = client
@@ -123,8 +138,8 @@ class TestRBAC:
 
 
 class TestCoreEndpoints:
-    def test_user_can_trigger_run(self, client):
-        """普通用户可以触发执行（login_required 即可）"""
+    def test_engineer_can_trigger_run(self, client):
+        """engineer（测试工程师）可触发执行（RBAC: run 权限）"""
         c, _ = client
         _login(c, "alice")
         resp = c.post("/api/runs", json={"test_path": "tests/test_api/"})
@@ -169,7 +184,7 @@ class TestCoreEndpoints:
 
 
 class TestAuditApi:
-    """审计查询接口（admin 专属）"""
+    """审计查询接口（admin + engineer 可看；viewer 403）"""
 
     def test_admin_can_query(self, client, monkeypatch):
         c, _ = client
@@ -181,14 +196,21 @@ class TestAuditApi:
         assert resp.status_code == 200
         assert resp.get_json()["logs"][0]["action"] == "login"
 
-    def test_user_forbidden(self, client):
+    def test_engineer_can_query(self, client, monkeypatch):
+        """engineer 拥有 audit 权限（可查看审计）。"""
         c, _ = client
         _login(c, "alice")
+        monkeypatch.setattr(app_mod.db, "list_audit", lambda **k: [])
+        assert c.get("/api/audit").status_code == 200
+
+    def test_viewer_forbidden(self, client):
+        c, _ = client
+        _login(c, "bob")
         assert c.get("/api/audit").status_code == 403
 
-    def test_page_requires_admin(self, client):
+    def test_page_requires_audit_perm(self, client):
         c, _ = client
-        _login(c, "alice")
+        _login(c, "bob")
         assert c.get("/audit").status_code == 403
 
     def test_run_requires_test_path(self, client):
