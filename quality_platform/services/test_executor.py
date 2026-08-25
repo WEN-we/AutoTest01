@@ -62,6 +62,49 @@ def _load_auto_analysis_cfg() -> dict:
         return defaults
 
 
+def _load_distributed_workers() -> list[str]:
+    """读取分布式 worker 节点配置（distributed.workers，可空=仅本地执行）。"""
+    try:
+        cfg = yaml.safe_load(PLATFORM_CONFIG.read_text(encoding="utf-8")) \
+            .get("distributed", {}) or {}
+        return [w for w in (cfg.get("workers") or []) if w]
+    except Exception:
+        return []
+
+
+def parse_junit_text(xml_text: str) -> list[dict]:
+    """从 JUnit XML 文本解析用例结果（主控本地执行与分布式 worker 回传共用）。"""
+    if not xml_text.strip():
+        return []
+    root = ET.fromstring(xml_text)
+    results = []
+    for case in root.iter("testcase"):
+        nodeid = case.get("classname", "") + "::" + case.get("name", "")
+        duration = float(case.get("time", 0) or 0)
+        failure = case.find("failure")
+        error = case.find("error")
+        skipped = case.find("skipped")
+        if failure is not None:
+            results.append({
+                "nodeid": nodeid, "status": "failed", "duration": duration,
+                "error_type": (failure.get("type") or "AssertionError"),
+                "error_message": (failure.text or "").strip()[:4000],
+            })
+        elif error is not None:
+            results.append({
+                "nodeid": nodeid, "status": "error", "duration": duration,
+                "error_type": (error.get("type") or "Error"),
+                "error_message": (error.text or "").strip()[:4000],
+            })
+        elif skipped is not None:
+            results.append({"nodeid": nodeid, "status": "skipped",
+                            "duration": duration, "error_type": "", "error_message": ""})
+        else:
+            results.append({"nodeid": nodeid, "status": "passed",
+                            "duration": duration, "error_type": "", "error_message": ""})
+    return results
+
+
 class TestExecutor:
     """pytest 执行器（线程池队列 + JUnit 解析 + 取消/超时治理）"""
 
@@ -76,23 +119,27 @@ class TestExecutor:
 
     # ---------- 对外接口 ----------
     def run_async(self, test_path: str, reruns: int = 0, parallel: int = 0,
-                  timeout: int = 0, marker: str = "") -> int:
+                  timeout: int = 0, marker: str = "", workers: list[str] | None = None) -> int:
         """
         提交执行任务（排队），立即返回 execution_id。
         reruns:   失败重试次数（大厂标准 1~2 次）
         parallel: 并发 worker 数（0 = 串行；>1 走 pytest-xdist）
         timeout:  单用例超时秒数（0 = 不限制，走 pytest-timeout）
         marker:   pytest 标记过滤（如 smoke / api）
+        workers:  远程执行节点列表（如 ["http://127.0.0.1:9101", ...]）；
+                  非空时按文件粒度分发并行执行（分布式），无可用节点自动降级本地
         """
         exec_id = db.insert_execution(test_path)
         future = self._pool.submit(
             self._run, exec_id, test_path,
             reruns=reruns, parallel=parallel, timeout=timeout, marker=marker,
+            workers=workers,
         )
         with self._lock:
             self._futures[exec_id] = future
         queued = self.queue_status()["queued"]
-        log.info(f"[平台] 任务已提交：exec={exec_id} path={test_path} 排队中={queued}")
+        log.info(f"[平台] 任务已提交：exec={exec_id} path={test_path} "
+                 f"workers={workers or '本地'} 排队中={queued}")
         return exec_id
 
     def cancel(self, exec_id: int) -> dict:
@@ -142,8 +189,21 @@ class TestExecutor:
 
     # ---------- 内部实现 ----------
     def _run(self, exec_id: int, test_path: str, reruns: int = 0,
-             parallel: int = 0, timeout: int = 0, marker: str = ""):
+             parallel: int = 0, timeout: int = 0, marker: str = "",
+             workers: list[str] | None = None):
         started = time.time()
+        if workers:
+            try:
+                self._run_distributed(exec_id, test_path, workers,
+                                      reruns, parallel, timeout, marker, started)
+                return
+            except Exception as exc:
+                log.warning(f"[平台] 分布式执行异常，降级本地：{exc}")
+        self._run_local(exec_id, test_path, reruns, parallel, timeout, marker, started)
+
+    def _run_local(self, exec_id: int, test_path: str, reruns: int, parallel: int,
+                   timeout: int, marker: str, started: float):
+        """本地执行（原 _run 逻辑）。"""
         cancelled = False
         timed_out = False
         try:
@@ -155,38 +215,9 @@ class TestExecutor:
             log.info(f"[平台] 执行测试：{' '.join(cmd)}")
             env = {**os.environ, **_load_exec_env()}  # 注入执行环境变量（覆盖被测服务地址）
             cancelled, timed_out, _ = self._run_subprocess(cmd, env, exec_id)
-            results = self._parse_junit(junit_file) if junit_file.exists() else []
-            total = len(results)
-            passed = sum(1 for r in results if r["status"] == "passed")
-            failed = sum(1 for r in results if r["status"] in ("failed", "error"))
-            skipped = total - passed - failed
-
-            for r in results:
-                if r["status"] in ("failed", "error"):
-                    r["screenshot"] = self._find_screenshot(r["nodeid"])
-                db.insert_case_result(exec_id, r["nodeid"], r["status"],
-                                      r["duration"], r["error_type"],
-                                      r["error_message"], r.get("screenshot", ""))
-
-            duration = round(time.time() - started, 2)
-            db.finish_execution(exec_id, total, passed, failed, skipped, duration)
-            if cancelled:
-                self._mark_status(exec_id, "cancelled")
-            elif timed_out:
-                self._mark_status(exec_id, "timeout")
-            log.info(f"[平台] 执行完成：exec={exec_id} total={total} "
-                     f"passed={passed} failed={failed} skipped={skipped} "
-                     f"cancelled={cancelled} timeout={timed_out}")
-            # 智能闭环：失败用例自动 AI 归因（LLM 不可用自动降级规则；失败不影响主流程）
-            if not cancelled and failed > 0:
-                self._auto_analyze(exec_id)
-            # 完成通知（webhook，失败不阻塞主流程；消息中带归因结论）
-            if not cancelled:
-                try:
-                    from quality_platform.services.notifier import send_execution_summary
-                    send_execution_summary(exec_id)
-                except Exception as exc:
-                    log.warning(f"[平台] 通知异常：{exc}")
+            results = parse_junit_text(junit_file.read_text(encoding="utf-8", errors="replace")) \
+                if junit_file.exists() else []
+            self._store_results(exec_id, results, started, cancelled, timed_out)
         except Exception as exc:
             log.error(f"[平台] 执行异常：{exc}")
             db.finish_execution(exec_id, 0, 0, 0, 0, round(time.time() - started, 2))
@@ -194,6 +225,57 @@ class TestExecutor:
             with self._lock:
                 self._futures.pop(exec_id, None)
                 self._cancels.discard(exec_id)
+
+    def _run_distributed(self, exec_id: int, test_path: str, workers: list[str],
+                         reruns: int, parallel: int, timeout: int, marker: str,
+                         started: float):
+        """分布式执行：按文件分发到远程 worker 并行跑，汇总 JUnit 入库。"""
+        from quality_platform.remote.dispatcher import run_distributed
+        out = run_distributed(test_path, workers, reruns, parallel, timeout, marker)
+        if out.get("fallback_local") or not out.get("workers_used"):
+            log.warning(f"[平台] 分布式无可用节点，降级本地执行：exec={exec_id}")
+            self._run_local(exec_id, test_path, reruns, parallel, timeout, marker, started)
+            return
+        results = out["results"]
+        self._store_results(exec_id, results, started,
+                            cancelled=False, timed_out=False)
+        for err in out["errors"]:
+            log.warning(f"[平台] worker 异常（已记录）：{err}")
+
+    def _store_results(self, exec_id: int, results: list[dict], started: float,
+                       cancelled: bool, timed_out: bool):
+        """统一入库：结果写 case_results + 汇总 executions（本地/分布式共用）。"""
+        total = len(results)
+        passed = sum(1 for r in results if r["status"] == "passed")
+        failed = sum(1 for r in results if r["status"] in ("failed", "error"))
+        skipped = total - passed - failed
+
+        for r in results:
+            if r["status"] in ("failed", "error"):
+                r["screenshot"] = self._find_screenshot(r["nodeid"])
+            db.insert_case_result(exec_id, r["nodeid"], r["status"],
+                                  r["duration"], r["error_type"],
+                                  r["error_message"], r.get("screenshot", ""))
+
+        duration = round(time.time() - started, 2)
+        db.finish_execution(exec_id, total, passed, failed, skipped, duration)
+        if cancelled:
+            self._mark_status(exec_id, "cancelled")
+        elif timed_out:
+            self._mark_status(exec_id, "timeout")
+        log.info(f"[平台] 执行完成：exec={exec_id} total={total} "
+                 f"passed={passed} failed={failed} skipped={skipped} "
+                 f"cancelled={cancelled} timeout={timed_out}")
+        # 智能闭环：失败用例自动 AI 归因（LLM 不可用自动降级规则；失败不影响主流程）
+        if not cancelled and failed > 0:
+            self._auto_analyze(exec_id)
+        # 完成通知（webhook，失败不阻塞主流程；消息中带归因结论）
+        if not cancelled:
+            try:
+                from quality_platform.services.notifier import send_execution_summary
+                send_execution_summary(exec_id)
+            except Exception as exc:
+                log.warning(f"[平台] 通知异常：{exc}")
 
     def _run_subprocess(self, cmd: list[str], env: dict, exec_id: int,
                         poll_seconds: float = 2.0) -> tuple[bool, bool, tuple]:
@@ -278,34 +360,10 @@ class TestExecutor:
 
     # ---------- JUnit 解析 ----------
     def _parse_junit(self, xml_path: Path) -> list[dict]:
-        tree = ET.parse(xml_path)
-        root = tree.getroot()
-        results = []
-        for case in root.iter("testcase"):
-            nodeid = case.get("classname", "") + "::" + case.get("name", "")
-            duration = float(case.get("time", 0) or 0)
-            failure = case.find("failure")
-            error = case.find("error")
-            skipped = case.find("skipped")
-            if failure is not None:
-                results.append({
-                    "nodeid": nodeid, "status": "failed", "duration": duration,
-                    "error_type": (failure.get("type") or "AssertionError"),
-                    "error_message": (failure.text or "").strip()[:4000],
-                })
-            elif error is not None:
-                results.append({
-                    "nodeid": nodeid, "status": "error", "duration": duration,
-                    "error_type": (error.get("type") or "Error"),
-                    "error_message": (error.text or "").strip()[:4000],
-                })
-            elif skipped is not None:
-                results.append({"nodeid": nodeid, "status": "skipped",
-                                "duration": duration, "error_type": "", "error_message": ""})
-            else:
-                results.append({"nodeid": nodeid, "status": "passed",
-                                "duration": duration, "error_type": "", "error_message": ""})
-        return results
+        """（兼容保留）从文件解析 JUnit XML。"""
+        if not xml_path.exists():
+            return []
+        return parse_junit_text(xml_path.read_text(encoding="utf-8", errors="replace"))
 
     # ---------- 证据关联 ----------
     def _find_screenshot(self, nodeid: str) -> str:

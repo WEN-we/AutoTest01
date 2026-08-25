@@ -40,3 +40,9 @@ notify:
 auto_analysis:
   enabled: true
   max_cases: 10
+
+# 分布式执行（远程 worker 节点，大厂"执行集群"雏形）
+# 每个节点：python -m quality_platform.remote.worker --port 9101
+# 平台提交执行时传 workers 参数即分发并行；留空 = 仅本地执行
+distributed:
+  workers: []   # 启动 worker 后在此登记：python -m quality_platform.remote.worker --port 9101

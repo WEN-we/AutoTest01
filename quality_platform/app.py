@@ -290,15 +290,35 @@ def api_run_start():
     test_path = (data.get("test_path") or "").strip()
     if not test_path:
         return jsonify({"error": "test_path 不能为空"}), 400
+    workers = data.get("workers") or None
+    if workers:
+        workers = [str(w).strip() for w in workers if str(w).strip()]
+        if not workers:
+            workers = None
     exec_id = executor.run_async(
         test_path,
         reruns=int(data.get("reruns", 0) or 0),
         parallel=int(data.get("parallel", 0) or 0),
         timeout=int(data.get("timeout", 0) or 0),
         marker=(data.get("marker") or "").strip(),
+        workers=workers,
     )
-    _audit("run_start", target=str(exec_id), detail=test_path)
-    return jsonify({"execution_id": exec_id, "status": "running"}), 202
+    _audit("run_start", target=str(exec_id), detail=f"{test_path} workers={workers or '本地'}")
+    return jsonify({"execution_id": exec_id, "status": "running",
+                    "mode": "distributed" if workers else "local"}), 202
+
+
+@app.route("/api/workers")
+@login_required
+def api_workers():
+    """分布式执行节点状态（配置的 worker 实时健康检查）。"""
+    from quality_platform.remote.dispatcher import workers_status
+    from quality_platform.services.test_executor import _load_distributed_workers
+    urls = _load_distributed_workers()
+    if not urls:
+        return jsonify({"workers": [], "enabled": False,
+                        "note": "未配置 distributed.workers（platform_config.yaml）"})
+    return jsonify({"workers": workers_status(urls), "enabled": True})
 
 
 @app.route("/api/runs/<int:exec_id>")
