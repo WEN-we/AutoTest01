@@ -211,3 +211,50 @@ class TestUsers:
                 "SELECT COUNT(*) AS c FROM users WHERE username='admin'").fetchone()["c"]
         assert count == 1
         assert models.verify_user("admin", "admin123") is not None
+
+
+# ==============================
+# PostgreSQL 方言适配层（纯逻辑测试，无需 PG 服务器）
+# ==============================
+class TestPgDialect:
+    """models._PGConn._adapt_sql 的 SQLite→PG 方言转换 + PG 版 DDL 干净性。"""
+
+    def _pg(self):
+        return models._PGConn.__new__(models._PGConn)
+
+    def test_placeholder_conversion(self):
+        out = self._pg()._adapt_sql("SELECT * FROM users WHERE username=?")
+        assert out == "SELECT * FROM users WHERE username=%s"
+
+    def test_insert_auto_returning_id(self):
+        sql = "INSERT INTO executions (test_path, status, started_at) VALUES (?, 'running', ?)"
+        out = self._pg()._adapt_sql(sql)
+        assert out.endswith(" RETURNING id")
+        assert "?" not in out
+        assert "VALUES (%s, 'running', %s)" in out
+
+    def test_insert_or_ignore_to_on_conflict(self):
+        sql = "INSERT OR IGNORE INTO users (username, password_hash, role, created_at) VALUES (?,?,?,?)"
+        out = self._pg()._adapt_sql(sql)
+        assert out.startswith("INSERT INTO users")
+        assert "OR IGNORE" not in out
+        assert out.endswith(" ON CONFLICT DO NOTHING")
+
+    def test_update_and_limit_params(self):
+        out = self._pg()._adapt_sql(
+            "UPDATE cases SET name=?, updated_at=? WHERE id=?")
+        assert out == "UPDATE cases SET name=%s, updated_at=%s WHERE id=%s"
+        out2 = self._pg()._adapt_sql("SELECT * FROM cases WHERE module=? ORDER BY id DESC LIMIT ?")
+        assert out2 == "SELECT * FROM cases WHERE module=%s ORDER BY id DESC LIMIT %s"
+
+    def test_pg_schema_no_sqlite_dialect(self):
+        s = models._SCHEMA_PG
+        assert "AUTOINCREMENT" not in s
+        assert "INSERT OR IGNORE" not in s.upper()
+        assert "?" not in s
+        assert "PRAGMA" not in s.upper()
+        assert "SERIAL" in s and "SERIAL PRIMARY KEY" in s
+
+    def test_sqlite_schema_kept(self):
+        """SQLite 版 DDL 保持原样（默认后端不受影响）。"""
+        assert "AUTOINCREMENT" in models._SCHEMA

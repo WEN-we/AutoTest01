@@ -1,8 +1,10 @@
 """
-质量工程平台 - SQLite 数据访问层
+质量工程平台 - 数据访问层（SQLite / PostgreSQL 双后端）
 
 设计（大厂质量平台简化落地）：
-- 零运维：SQLite 单文件（quality_platform/data/quality.db），首次运行自动建表
+- 默认 SQLite：零运维（quality_platform/data/quality.db），首次运行自动建表
+- 可选 PostgreSQL：设置环境变量 DB_TYPE=postgres + DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD
+  （生产级：并发写、网络访问、备份恢复；SQL 方言由连接包装层自动适配）
 - 三张核心表：
     executions   执行批次（一次 pytest 运行）
     case_results 单用例结果（nodeid/状态/错误/截图），归属某次执行
@@ -20,6 +22,16 @@ from datetime import datetime
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DATA_DIR, "quality.db")
+
+# ---------- 后端选择 ----------
+DB_TYPE = os.getenv("DB_TYPE", "sqlite").strip().lower()   # sqlite / postgres
+PG_CONFIG = {
+    "host": os.getenv("DB_HOST", "127.0.0.1"),
+    "port": int(os.getenv("DB_PORT", "5432") or 5432),
+    "dbname": os.getenv("DB_NAME", "quality_platform"),
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", ""),
+}
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS executions (
@@ -97,18 +109,194 @@ CREATE TABLE IF NOT EXISTS ai_settings (
 );
 """
 
+# PostgreSQL 版 DDL（SERIAL 自增；时间/布尔用兼容类型，代码传值不变）
+_SCHEMA_PG = """
+CREATE TABLE IF NOT EXISTS executions (
+    id            SERIAL PRIMARY KEY,
+    test_path     TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'running',
+    started_at    TEXT NOT NULL,
+    finished_at   TEXT,
+    duration      DOUBLE PRECISION,
+    total         INTEGER DEFAULT 0,
+    passed        INTEGER DEFAULT 0,
+    failed        INTEGER DEFAULT 0,
+    skipped       INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS case_results (
+    id            SERIAL PRIMARY KEY,
+    execution_id  INTEGER NOT NULL,
+    nodeid        TEXT NOT NULL,
+    status        TEXT NOT NULL,
+    duration      DOUBLE PRECISION DEFAULT 0,
+    error_type    TEXT,
+    error_message TEXT,
+    screenshot    TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_case_exec ON case_results(execution_id);
+CREATE INDEX IF NOT EXISTS idx_case_nodeid ON case_results(nodeid);
+CREATE TABLE IF NOT EXISTS ai_analysis (
+    id            SERIAL PRIMARY KEY,
+    case_result_id INTEGER NOT NULL,
+    category      TEXT,
+    confidence    DOUBLE PRECISION,
+    suggestion    TEXT,
+    key_evidence  TEXT,
+    source        TEXT,
+    analyzed_at   TEXT
+);
+CREATE TABLE IF NOT EXISTS users (
+    id            SERIAL PRIMARY KEY,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'user',
+    created_at    TEXT
+);
+CREATE TABLE IF NOT EXISTS cases (
+    id            SERIAL PRIMARY KEY,
+    nodeid        TEXT NOT NULL UNIQUE,
+    name          TEXT,
+    module        TEXT,
+    tags          TEXT DEFAULT '',
+    owner         TEXT DEFAULT '',
+    description   TEXT DEFAULT '',
+    status        TEXT DEFAULT 'active',
+    created_at    TEXT,
+    updated_at    TEXT
+);
+CREATE TABLE IF NOT EXISTS audit_log (
+    id            SERIAL PRIMARY KEY,
+    username      TEXT NOT NULL,
+    action        TEXT NOT NULL,
+    target        TEXT DEFAULT '',
+    detail        TEXT DEFAULT '',
+    ip            TEXT DEFAULT '',
+    ok            INTEGER DEFAULT 1,
+    created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
+CREATE TABLE IF NOT EXISTS ai_settings (
+    id            SERIAL PRIMARY KEY,
+    provider      TEXT NOT NULL,
+    base_url      TEXT NOT NULL,
+    api_key_enc   TEXT DEFAULT '',
+    model         TEXT NOT NULL,
+    enabled       INTEGER DEFAULT 0,
+    updated_at    TEXT
+);
+"""
+
+
+class _PGCursor:
+    """psycopg2 游标包装：让现有 sqlite3 风格的 execute/fetchone/fetchall/lastrowid 直接可用。"""
+
+    def __init__(self, cur):
+        self._cur = cur
+
+    @property
+    def lastrowid(self):
+        """INSERT ... RETURNING id 时取回主键（psycopg2 需显式 fetch）。"""
+        row = self._cur.fetchone()
+        return row[0] if row else None
+
+    @property
+    def rowcount(self):
+        return self._cur.rowcount
+
+    def fetchone(self):
+        row = self._cur.fetchone()
+        return dict(row) if row is not None else None
+
+    def fetchall(self):
+        return [dict(r) for r in self._cur.fetchall()]
+
+    def close(self):
+        self._cur.close()
+
+
+class _PGConn:
+    """psycopg2 连接包装：sqlite3 风格兼容层（`?`→`%s`、INSERT 自动 RETURNING、
+    INSERT OR IGNORE → ON CONFLICT DO NOTHING、executescript 拆条执行）。"""
+
+    def __init__(self, conn):
+        self._conn = conn
+        self.closed = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, *exc):
+        try:
+            if exc_type is None:
+                self._conn.commit()
+            else:
+                self._conn.rollback()
+        finally:
+            self.close()
+        return False
+
+    def close(self):
+        if not self.closed:
+            try:
+                self._conn.close()
+            finally:
+                self.closed = True
+
+    def _adapt_sql(self, sql: str) -> str:
+        """SQLite 方言 → PG 方言（仅差异点，其余原样）。"""
+        s = sql.strip()
+        has_ignore = s.upper().startswith("INSERT OR IGNORE")
+        if has_ignore:
+            s = s.replace("INSERT OR IGNORE INTO", "INSERT INTO", 1)
+        s = s.replace("?", "%s")
+        if has_ignore:
+            s = s.rstrip().rstrip(";") + " ON CONFLICT DO NOTHING"
+        elif s.upper().startswith("INSERT") and "RETURNING" not in s.upper():
+            s = s.rstrip().rstrip(";") + " RETURNING id"
+        return s
+
+    def execute(self, sql, args=None):
+        cur = self._conn.cursor()
+        try:
+            cur.execute(self._adapt_sql(sql), tuple(args) if args else ())
+        except Exception:
+            cur.close()
+            raise
+        return _PGCursor(cur)
+
+    def executescript(self, script: str):
+        """PG 无 executescript：按分号拆条执行（跳过空语句与注释行）。"""
+        cur = self._conn.cursor()
+        try:
+            for stmt in script.split(";"):
+                stmt = stmt.strip()
+                if stmt and not stmt.startswith("--"):
+                    cur.execute(stmt)
+        finally:
+            cur.close()
+
 
 class _Database:
     def __init__(self):
         self.path = DB_PATH
+        self.backend = DB_TYPE   # sqlite / postgres
 
     # ---------- 基础 ----------
     def init_db(self):
+        if self.backend == "postgres":
+            with self._conn() as conn:
+                conn.executescript(_SCHEMA_PG)
+            return
         os.makedirs(DATA_DIR, exist_ok=True)
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
 
     def _conn(self):
+        if self.backend == "postgres":
+            import psycopg2
+            import psycopg2.extras
+            conn = psycopg2.connect(cursor_factory=psycopg2.extras.RealDictCursor, **PG_CONFIG)
+            return _PGConn(conn)
         os.makedirs(DATA_DIR, exist_ok=True)  # 首次连接自动建目录，避免未 init_db 时报错
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
