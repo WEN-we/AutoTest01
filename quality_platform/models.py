@@ -195,9 +195,9 @@ class _PGCursor:
 
     @property
     def lastrowid(self):
-        """INSERT ... RETURNING id 时取回主键（psycopg2 需显式 fetch）。"""
+        """INSERT ... RETURNING id 时取回主键（RealDictRow 为字典，须按列名取）。"""
         row = self._cur.fetchone()
-        return row[0] if row else None
+        return row["id"] if row else None
 
     @property
     def rowcount(self):
@@ -245,6 +245,8 @@ class _PGConn:
     def _adapt_sql(self, sql: str) -> str:
         """SQLite 方言 → PG 方言（仅差异点，其余原样）。"""
         s = sql.strip()
+        # SQLite 特有函数 → PG 等价（datetime('now') 等）
+        s = s.replace("datetime('now')", "now()")
         has_ignore = s.upper().startswith("INSERT OR IGNORE")
         if has_ignore:
             s = s.replace("INSERT OR IGNORE INTO", "INSERT INTO", 1)
