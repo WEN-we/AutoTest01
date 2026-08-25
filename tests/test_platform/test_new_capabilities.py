@@ -13,14 +13,6 @@ from utils.tools.self_heal import (derive_candidates, record_heal_event,
 from utils.tools.visual_diff import compare_images, update_baseline
 
 
-@pytest.fixture
-def tmp_db(tmp_path, monkeypatch):
-    """临时 SQLite（同 test_models.py，本文件独立可运行）"""
-    monkeypatch.setattr(models_db, "path", str(tmp_path / "test.db"))
-    models_db.init_db()
-    return models_db
-
-
 # ==============================
 # 审计日志（数据层）
 # ==============================

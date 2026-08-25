@@ -18,6 +18,48 @@ import pytest
 from utils.tools.logger import logger
 
 # ==============================
+# 0.1 隔离数据库 fixture（SQLite / PostgreSQL 双后端兼容，全测试共用）
+# ==============================
+@pytest.fixture
+def tmp_db(tmp_path, monkeypatch):
+    """把全局 db 指向隔离库（每次测试独立，双后端兼容）：
+    - SQLite：monkeypatch db.path 指向临时文件
+    - PostgreSQL：临时建独立数据库并切换 PG_CONFIG.dbname，测试结束删除
+    """
+    import uuid
+
+    import quality_platform.models as models
+
+    models_db = models.db
+    if models.DB_TYPE == "postgres":
+        import psycopg2
+
+        admin_cfg = dict(models.PG_CONFIG)
+        admin_cfg["dbname"] = "postgres"
+        conn = psycopg2.connect(**admin_cfg)
+        conn.autocommit = True
+        cur = conn.cursor()
+        dbname = "qp_test_" + uuid.uuid4().hex[:8]
+        cur.execute(f'CREATE DATABASE "{dbname}"')
+        conn.close()
+
+        new_cfg = dict(models.PG_CONFIG)
+        new_cfg["dbname"] = dbname
+        monkeypatch.setattr(models, "PG_CONFIG", new_cfg)
+        models_db.init_db()
+        yield models_db
+
+        conn = psycopg2.connect(**admin_cfg)
+        conn.autocommit = True
+        conn.cursor().execute(f'DROP DATABASE IF EXISTS "{dbname}"')
+        conn.close()
+    else:
+        monkeypatch.setattr(models_db, "path", str(tmp_path / "test.db"))
+        models_db.init_db()
+        yield models_db
+
+
+# ==============================
 # 0. 失败自动截图 + Allure 附件（大厂稳定性治理标配：失败即证据）
 # ==============================
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
