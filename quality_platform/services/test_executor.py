@@ -276,6 +276,12 @@ class TestExecutor:
                 send_execution_summary(exec_id)
             except Exception as exc:
                 log.warning(f"[平台] 通知异常：{exc}")
+        # 告警规则检查（最近执行失败率超阈值 -> 审计留痕；不阻塞主流程）
+        try:
+            from quality_platform.services.observability import check_alerts
+            check_alerts()
+        except Exception as exc:
+            log.warning(f"[平台] 告警检查异常：{exc}")
 
     def _run_subprocess(self, cmd: list[str], env: dict, exec_id: int,
                         poll_seconds: float = 2.0) -> tuple[bool, bool, tuple]:

@@ -46,3 +46,7 @@ auto_analysis:
 # 平台提交执行时传 workers 参数即分发并行；留空 = 仅本地执行
 distributed:
   workers: []   # 启动 worker 后在此登记：python -m quality_platform.remote.worker --port 9101
+
+# 告警规则（可观测性：最近一次执行失败率超阈值触发告警 + 审计留痕）
+alerting:
+  fail_rate_threshold: 80.0

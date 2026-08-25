@@ -137,6 +137,24 @@ async function loadDashboard() {
       const e = d.env;
       document.getElementById("k-env").textContent = `Python ${e.python} · ${e.host}`;
     }
+    // 平台健康（可观测性：DB/节点/队列/告警）
+    try {
+      const h = await getJSON("/api/health");
+      document.getElementById("h-db").textContent = h.db.ok ? h.db.backend : "异常";
+      const alive = (h.workers || []).filter(w => w.ok).length;
+      document.getElementById("h-workers").textContent =
+        (h.workers && h.workers.length ? `${alive}/${h.workers.length}` : "仅本地");
+      document.getElementById("h-queue").textContent =
+        `${h.queue.running}/${h.queue.queued}`;
+      const alerts = h.alerts || [];
+      document.getElementById("h-alerts").textContent =
+        alerts.length ? `${alerts.length} 条` : "无";
+      if (alerts.length) {
+        document.getElementById("h-alerts").style.color = "#e5534b";
+      }
+    } catch (e) {
+      document.getElementById("h-db").textContent = "-";
+    }
     renderRuns(d.executions, "runs-tbody");
     renderChart("trendChart", (canvas) => new Chart(canvas, {
       type: "line",

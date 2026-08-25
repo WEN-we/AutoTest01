@@ -236,6 +236,39 @@ def _env_info() -> dict:
     }
 
 
+@app.route("/api/health")
+def api_health():
+    """服务健康检查（监控探活用，公开）：
+    DB 连通/后端类型 + worker 节点 + 执行队列 + 最近执行 + 告警。"""
+    from quality_platform.remote.dispatcher import workers_status
+    from quality_platform.services.observability import check_alerts, db_health
+    from quality_platform.services.test_executor import _load_distributed_workers
+    try:
+        alerts = check_alerts()
+    except Exception:  # noqa: BLE001
+        alerts = []
+    return jsonify({
+        "status": "ok",
+        "time": datetime.now().isoformat(timespec="seconds"),
+        "db": db_health(),
+        "queue": executor.queue_status(),
+        "workers": workers_status(_load_distributed_workers()),
+        "latest_execution": db.list_executions(limit=1) or None,
+        "alerts": alerts,
+    })
+
+
+@app.route("/api/metrics")
+@login_required
+def api_metrics():
+    """执行指标：近 7 天趋势 + 累计指标（看板可观测性）。"""
+    from quality_platform.services.observability import cumulative_stats, daily_stats
+    return jsonify({
+        "daily": daily_stats(7),
+        "cumulative": cumulative_stats(),
+    })
+
+
 @app.route("/api/dashboard")
 @login_required
 def api_dashboard():
