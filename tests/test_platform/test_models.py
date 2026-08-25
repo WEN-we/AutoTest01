@@ -1,4 +1,6 @@
-"""数据访问层单元测试：临时 SQLite 全 CRUD 覆盖"""
+"""数据访问层单元测试：临时 SQLite / PostgreSQL 双后端全 CRUD 覆盖"""
+import uuid
+
 import bcrypt
 import pytest
 
@@ -8,10 +10,36 @@ from quality_platform.models import db as models_db
 
 @pytest.fixture
 def tmp_db(tmp_path, monkeypatch):
-    """把全局 db 单例指向临时库（每次操作独立连接，改 path 即生效）"""
-    monkeypatch.setattr(models_db, "path", str(tmp_path / "test.db"))
-    models_db.init_db()
-    return models_db
+    """把全局 db 指向隔离库（每次测试独立，双后端兼容）：
+    - SQLite：monkeypatch db.path 指向临时文件
+    - PostgreSQL：临时建一个独立数据库并切换 PG_CONFIG.dbname，测试结束删除
+    """
+    if models.DB_TYPE == "postgres":
+        import psycopg2
+
+        admin_cfg = dict(models.PG_CONFIG)
+        admin_cfg["dbname"] = "postgres"
+        conn = psycopg2.connect(**admin_cfg)
+        conn.autocommit = True
+        cur = conn.cursor()
+        dbname = "qp_test_" + uuid.uuid4().hex[:8]
+        cur.execute(f'CREATE DATABASE "{dbname}"')
+        conn.close()
+
+        new_cfg = dict(models.PG_CONFIG)
+        new_cfg["dbname"] = dbname
+        monkeypatch.setattr(models, "PG_CONFIG", new_cfg)
+        models_db.init_db()
+        yield models_db
+
+        conn = psycopg2.connect(**admin_cfg)
+        conn.autocommit = True
+        conn.cursor().execute(f'DROP DATABASE IF EXISTS "{dbname}"')
+        conn.close()
+    else:
+        monkeypatch.setattr(models_db, "path", str(tmp_path / "test.db"))
+        models_db.init_db()
+        yield models_db
 
 
 class TestExecutions:

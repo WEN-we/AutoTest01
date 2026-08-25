@@ -43,3 +43,6 @@ Flask-CORS>=4.0
 PyJWT>=2.8
 bcrypt>=4.1
 cryptography>=41.0
+
+# PostgreSQL 数据层后端（DB_TYPE=postgres 时使用）
+psycopg2-binary>=2.9.9

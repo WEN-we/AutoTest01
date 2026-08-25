@@ -87,4 +87,6 @@ node_modules/
 .tools/
 
 # 开发过程笔记
-docs/superpowers/
+docs/superpowers/.pgdist/
+.pgdata/
+.pgdist/
