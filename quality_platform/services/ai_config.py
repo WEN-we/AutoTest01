@@ -31,9 +31,9 @@ PROVIDER_PRESETS = {
         "need_key": True,
     },
     "qwen": {
-        "label": "通义千问（DashScope）",
+        "label": "通义千问（阿里云百炼）",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-        "model": "qwen-plus",
+        "model": "qwen3.7-flash",   # Flash 免费档（qwen-plus 需付费额度）
         "need_key": True,
     },
     "doubao": {
