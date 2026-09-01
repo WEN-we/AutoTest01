@@ -592,18 +592,47 @@ _COLLECT_TTL = 300  # 缓存 5 分钟，避免每次请求同步阻塞跑 pytest
 _collect_cache: dict = {"ts": 0.0, "nodeids": []}
 
 
+def _discover_test_dirs() -> list[str]:
+    """动态发现 tests/ 下所有测试端目录（tests/test_*），按名称排序。
+
+    用于执行中心平台选择器与用例收集：避免硬编码目录导致新增测试端无法被 UI 触达。
+    """
+    test_root = PROJECT_ROOT / "tests"
+    if not test_root.is_dir():
+        return []
+    return sorted(
+        p.name for p in test_root.iterdir()
+        if p.is_dir() and p.name.startswith("test_") and p.name != "test_"
+    )
+
+
 def _collect_test_nodeids(force: bool = False) -> list[str]:
-    """运行 pytest --collect-only 收集用例 nodeid（结果缓存 _COLLECT_TTL 秒）。"""
+    """运行 pytest --collect-only 收集全部测试端用例 nodeid（结果缓存 _COLLECT_TTL 秒）。
+
+    遍历 tests/test_* 全目录、逐目录容错收集：某端（如需要真机/模拟器的 android/ios）
+    收集失败不影响其余端，保证 UI 用例库/导入覆盖完整。
+    """
     if not force and (time.time() - _collect_cache["ts"]) < _COLLECT_TTL:
         return _collect_cache["nodeids"]
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q",
-         "tests/test_smoke/", "tests/test_api/", "tests/test_whitebox/"],
-        cwd=str(PROJECT_ROOT), capture_output=True, text=True,
-        encoding="utf-8", errors="replace", timeout=60,
-    )
-    nodeids = [ln for ln in proc.stdout.splitlines()
-               if "::" in ln and not ln.startswith("no tests ran")]
+    nodeids: list[str] = []
+    for d in _discover_test_dirs():
+        path = f"tests/{d}/"
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "pytest", "--collect-only", "-q", path],
+                cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=45,
+            )
+            # 0=正常收集；5=该端无用例（部分端可能为空），均视为成功
+            if proc.returncode not in (0, 5):
+                print(f"[collect] 跳过 {path}：returncode={proc.returncode} "
+                      f"{proc.stderr.strip()[:120]}")
+                continue
+            for ln in proc.stdout.splitlines():
+                if "::" in ln and not ln.startswith("no tests ran"):
+                    nodeids.append(ln.strip())
+        except Exception as exc:  # 超时/导入异常等：跳过该端，不阻断整体
+            print(f"[collect] 跳过 {path}：{exc}")
     _collect_cache["ts"] = time.time()
     _collect_cache["nodeids"] = nodeids
     return nodeids
@@ -617,6 +646,13 @@ def api_cases():
         return jsonify({"cases": lines[:1000], "count": len(lines)})
     except Exception as exc:
         return jsonify({"error": str(exc), "cases": []}), 500
+
+
+@app.route("/api/platforms", methods=["GET"])
+@login_required
+def api_platforms():
+    """测试端清单（执行中心平台选择器用）：动态发现 tests/test_* 全部目录。"""
+    return jsonify({"platforms": _discover_test_dirs()})
 
 
 # ==============================

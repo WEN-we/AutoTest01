@@ -337,6 +337,27 @@ async function runImpact() {
   } catch (e) { el.textContent = "精准执行失败：" + e.message; }
 }
 
+/* ---------- 执行中心平台选择器 ---------- */
+async function loadPlatforms() {
+  const sel = document.getElementById("platform-select");
+  if (!sel) return;
+  try {
+    const d = await getJSON("/api/platforms");
+    const list = (d.platforms || []).filter(p => p.startsWith("test_"));
+    sel.innerHTML = '<option value="">— 选择测试端 —</option>' +
+      list.map(p => `<option value="tests/${p}/">${p}</option>`).join("");
+    // 选中即自动填入执行路径与定时任务路径
+    sel.onchange = () => {
+      if (sel.value) {
+        const tp = document.getElementById("test-path");
+        const sp = document.getElementById("sched-path");
+        if (tp) tp.value = sel.value;
+        if (sp) sp.value = sel.value;
+      }
+    };
+  } catch (e) { console.error("加载测试端失败", e); }
+}
+
 async function triggerRun() {
   const path = document.getElementById("test-path").value.trim();
   const msg = document.getElementById("run-msg");
@@ -656,6 +677,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("history-tbody")) {
     loadHistory();
     loadQueue();
+    loadPlatforms();
     document.getElementById("btn-run").onclick = triggerRun;
     loadSchedules();
     const sbtn = document.getElementById("btn-sched");

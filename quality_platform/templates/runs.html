@@ -3,6 +3,9 @@
 {% block content %}
 <h1>执行中心 <span class="hint">参数化执行：并发 / 失败重试 / 超时 / 标记</span></h1>
 <div class="run-form">
+  <select id="platform-select" title="选择测试端（自动填入路径）">
+    <option value="">— 选择测试端 —</option>
+  </select>
   <input type="text" id="test-path" placeholder="测试路径，如 tests/test_smoke/" value="tests/test_smoke/">
   <input type="number" id="opt-parallel" placeholder="并发(0=串行)" value="0" style="width:120px" title="pytest-xdist worker 数">
   <input type="number" id="opt-reruns" placeholder="重试(0=不重试)" value="1" style="width:120px" title="失败自动重试次数">
@@ -33,6 +36,7 @@
   </select>
   <input type="text" id="sched-cron" placeholder="时间(22:00)或小时(6)" value="22:00" style="width:120px">
   <input type="text" id="sched-path" placeholder="测试路径" value="tests/test_smoke/" style="width:220px">
+  <span class="hint">✏️ 或从上方「选择测试端」自动带入</span>
   <button id="btn-sched" class="btn">创建定时任务</button>
 </div>
 <div id="sched-msg" class="hint"></div>
