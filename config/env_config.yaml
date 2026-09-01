@@ -20,13 +20,14 @@ dev:
     database: "${DB_NAME:-test_auto}"    # 数据库名称
 
 # 测试环境（电商平台）
+# 默认本地被测服务（127.0.0.1:8090）；CI/远程用环境变量覆盖（TEST_API_URL/TEST_UI_URL）
 test:
-  base_api_url: "${TEST_API_URL:-https://rica-names-tucson-story.trycloudflare.com/api}"
-  base_ui_url: "${TEST_UI_URL:-https://rica-names-tucson-story.trycloudflare.com}"
-  android_api_url: "${TEST_API_URL:-https://rica-names-tucson-story.trycloudflare.com/api/app}"
-  ios_api_url: "${TEST_API_URL:-https://rica-names-tucson-story.trycloudflare.com/api/ios}"
-  harmony_api_url: "${TEST_API_URL:-https://rica-names-tucson-story.trycloudflare.com/api/harmony}"
-  windows_api_url: "${TEST_API_URL:-https://rica-names-tucson-story.trycloudflare.com/api/pc}"
+  base_api_url: "${TEST_API_URL:-http://127.0.0.1:8090/api}"
+  base_ui_url: "${TEST_UI_URL:-http://127.0.0.1:8090}"
+  android_api_url: "${TEST_API_URL:-http://127.0.0.1:8090/api/app}"
+  ios_api_url: "${TEST_API_URL:-http://127.0.0.1:8090/api/ios}"
+  harmony_api_url: "${TEST_API_URL:-http://127.0.0.1:8090/api/harmony}"
+  windows_api_url: "${TEST_API_URL:-http://127.0.0.1:8090/api/pc}"
   linux_server_url: 192.168.138.129
 
   db:

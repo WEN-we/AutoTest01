@@ -179,6 +179,10 @@ class TestAIIntegration:
         monkeypatch.setattr(db, "get_analysis", lambda i: None)
         monkeypatch.setattr(db, "get_case_result", lambda i: case)
         monkeypatch.setattr(db, "upsert_analysis", fake_upsert)
+        # 强制 LLM 不可用 -> 规则引擎归因（不受平台 AI 配置影响，消除环境不确定性）
+        from utils.ai.llm_client import LLMClient
+        monkeypatch.setattr(ai_integration.ai, "_llm",
+                            lambda: LLMClient(api_key=""))
         result = ai_integration.ai.analyze_failure(5)
         # 无 LLM Key → 规则引擎归因
         assert result["source"] == "rule"
