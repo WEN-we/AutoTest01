@@ -101,7 +101,7 @@ def cmd_start(start_workers: bool) -> int:
         return 1
 
     order = ["sut", "platform"] + (["worker-9101", "worker-9102"] if start_workers else [])
-    total = 2 + (2 if start_workers else 0)
+    total = 1 + len(order)  # 1 = MySQL 检查步骤
     for i, name in enumerate(order, start=2):
         comp = COMPONENTS[name]
         print(f"\n[{i}/{total}] 启动 {name}（端口 {comp['port']}）...")
