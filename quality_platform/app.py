@@ -384,6 +384,54 @@ def api_dashboard():
 # ==============================
 # API：执行
 # ==============================
+def _normalize_test_path(test_path: str) -> str | None:
+    """把点号模块格式的 nodeid 归一化为 pytest 可用的文件路径格式。
+
+    用户/历史数据可能粘贴模块点号 nodeid（如
+    `tests.test_platform.test_ai_config.TestKeyEncryption::test_encrypt_decrypt_roundtrip`），
+    pytest 只认文件路径（`tests/test_platform/test_ai_config.py::...`），
+    不归一化会导致 "file or directory not found" → total=0 空执行。
+    归一化基于真实文件系统探测（逐段尝试 .py 是否存在），不做命名猜测。
+    仅处理 `tests.` 开头的点号模块形式；其余返回 None（原样使用）。
+    """
+    p = test_path.strip()
+    if not p.startswith("tests.") or "/" in p or "\\" in p:
+        return None
+    head, _, tail = p.partition("::")
+    parts = head.split(".")
+    if len(parts) < 3:
+        return None
+    # 逐段探测：把 parts[:i] 作为目录前缀，parts[i] 当作模块名 + ".py"
+    # 命中真实存在的 test_*.py 文件即视为模块文件，其后段为类名
+    for i in range(1, len(parts)):
+        candidate = PROJECT_ROOT / "/".join(parts[:i]) / f"{parts[i]}.py"
+        if candidate.is_file():
+            file_part = "/".join(parts[:i]) + f"/{parts[i]}.py"
+            class_part = ".".join(parts[i + 1:])
+            normalized = file_part
+            if class_part:
+                normalized += "::" + class_part
+            if tail:
+                normalized += "::" + tail
+            return normalized
+    return None
+
+
+def _test_path_exists(test_path: str) -> bool:
+    """校验测试路径在项目内真实存在（文件或目录），避免无效路径排队跑出 total=0。"""
+    p = test_path.strip().replace("\\", "/")
+    if "::" in p:
+        p = p.split("::", 1)[0]            # nodeid → 文件部分
+    if p.startswith("tests."):
+        return False                        # 点号模块格式未归一化成功 → 视为无效
+    target = (PROJECT_ROOT / p.lstrip("/")).resolve()
+    try:
+        target.relative_to(PROJECT_ROOT.resolve())
+    except ValueError:
+        return False                        # 路径逃逸出项目目录 → 拒绝
+    return target.exists()
+
+
 @app.route("/api/runs", methods=["GET"])
 @login_required
 def api_runs():
@@ -397,6 +445,12 @@ def api_run_start():
     test_path = (data.get("test_path") or "").strip()
     if not test_path:
         return jsonify({"error": "test_path 不能为空"}), 400
+    # 路径归一化（点号模块 nodeid → 文件路径）与存在性校验（防无效路径跑出 total=0 空执行）
+    normalized = _normalize_test_path(test_path)
+    if normalized is not None:
+        test_path = normalized
+    if not _test_path_exists(test_path):
+        return jsonify({"error": f"测试路径不存在或无法识别：{test_path}"}), 400
     workers = data.get("workers") or None
     if workers:
         workers = [str(w).strip() for w in workers if str(w).strip()]

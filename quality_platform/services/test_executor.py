@@ -213,7 +213,11 @@ class TestExecutor:
             cmd = self._build_command(test_path, reruns, parallel, timeout, marker,
                                       junit_file)
             log.info(f"[平台] 执行测试：{' '.join(cmd)}")
-            env = {**os.environ, **_load_exec_env()}  # 注入执行环境变量（覆盖被测服务地址）
+            # 注入执行环境变量（覆盖被测服务地址）
+            # TEST_PLATFORM_EXECUTION=1：通知 conftest 跳过 Allure HTML 生成后处理。
+            # 否则每次平台执行都会触发 allure generate（89s~120s 超时），
+            # 与手动/并发执行互相阻塞，单用例执行被拖慢 100 倍（exec=68 实测 268s）。
+            env = {**os.environ, **_load_exec_env(), "TEST_PLATFORM_EXECUTION": "1"}
             cancelled, timed_out, _ = self._run_subprocess(cmd, env, exec_id)
             results = parse_junit_text(junit_file.read_text(encoding="utf-8", errors="replace")) \
                 if junit_file.exists() else []
@@ -263,6 +267,11 @@ class TestExecutor:
             self._mark_status(exec_id, "cancelled")
         elif timed_out:
             self._mark_status(exec_id, "timeout")
+        elif total == 0:
+            # 未收集到任何用例：路径有效但被测端被 pytest 忽略/依赖缺失/目录为空。
+            # 标记 empty（前端展示"未收集到用例"），避免被误读为"执行成功 0 条"。
+            self._mark_status(exec_id, "empty")
+            log.warning(f"[平台] 执行完成但未收集到用例（total=0，路径有效但被测端可能被忽略）：exec={exec_id}")
         log.info(f"[平台] 执行完成：exec={exec_id} total={total} "
                  f"passed={passed} failed={failed} skipped={skipped} "
                  f"cancelled={cancelled} timeout={timed_out}")

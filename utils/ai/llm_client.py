@@ -24,6 +24,12 @@ import requests
 from utils.tools.logger import log
 from utils.tools.config_reader import ConfigReader
 
+# AI 调用必须直连服务商，禁止走系统代理：
+# 平台运行环境常注入 HTTP(S)_PROXY（如企业代理/抓包代理），requests 默认 trust_env=True
+# 会把所有 LLM 请求劫持到代理 → 60s 读超时 / ProxyError，AI 归因/用例生成/试连全部失败。
+# 显式禁用后，外网可达时直连稳定；如需代理请在 base_url 上自行处理。
+_DISABLE_PROXY = {"http": None, "https": None}
+
 DEFAULT_TIMEOUT = 60      # 秒
 DEFAULT_RETRIES = 3       # 可重试错误的最大尝试次数（含首次）
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}   # 限流/服务端错误 → 重试
@@ -95,7 +101,7 @@ class LLMClient:
             try:
                 log.debug(f"LLM 请求 -> {self.model} @ {self.base_url}（第 {attempt} 次）")
                 resp = requests.post(self._chat_url, json=payload, headers=headers,
-                                     timeout=self.timeout)
+                                     timeout=self.timeout, proxies=_DISABLE_PROXY)
                 resp.raise_for_status()
                 try:
                     return resp.json()["choices"][0]["message"]["content"].strip()

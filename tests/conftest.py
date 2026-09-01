@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import shutil
 import subprocess
 from pathlib import Path
@@ -16,6 +17,18 @@ if sys.platform == 'win32':
 import pytest
 
 from utils.tools.logger import logger
+
+# ==============================
+# 0.0 会话级状态：Allure HTML 生成的并发安全标记
+# ==============================
+_SESSION_START_TS = 0.0          # pytest 会话开始时间戳（用于筛选"本次会话"的结果文件）
+
+
+def pytest_sessionstart(session):
+    """记录会话开始时间：Allure 生成只处理本会话的结果文件，避免并发执行互相污染。"""
+    global _SESSION_START_TS
+    _SESSION_START_TS = time.time()
+
 
 # ==============================
 # 0.1 隔离数据库 fixture（SQLite / PostgreSQL 双后端兼容，全测试共用）
@@ -539,13 +552,23 @@ def fixture_linux_client(request: pytest.FixtureRequest):
 # 8. 本地执行自动生成Allure HTML报告
 # ==============================
 def _get_allure_path() -> str:
-    """获取allure可执行文件路径"""
+    """获取allure可执行文件路径（PATH → .venv → .tools/allure-*/bin）"""
     allure_exe = shutil.which('allure')
     if allure_exe:
         return allure_exe
-    venv_allure = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.venv', 'Scripts', 'allure.exe')
+    project_root = os.path.dirname(os.path.dirname(__file__))
+    venv_allure = os.path.join(project_root, '.venv', 'Scripts', 'allure.exe')
     if os.path.exists(venv_allure):
         return venv_allure
+    # 项目自带工具目录（.tools/allure-x.y.z/bin/allure.bat，离线可用）
+    tools_dir = os.path.join(project_root, '.tools')
+    if os.path.isdir(tools_dir):
+        for entry in sorted(os.listdir(tools_dir), reverse=True):
+            if entry.startswith('allure-'):
+                for exe_name in ('allure.bat', 'allure'):
+                    candidate = os.path.join(tools_dir, entry, 'bin', exe_name)
+                    if os.path.exists(candidate):
+                        return candidate
     return None
 
 
@@ -608,9 +631,34 @@ def pytest_sessionfinish(session, exitstatus):
     report_name = f"{timestamp}_{test_type}"
     report_output_dir = os.path.join(project_root, 'reports', 'allure-report', report_name)
 
+    # 并发安全：把"本会话产生"的结果文件复制到独立副本再 generate。
+    # 原因：手动 pytest 与平台执行（或另一次手动执行）并发时共用 allure-results，
+    # 直接对原目录 generate 会读到对方写入的半成品；生成后清空原目录还会误删对方数据。
+    snapshot_dir = os.path.join(project_root, 'reports', 'platform', f'_allure_snapshot_{os.getpid()}')
+    try:
+        os.makedirs(snapshot_dir, exist_ok=True)
+        copied = 0
+        for f in os.listdir(allure_results_dir):
+            fpath = os.path.join(allure_results_dir, f)
+            try:
+                if os.path.isfile(fpath) and os.path.getmtime(fpath) >= _SESSION_START_TS:
+                    shutil.copy2(fpath, os.path.join(snapshot_dir, f))
+                    copied += 1
+                elif os.path.isdir(fpath):
+                    shutil.copytree(fpath, os.path.join(snapshot_dir, f), dirs_exist_ok=True)
+            except OSError:
+                continue
+        if copied == 0 and not os.listdir(snapshot_dir):
+            logger.warning("本会话没有可用的allure结果文件，跳过生成报告")
+            return
+        logger.info(f"本会话快照 {copied} 个结果文件 → 副本 {snapshot_dir}")
+    except Exception as e:
+        logger.error(f"Allure快照失败: {e}")
+        return
+
     try:
         os.makedirs(report_output_dir, exist_ok=True)
-        cmd = f'"{allure_path}" generate "{allure_results_dir}" -o "{report_output_dir}" --clean'
+        cmd = f'"{allure_path}" generate "{snapshot_dir}" -o "{report_output_dir}" --clean'
         logger.info(f"正在生成Allure HTML报告: {report_name}")
         result = subprocess.run(
             cmd,
@@ -622,15 +670,20 @@ def pytest_sessionfinish(session, exitstatus):
 
         if result.returncode == 0:
             logger.info(f"✅ Allure报告生成成功: {report_output_dir}")
-            # 生成完成后清空 allure-results，避免下次执行时混入旧数据
+            # 生成完成后仅清理"本会话"的结果文件（避免误删并发执行者的数据）
             for f in os.listdir(allure_results_dir):
                 fpath = os.path.join(allure_results_dir, f)
-                if os.path.isfile(fpath):
-                    os.remove(fpath)
-                elif os.path.isdir(fpath):
-                    shutil.rmtree(fpath)
-            logger.info("已清理 allure-results 临时文件")
+                try:
+                    if os.path.isfile(fpath) and os.path.getmtime(fpath) >= _SESSION_START_TS:
+                        os.remove(fpath)
+                    elif os.path.isdir(fpath):
+                        shutil.rmtree(fpath)
+                except OSError:
+                    continue
+            logger.info("已清理本会话的 allure-results 临时文件")
         else:
             logger.error(f"Allure报告生成失败: {result.stderr}")
     except Exception as e:
         logger.error(f"生成Allure报告异常: {e}")
+    finally:
+        shutil.rmtree(snapshot_dir, ignore_errors=True)

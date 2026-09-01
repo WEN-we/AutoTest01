@@ -31,6 +31,7 @@ h2 { font-size: 15px; font-weight: 500; margin: 24px 0 10px; }
 .pass { color: var(--green); }
 .fail { color: var(--red); }
 .skip { color: var(--amber); }
+.warn { color: var(--amber); font-weight: 600; }
 .run { color: var(--accent); }
 .btn { background: var(--accent); color: #fff; border: 0; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-size: 13px; }
 .btn:hover { opacity: 0.85; }

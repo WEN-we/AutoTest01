@@ -59,21 +59,24 @@ def _load_cfg() -> dict:
 
 
 def _git_changed_files(base: str = "HEAD~1") -> list[str]:
-    """git diff 变更文件列表（新增/修改/删除均含）。失败返回空列表。"""
-    try:
-        proc = subprocess.run(
-            ["git", "diff", "--name-only", base],
-            cwd=str(PROJECT_ROOT), capture_output=True, text=True,
-            encoding="utf-8", errors="replace", timeout=30,
-        )
-        if proc.returncode != 0:
-            log.warning(f"[精准测试] git diff 失败：{proc.stderr.strip()[:200]}")
-            return []
-        return [ln.strip().replace("\\", "/") for ln in proc.stdout.splitlines()
-                if ln.strip()]
-    except Exception as exc:
-        log.warning(f"[精准测试] git 命令异常：{exc}")
-        return []
+    """git diff 变更文件列表（新增/修改/删除均含）。失败返回空列表。
+    健壮性：仓库只有 1 个 commit 时 HEAD~1 不存在（fatal: bad revision），
+    自动回退到 HEAD（对比工作区与当前提交），保证精准测试永不因 git 状态报错。"""
+    for candidate in (base, "HEAD"):
+        try:
+            proc = subprocess.run(
+                ["git", "diff", "--name-only", candidate],
+                cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=30,
+            )
+            if proc.returncode == 0:
+                return [ln.strip().replace("\\", "/") for ln in proc.stdout.splitlines()
+                        if ln.strip()]
+            log.warning(f"[精准测试] git diff {candidate} 失败：{proc.stderr.strip()[:120]}"
+                        f"（回退下一候选）")
+        except Exception as exc:  # noqa: BLE001
+            log.warning(f"[精准测试] git 命令异常（{candidate}）：{exc}")
+    return []
 
 
 def _direct_test_dir(changed_file: str) -> str | None:

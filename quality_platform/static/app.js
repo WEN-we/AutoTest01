@@ -34,6 +34,7 @@ const RUN_STATUS = {
   cancelled: ["skip", "已取消"],
   interrupted: ["skip", "中断(服务重启)"],
   timeout:   ["fail", "超时终止"],
+  empty:     ["warn", "未收集到用例"],
 };
 
 function statusBadge(status) {
