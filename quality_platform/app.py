@@ -797,6 +797,110 @@ def api_report_export():
 
 
 # ==============================
+# API：AI 发布风控（综合门禁/flaky/聚类/趋势的发布风险评级）
+# ==============================
+@app.route("/api/risk")
+@login_required
+def api_risk():
+    """AI 发布风控：返回 level/score/reasons/signals（可解释评级）。"""
+    from quality_platform.services.risk import assess_release_risk
+    return jsonify(assess_release_risk())
+
+
+# ==============================
+# API：CI 结果回写（GitHub Actions 等外部 CI 把 JUnit 结果汇入平台统一管线）
+# ==============================
+@app.route("/api/ci/ingest", methods=["POST"])
+def api_ci_ingest():
+    """外部 CI 回写入口：携带 X-CI-Token（= PLATFORM_CI_TOKEN 或 PLATFORM_SECRET）。
+
+    Body: {"junit_xml": "<testsuites...>", "source": "github-actions", "test_path": "ci:unit"}
+    解析后走与平台执行完全相同的入库/自动归因/通知/告警管线（集中化：一个事实源）。
+    """
+    import secrets as _secrets
+    expected = os.getenv("PLATFORM_CI_TOKEN", "") or _secret
+    token = request.headers.get("X-CI-Token", "")
+    if not expected or not _secrets.compare_digest(token, expected):
+        return jsonify({"error": "无效的 CI 令牌"}), 401
+
+    data = request.get_json(silent=True) or {}
+    xml_text = data.get("junit_xml") or ""
+    if not xml_text and request.data:
+        xml_text = request.data.decode("utf-8", errors="replace")
+    if not xml_text.strip():
+        return jsonify({"error": "junit_xml 不能为空"}), 400
+    source = (data.get("source") or "ci").strip()
+    test_path = (data.get("test_path") or f"ci:{source}").strip()
+    try:
+        from quality_platform.services.test_executor import parse_junit_text
+        results = parse_junit_text(xml_text)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"JUnit XML 解析失败：{exc}"}), 400
+    if not results:
+        return jsonify({"error": "JUnit XML 中未解析到用例"}), 400
+
+    exec_id = db.insert_execution(test_path)
+    executor._store_results(exec_id, results, started=time.time(),
+                            cancelled=False, timed_out=False)
+    _audit("ci_ingest", target=str(exec_id),
+           detail=f"{source} {len(results)} cases")
+    return jsonify({"ok": True, "execution_id": exec_id, "total": len(results)}), 201
+
+
+# ==============================
+# API：Allure 报告（生成 + UI 直接打开）
+# ==============================
+def _find_allure_cli() -> str:
+    """定位 allure 命令行：PATH 优先，其次 .tools/allure-*/bin。"""
+    import shutil
+    cli = shutil.which("allure")
+    if cli:
+        return cli
+    tools = PROJECT_ROOT / ".tools"
+    if tools.is_dir():
+        for pattern in ("allure-*/bin/allure.bat", "allure-*/bin/allure"):
+            hits = sorted(tools.glob(pattern))
+            if hits:
+                return str(hits[0])
+    return ""
+
+
+@app.route("/api/allure/generate", methods=["POST"])
+@admin_required
+def api_allure_generate():
+    """用本地 allure CLI 把 reports/allure-results 生成 HTML 报告（UI 可直接打开）。"""
+    cli = _find_allure_cli()
+    if not cli:
+        return jsonify({"ok": False,
+                        "error": "未找到 allure 命令行：请安装（scoop/choco）或解压到 .tools/allure-x.y.z/bin"}), 404
+    out = PROJECT_ROOT / "reports" / "allure-report"
+    try:
+        res = subprocess.run(
+            [cli, "generate", str(PROJECT_ROOT / "reports" / "allure-results"),
+             "-o", str(out), "--clean"],
+            cwd=str(PROJECT_ROOT), capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=180,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"ok": False, "error": f"allure 执行异常：{exc}"}), 500
+    ok = res.returncode == 0 and (out / "index.html").exists()
+    _audit("allure_generate", detail=f"returncode={res.returncode}", ok=ok)
+    return jsonify({
+        "ok": ok,
+        "report_url": "/reports/allure-report/index.html" if ok else "",
+        "message": ((res.stdout or "") + (res.stderr or ""))[-300:],
+    })
+
+
+@app.route("/reports/<path:filename>")
+@login_required
+def page_reports(filename):
+    """受登录保护的报告静态服务（Allure HTML / 截图 / JUnit 等，send_from_directory 防目录穿越）。"""
+    from flask import send_from_directory
+    return send_from_directory(str(PROJECT_ROOT / "reports"), filename)
+
+
+# ==============================
 # 启动
 # ==============================
 # 模块加载即初始化：import 模式（test_client / WSGI 加载）同样预置管理员，避免全新库无账号

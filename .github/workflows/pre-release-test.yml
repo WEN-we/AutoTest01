@@ -136,6 +136,17 @@ jobs:
           name: unit-test-results
           path: reports/platform/junit-unit.xml
 
+      - name: 回传测试结果到质量平台（未配置平台地址则跳过）
+        if: always()
+        env:
+          PLATFORM_URL: ${{ secrets.PLATFORM_URL }}
+          PLATFORM_CI_TOKEN: ${{ secrets.PLATFORM_CI_TOKEN }}
+        run: |
+          python quality_platform/scripts/ci_publish.py \
+            --junit reports/platform/junit-unit.xml \
+            --source ci-unit \
+            --test-path "ci:platform-unit"
+
   # Web 端 UI 测试
   web-tests:
     name: Web 端 UI 测试

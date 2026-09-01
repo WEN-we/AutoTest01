@@ -21,6 +21,12 @@
   <span id="impact-result" class="hint"></span>
 </div>
 
+<div class="toolbar" style="margin-top:10px">
+  <button class="btn admin-only" onclick="generateAllure()">生成 Allure 报告</button>
+  <a class="btn" href="/reports/allure-report/index.html" target="_blank">打开 Allure 报告</a>
+  <span id="allure-msg" class="hint"></span>
+</div>
+
 <h2>执行历史</h2>
 <table class="tbl">
   <thead><tr><th>#</th><th>测试路径</th><th>总数</th><th>通过</th><th>失败</th><th>通过率</th><th>耗时</th><th>开始时间</th><th>状态</th><th></th></tr></thead>

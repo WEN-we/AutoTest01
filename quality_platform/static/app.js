@@ -653,13 +653,36 @@ async function testAiConfig() {
   } catch (err) { msg.textContent = "❌ " + err.message; }
 }
 
+/* ---------- AI 发布风控 ---------- */
+async function loadRisk() {
+  const banner = document.getElementById("risk-banner");
+  if (!banner) return;
+  try {
+    const d = await getJSON("/api/risk");
+    const cls = { low: "gate-pass", medium: "gate-warn", high: "gate-fail", critical: "gate-fail" }[d.level] || "gate-none";
+    banner.className = "gate " + cls;
+    banner.textContent = `AI 发布风控：${(d.level || "").toUpperCase()}（风险分 ${d.score}/100，越低越危险） ${d.advice || ""}`;
+    document.getElementById("risk-reasons").textContent = (d.reasons || []).join(" ｜ ");
+  } catch (e) { banner.textContent = "AI 发布风控：加载失败 " + e.message; }
+}
+
+/* ---------- Allure 报告（生成 + 打开） ---------- */
+async function generateAllure() {
+  const msg = document.getElementById("allure-msg");
+  if (msg) msg.textContent = "生成中（最长 3 分钟）...";
+  try {
+    const d = await getJSON("/api/allure/generate", { method: "POST" });
+    if (msg) msg.textContent = d.ok ? "✅ 已生成，点「打开 Allure 报告」查看" : "❌ " + (d.error || d.message || "失败");
+  } catch (e) { if (msg) msg.textContent = "❌ " + e.message; }
+}
+
 /* ---------- 初始化 ---------- */
 let _filterTimer = null;
 document.addEventListener("DOMContentLoaded", () => {
   initNav();      // 全站导航（window._user 由服务端注入）
   applyAcl();     // 非 admin 隐藏管理按钮
 
-  if (document.getElementById("trendChart")) loadDashboard();
+  if (document.getElementById("trendChart")) { loadDashboard(); loadRisk(); }
   if (document.getElementById("failures-tbody")) {
     loadFailures();
     const btn = document.getElementById("btn-flaky");
