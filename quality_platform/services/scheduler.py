@@ -94,17 +94,21 @@ class Scheduler:
         while not self._stop.is_set():
             try:
                 for s in self.list():
-                    if not s["enabled"]:
-                        continue
-                    if self._should_run(s):
-                        log.info(f"[平台] 触发定时执行：{s['name']} -> {s['test_path']}")
-                        executor.run_async(s["test_path"], reruns=s["reruns"],
-                                           parallel=s["parallel"])
-                        with db._conn() as conn:
-                            conn.execute(
-                                "UPDATE schedules SET last_run=? WHERE id=?",
-                                (datetime.now().isoformat(timespec="seconds"), s["id"]),
-                            )
+                    # 单条调度异常不阻断其余调度（cron 数据损坏等仅记录告警，本轮跳过）
+                    try:
+                        if not s["enabled"]:
+                            continue
+                        if self._should_run(s):
+                            log.info(f"[平台] 触发定时执行：{s['name']} -> {s['test_path']}")
+                            executor.run_async(s["test_path"], reruns=s["reruns"],
+                                               parallel=s["parallel"])
+                            with db._conn() as conn:
+                                conn.execute(
+                                    "UPDATE schedules SET last_run=? WHERE id=?",
+                                    (datetime.now().isoformat(timespec="seconds"), s["id"]),
+                                )
+                    except Exception as exc:
+                        log.warning(f"[平台] 调度 #{s.get('id')} 处理异常（本轮跳过）：{exc}")
             except Exception as exc:
                 log.warning(f"[平台] 调度循环异常：{exc}")
             self._stop.wait(self.POLL_SECONDS)
@@ -136,6 +140,33 @@ class Scheduler:
             return datetime.fromisoformat(s["last_run"]).date().isoformat()
         except ValueError:
             return ""
+
+
+def validate_cron(kind: str, cron_value: str) -> str | None:
+    """调度时间入参校验（API 创建入口与数据完整性共用）。
+    返回错误描述；合法返回 None。
+    - daily: 必须 HH:MM，小时 00-23、分钟 00-59
+    - interval: 必须正数小时（0 < x <= 720）
+    """
+    kind = (kind or "").strip().lower()
+    cron_value = str(cron_value or "").strip()
+    if kind == "daily":
+        parts = cron_value.split(":")
+        if len(parts) != 2 or not parts[0].isdigit() or not parts[1].isdigit():
+            return "daily 调度时间必须为 HH:MM 格式（如 22:00）"
+        hh, mm = int(parts[0]), int(parts[1])
+        if not (0 <= hh <= 23 and 0 <= mm <= 59):
+            return "daily 调度时间越界：小时 00-23、分钟 00-59"
+        return None
+    if kind == "interval":
+        try:
+            hours = float(cron_value)
+        except ValueError:
+            return "interval 调度必须为小时数（如 6）"
+        if not (0 < hours <= 720):
+            return "interval 调度小时数必须为正数且不超过 720（30 天）"
+        return None
+    return "kind 必须为 daily / interval"
 
 
 scheduler = Scheduler()

@@ -351,6 +351,17 @@ class _Database:
             ).fetchall()
             return [dict(r) for r in rows]
 
+    def list_executions_since(self, since: str, limit: int = 20000) -> list[dict]:
+        """按开始时间（YYYY-MM-DD 前缀）过滤执行记录（近 N 天统计用）。
+        修复：此前 daily_stats 用 list_executions(limit=1000) 后按日期内存过滤，
+        执行记录超过 1000 条时 7 天窗口被截断、趋势统计失真。"""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM executions WHERE started_at >= ? ORDER BY id DESC LIMIT ?",
+                (since, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
     def get_execution(self, exec_id: int) -> dict | None:
         with self._conn() as conn:
             row = conn.execute("SELECT * FROM executions WHERE id=?", (exec_id,)).fetchone()

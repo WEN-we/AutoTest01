@@ -17,13 +17,16 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import time
 from typing import Any
 
+from quality_platform.security import get_platform_secret
+
 DEFAULT_TTL = 300  # 秒（5 分钟，短时有效防重放）
 
-_secret = os.getenv("PLATFORM_SECRET") or "quality-platform-insecure-secret"
+# 统一密钥源（环境变量 PLATFORM_SECRET > data/secret.key > 进程内随机），
+# 修复 CWE-798：此前硬编码公开常量，未设置密钥时任何人都可伪造 admin 令牌。
+_secret = get_platform_secret()
 
 
 def _b64url(data: bytes) -> str:

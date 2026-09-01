@@ -39,6 +39,7 @@ from flask import Flask, jsonify, redirect, render_template, request, session, u
 
 from quality_platform.models import (create_sso_user, db, ensure_admin,
                                      get_user_by_username, verify_user)
+from quality_platform.security import get_platform_secret
 from quality_platform.services.ai_integration import ai
 from quality_platform.services.failure_clustering import cluster_failures
 from quality_platform.services.gate import evaluate_gate, quality_score, test_pyramid
@@ -50,13 +51,12 @@ PLATFORM_DIR = Path(__file__).resolve().parent
 
 app = Flask(__name__, template_folder=str(PLATFORM_DIR / "templates"),
             static_folder=str(PLATFORM_DIR / "static"))
-# 密钥优先取环境变量；未配置时每次启动随机生成（会话不跨重启保留，但绝不使用固定弱密钥）
-_secret = os.getenv("PLATFORM_SECRET", "")
-if not _secret:
-    _secret = secrets.token_hex(32)
-    print("[安全提示] 未设置 PLATFORM_SECRET，本次启动使用随机会话密钥（重启后需重新登录）；"
-          "生产环境请在环境变量/.env 中固定配置")
-app.secret_key = _secret
+# 统一密钥源（环境变量 PLATFORM_SECRET > data/secret.key > 进程内随机），
+# 会话/SSO 签名/Fernet 加密三方共用同一密钥，杜绝硬编码回退密钥被伪造令牌接管（CWE-798）。
+app.secret_key = get_platform_secret()
+# 会话 Cookie 安全加固：HttpOnly 防 XSS 窃取；SameSite=Lax 阻断跨站携带（CSRF 基础防线之一）。
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 
 # ==============================
@@ -102,6 +102,28 @@ def permission_required(perm: str):
     return decorator
 
 
+# ---------- CSRF 防护：跨站请求伪造（SameSite=Lax 之外的主动防线） ----------
+# 对会话内所有状态变更请求（POST/PUT/DELETE）校验 Origin/Referer：
+# 浏览器发起的跨站请求会携带 Origin，若与本站域名不匹配直接拒绝（403），
+# 阻断恶意站点借用户已登录会话发起写操作。同源请求/无来源头的非浏览器调用不受影响。
+_SAFE_METHODS = ("GET", "HEAD", "OPTIONS")
+
+
+@app.before_request
+def _csrf_origin_guard():
+    if request.method in _SAFE_METHODS or not session.get("user"):
+        return None
+    origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
+    if not origin:
+        return None  # 无浏览器上下文（脚本/curl），不构成 CSRF 场景
+    from urllib.parse import urlparse
+    origin_host = (urlparse(origin).hostname or "").lower()
+    request_host = request.host.split(":")[0].lower()
+    if origin_host == request_host:
+        return None
+    return jsonify({"error": "请求来源校验失败（CSRF 防护）"}), 403
+
+
 @app.route("/login")
 def page_login():
     if session.get("user"):
@@ -114,15 +136,31 @@ def api_login():
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
     password = data.get("password") or ""
+    # 暴力破解防护：同一 IP+用户名 15 分钟内累计 5 次失败 → 锁定 15 分钟
+    _LOGIN_WINDOW, _LOGIN_MAX_FAIL, _LOGIN_LOCK = 900, 5, 900
+    key = f"{request.remote_addr}|{username.lower()}"
+    now_ts = time.time()
+    window = _login_failures.get(key, [])
+    window = [t for t in window if now_ts - t < _LOGIN_WINDOW]
+    if len(window) >= _LOGIN_MAX_FAIL:
+        db.insert_audit(username, "login", detail="登录锁定：失败次数过多",
+                        ip=request.remote_addr, ok=False)
+        return jsonify({"error": "失败次数过多，账号已临时锁定 15 分钟"}), 429
     user = verify_user(username, password)
     if not user:
+        _login_failures[key] = window + [now_ts]
         db.insert_audit(username, "login", detail="认证失败",
                         ip=request.remote_addr, ok=False)
         return jsonify({"error": "用户名或密码错误"}), 401
+    _login_failures.pop(key, None)
     session["user"] = {"id": user["id"], "username": user["username"],
                        "role": user["role"]}
     db.insert_audit(user["username"], "login", ip=request.remote_addr)
     return jsonify({"ok": True, "user": session["user"]})
+
+
+# 登录失败次数跟踪（进程内，暴力破解防护；IP|username -> 失败时间戳列表）
+_login_failures: dict[str, list[float]] = {}
 
 
 @app.route("/api/logout", methods=["POST"])
@@ -156,6 +194,11 @@ def sso_login():
     user = get_user_by_username(identity["username"])
     if not user:
         user = create_sso_user(identity["username"], identity["role"])
+    # 禁用状态校验：被禁用的账号不允许通过任何通道（含 SSO）登录
+    if user.get("status") == "disabled":
+        db.insert_audit(user["username"], "sso_login", detail="账号已禁用，拒绝登录",
+                        ip=request.remote_addr, ok=False)
+        return render_template("login.html", sso_error="账号已被禁用，请联系管理员"), 403
     session["user"] = {"id": user["id"], "username": user["username"],
                        "role": user["role"]}
     db.insert_audit(user["username"], "sso_login", detail="单点登录成功",
@@ -166,15 +209,25 @@ def sso_login():
 @app.route("/api/sso/token", methods=["POST"])
 @admin_required
 def api_sso_issue():
-    """（管理员）为外部系统签发一次性 SSO 令牌，用于集成联调/演示。"""
+    """（管理员）为外部系统签发一次性 SSO 令牌，用于集成联调/演示。
+    安全约束：role 必须 ∈ 白名单（RBAC 三级 + 历史 'user'，平台将其映射为只读访客）；
+    ttl 限制在 1~86400 秒，防止长期有效令牌被滥用。"""
     from quality_platform.services import sso
+    from quality_platform.services.rbac import ROLES
 
     data = request.get_json(silent=True) or {}
     username = (data.get("username") or "").strip()
-    role = (data.get("role") or "user").strip()
-    ttl = int(data.get("ttl", sso.DEFAULT_TTL))
+    role = (data.get("role") or "viewer").strip().lower()
+    allowed_roles = (*ROLES, "user")  # 'user' 为历史角色，has_permission 自动降级为只读
     if not username:
         return jsonify({"error": "username 不能为空"}), 400
+    if role not in allowed_roles:
+        return jsonify({"error": f"role 必须为 {allowed_roles}"}), 400
+    try:
+        ttl = int(data.get("ttl", sso.DEFAULT_TTL))
+    except (TypeError, ValueError):
+        ttl = sso.DEFAULT_TTL
+    ttl = max(1, min(ttl, 86400))  # 1 秒 ~ 24 小时
     result = sso.issue_token(username, role, ttl=ttl)
     _audit("sso_issue", target=username, detail=f"role={role} ttl={ttl}s")
     return jsonify({"ok": True, **result})
@@ -696,25 +749,36 @@ def api_schedules():
 @app.route("/api/schedules", methods=["POST"])
 @admin_required
 def api_schedules_add():
-    """创建定时回归任务（定时执行影响资源占用，仅 admin；与删除/启停一致）。"""
+    """创建定时回归任务（定时执行影响资源占用，仅 admin；与删除/启停一致）。
+    入参校验：daily 必须 HH:MM（00-23:00-59）；interval 必须正数小时。"""
+    from quality_platform.services.scheduler import validate_cron
     data = request.get_json(silent=True) or {}
-    kind = data.get("kind", "daily")
+    kind = (data.get("kind") or "daily").strip().lower()
+    cron_value = str(data.get("cron_value", "")).strip()
+    test_path = (data.get("test_path") or "").strip()
+    if not test_path:
+        return jsonify({"error": "test_path 不能为空"}), 400
+    error = validate_cron(kind, cron_value)
+    if error:
+        return jsonify({"error": error}), 400
     if kind == "daily":
         sched_id = scheduler.add_daily(
-            data.get("cron_value", "22:00"), data.get("test_path", ""),
+            cron_value, test_path,
             name=data.get("name", "每日回归"),
             reruns=int(data.get("reruns", 1) or 0),
             parallel=int(data.get("parallel", 0) or 0),
         )
-    else:
+    elif kind == "interval":
         sched_id = scheduler.add_interval(
-            float(data.get("cron_value", 6)), data.get("test_path", ""),
+            float(cron_value), test_path,
             name=data.get("name", "周期回归"),
             reruns=int(data.get("reruns", 1) or 0),
             parallel=int(data.get("parallel", 0) or 0),
         )
+    else:
+        return jsonify({"error": "kind 必须为 daily / interval"}), 400
     _audit("sched_add", target=str(sched_id),
-           detail=f"{kind} {data.get('cron_value', '')} {data.get('test_path', '')}")
+           detail=f"{kind} {cron_value} {test_path}")
     return jsonify({"schedule_id": sched_id}), 201
 
 
@@ -753,8 +817,8 @@ def api_impact():
 def api_impact_run():
     """按影响面分析结果一键执行建议测试集（admin）。"""
     from quality_platform.services.impact_analysis import analyze_changes
-    report = analyze_changes(base=request.get_json(silent=True).get("base", "HEAD~1")
-                             if request.get_json(silent=True) else "HEAD~1")
+    body = request.get_json(silent=True) or {}
+    report = analyze_changes(base=(body.get("base") or "HEAD~1"))
     targets = report["suggested_tests"]
     if not targets:
         return jsonify({"error": "无建议测试集（无变更或未收集到变更）"}), 400
@@ -914,7 +978,7 @@ def api_ci_ingest():
     解析后走与平台执行完全相同的入库/自动归因/通知/告警管线（集中化：一个事实源）。
     """
     import secrets as _secrets
-    expected = os.getenv("PLATFORM_CI_TOKEN", "") or _secret
+    expected = os.getenv("PLATFORM_CI_TOKEN", "") or get_platform_secret()
     token = request.headers.get("X-CI-Token", "")
     if not expected or not _secrets.compare_digest(token, expected):
         return jsonify({"error": "无效的 CI 令牌"}), 401

@@ -40,8 +40,8 @@
 <script>
 let _aiCode = "", _aiKind = "api", _aiSpec = "";
 
-// AI 生成入口仅对 admin/engineer（case_edit 权限）显示
-if (hasPerm("case_edit")) {
+// AI 生成入口仅对 admin/engineer（case_edit 权限）显示（app.js 提供 can()）
+if (can("case_edit")) {
   document.getElementById("ai-gen-box").style.display = "block";
 }
 

@@ -14,12 +14,12 @@
 """
 import base64
 import hashlib
-import os
 from datetime import datetime
 
 from cryptography.fernet import Fernet
 
 from quality_platform.models import db
+from quality_platform.security import get_platform_secret
 from utils.tools.logger import log
 
 # 服务商预设模板（前端下拉 + 试连默认值）
@@ -63,11 +63,17 @@ PROVIDER_PRESETS = {
 }
 
 
-def _fernet() -> Fernet:
-    """由 PLATFORM_SECRET 派生 Fernet 密钥（确定性，重启后可解密）。"""
-    secret = os.getenv("PLATFORM_SECRET") or "quality-platform-insecure-secret"
+def _fernet(secret: str | None = None) -> Fernet:
+    """由平台统一密钥派生 Fernet 密钥（确定性，重启后可解密）。"""
+    secret = secret or get_platform_secret()
     digest = hashlib.sha256(secret.encode("utf-8")).digest()
     return Fernet(base64.urlsafe_b64encode(digest))
+
+
+# 历史遗留密钥（仅用于一次性迁移旧密文，绝不用于任何新加密）：
+# 平台早期未统一密钥源时用硬编码常量派生 Fernet，导致历史 ai_settings.api_key_enc
+# 无法用新平台密钥解密。decrypt_key 检测到旧格式密文时自动重加密为当前密钥后返回明文。
+_LEGACY_SECRET = "quality-platform-insecure-secret"
 
 
 def encrypt_key(plain: str) -> str:
@@ -81,15 +87,35 @@ def encrypt_key(plain: str) -> str:
         return ""
 
 
+def _decrypt_with(secret: str, token: str) -> str | None:
+    try:
+        return _fernet(secret).decrypt(token.encode("utf-8")).decode("utf-8")
+    except Exception:
+        return None
+
+
 def decrypt_key(token: str) -> str:
-    """解密 API Key（解密失败返回空串，避免异常外泄）。"""
+    """解密 API Key（解密失败返回空串，避免异常外泄）。
+    优先当前平台密钥；失败则尝试历史遗留密钥，命中后自动迁移密文为当前密钥。"""
     if not token:
         return ""
-    try:
-        return _fernet().decrypt(token.encode("utf-8")).decode("utf-8")
-    except Exception as exc:
-        log.warning(f"[AI配置] 密钥解密失败（PLATFORM_SECRET 变更或密文损坏）：{exc}")
-        return ""
+    plain = _decrypt_with(get_platform_secret(), token)
+    if plain is not None:
+        return plain
+    legacy_plain = _decrypt_with(_LEGACY_SECRET, token)
+    if legacy_plain is not None:
+        # 历史密文：用当前密钥重新加密并落库（无感迁移，旧密钥即刻弃用）
+        try:
+            new_enc = encrypt_key(legacy_plain)
+            with db._conn() as conn:
+                conn.execute("UPDATE ai_settings SET api_key_enc=? WHERE api_key_enc=?",
+                             (new_enc, token))
+            log.info("[AI配置] 历史密钥密文已迁移到当前平台密钥")
+        except Exception as exc:  # 迁移失败不影响本次返回明文
+            log.warning(f"[AI配置] 密钥密文迁移失败：{exc}")
+        return legacy_plain
+    log.warning("[AI配置] 密钥解密失败（平台密钥变更或密文损坏，请重新保存 API Key）")
+    return ""
 
 
 def mask_key(api_key: str) -> str:

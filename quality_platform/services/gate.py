@@ -41,6 +41,10 @@ def evaluate_gate() -> dict:
     total = latest["total"] or 0
     passed = latest["passed"] or 0
     failed = latest["failed"] or 0
+    # 空执行（未收集到任何用例，如测试路径不存在）：无数据可评估，不判 FAIL
+    if total == 0:
+        return {"status": "no_data", "rules": [], "latest_run": None,
+                "note": "最近执行未收集到用例（total=0），无可评估数据"}
     pass_rate = round(passed / total * 100, 1) if total else 0.0
 
     flaky_report = _recent_flaky()
