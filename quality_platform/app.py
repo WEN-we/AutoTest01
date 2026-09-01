@@ -429,8 +429,9 @@ def api_failure_detail(case_result_id):
 
 
 @app.route("/api/failures/<int:case_result_id>/analyze", methods=["POST"])
-@login_required
+@permission_required("run")
 def api_failures_analyze(case_result_id):
+    """触发 AI 失败归因（LLM 调用有成本，限定 engineer+admin；viewer 只读不可触发）。"""
     result = ai.analyze_failure(case_result_id)
     return jsonify(result)
 
@@ -457,6 +458,10 @@ def api_ai_config_get():
     if not row:
         return jsonify({"configured": False, "presets": ai_config.PROVIDER_PRESETS,
                         "active": ai_config.get_active_config()})
+    # active 里的 api_key 是明文（供 LLM 构建用），对外一律脱敏
+    active = ai_config.get_active_config() or {}
+    if active.get("api_key"):
+        active["api_key"] = ai_config.mask_key(active["api_key"])
     return jsonify({
         "configured": True,
         "settings": {
@@ -467,7 +472,7 @@ def api_ai_config_get():
             "enabled": bool(row["enabled"]),
         },
         "presets": ai_config.PROVIDER_PRESETS,
-        "active": ai_config.get_active_config(),
+        "active": active,
     })
 
 
@@ -523,6 +528,29 @@ def api_ai_config_test():
 
 
 # ==============================
+# API：AI 用例生成（需求描述 → pytest 用例骨架，大厂 AI 提效）
+# ==============================
+@app.route("/api/ai/generate", methods=["POST"])
+@permission_required("case_edit")
+def api_ai_generate():
+    """根据需求描述生成 pytest 用例骨架（LLM 优先，未配置自动降级模板）。
+    生成结果由前端展示，工程师确认后可一键入库（POST /api/cases/manage）。"""
+    data = request.get_json(silent=True) or {}
+    spec = (data.get("spec") or "").strip()
+    kind = (data.get("kind") or "api").strip().lower()
+    if not spec:
+        return jsonify({"error": "需求描述不能为空"}), 400
+    if kind not in ("api", "ui"):
+        return jsonify({"error": "kind 必须为 api / ui"}), 400
+    code = ai.generate_case(spec, kind)
+    # generate_case 返回 {"code": str, "source": "llm"|"template"}，展开后返回
+    code_text = code.get("code", "") if isinstance(code, dict) else str(code)
+    source = code.get("source", "template") if isinstance(code, dict) else "template"
+    _audit("ai_generate", detail=f"{kind} {spec[:80]} source={source}")
+    return jsonify({"spec": spec, "kind": kind, "code": code_text, "source": source})
+
+
+# ==============================
 # API：用例库管理（CRUD）
 # ==============================
 @app.route("/api/cases/manage", methods=["GET"])
@@ -534,8 +562,9 @@ def api_cases_manage():
 
 
 @app.route("/api/cases/manage", methods=["POST"])
-@login_required
+@permission_required("case_edit")
 def api_cases_add():
+    """新增用例到用例库（case_edit：admin+engineer；viewer 只读）。"""
     data = request.get_json(silent=True) or {}
     nodeid = (data.get("nodeid") or "").strip()
     if not nodeid:
@@ -665,8 +694,9 @@ def api_schedules():
 
 
 @app.route("/api/schedules", methods=["POST"])
-@login_required
+@admin_required
 def api_schedules_add():
+    """创建定时回归任务（定时执行影响资源占用，仅 admin；与删除/启停一致）。"""
     data = request.get_json(silent=True) or {}
     kind = data.get("kind", "daily")
     if kind == "daily":

@@ -106,6 +106,10 @@ function initNav() {
 function applyAcl() {
   if (can("user_admin")) return;
   document.querySelectorAll(".admin-only").forEach(el => { el.style.display = "none"; });
+  /* case_edit（admin+engineer）可见，viewer 隐藏 */
+  document.querySelectorAll(".case-edit-only").forEach(el => {
+    if (!can("case_edit")) el.style.display = "none";
+  });
 }
 
 /* ---------- 看板 ---------- */

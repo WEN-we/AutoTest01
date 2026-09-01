@@ -1,13 +1,31 @@
 {% extends "base.html" %}
 {% block title %}用例管理 · 质量工程平台{% endblock %}
 {% block content %}
-<h1>用例管理 <span class="hint">pytest 实时收集 + 用例库（CRUD / 导入 / 标记）</span></h1>
+<h1>用例管理 <span class="hint">pytest 实时收集 + 用例库（CRUD / 导入 / AI 生成）</span></h1>
 
 <div class="toolbar">
   <input type="text" id="case-filter" placeholder="过滤关键字..." style="width:260px">
   <button class="btn admin-only" onclick="importCases()">从 pytest 一键导入</button>
-  <button class="btn" onclick="showAddCase()">新增用例</button>
+  <button class="btn case-edit-only" onclick="showAddCase()">新增用例</button>
   <span id="case-count" class="hint"></span>
+</div>
+
+<div id="ai-gen-box" class="card" style="text-align:left;margin-bottom:16px;display:none">
+  <h3>🤖 AI 生成用例 <span class="hint">需求描述 → pytest 用例骨架（LLM 优先，未配置自动降级模板）</span></h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+    <select id="ai-kind" style="padding:6px 10px">
+      <option value="api">接口用例</option>
+      <option value="ui">UI 用例</option>
+    </select>
+    <input id="ai-spec" placeholder="例如：登录接口，输入正确账号密码返回 token" style="padding:6px 10px;flex:1;min-width:260px">
+    <button class="btn" id="btn-ai-gen" onclick="aiGenerate()">生成用例</button>
+  </div>
+  <div id="ai-msg" class="hint" style="margin-bottom:6px"></div>
+  <pre id="ai-code" style="display:none;background:#1e1e2e;color:#ddd;padding:12px;border-radius:8px;overflow:auto;max-height:360px;font-size:12px;white-space:pre-wrap;word-break:break-all"></pre>
+  <div id="ai-actions" style="display:none;margin-top:8px">
+    <button class="btn" onclick="aiSave()">✅ 确认并入库</button>
+    <button class="btn" style="background:#607d8b" onclick="aiCopy()">📋 复制代码</button>
+  </div>
 </div>
 
 <h2>用例库（可管理）</h2>
@@ -18,4 +36,69 @@
 
 <h2>pytest 实时收集（只读）</h2>
 <pre id="cases-pre" class="cases"></pre>
+
+<script>
+let _aiCode = "", _aiKind = "api", _aiSpec = "";
+
+// AI 生成入口仅对 admin/engineer（case_edit 权限）显示
+if (hasPerm("case_edit")) {
+  document.getElementById("ai-gen-box").style.display = "block";
+}
+
+async function aiGenerate() {
+  const msg = document.getElementById("ai-msg");
+  _aiKind = document.getElementById("ai-kind").value;
+  _aiSpec = document.getElementById("ai-spec").value.trim();
+  if (!_aiSpec) { msg.textContent = "❌ 请输入需求描述"; return; }
+  msg.textContent = "⏳ AI 生成中...（LLM 或模板模式）";
+  document.getElementById("ai-code").style.display = "none";
+  document.getElementById("ai-actions").style.display = "none";
+  try {
+    const d = await getJSON("/api/ai/generate", {
+      method: "POST",
+      body: JSON.stringify({ spec: _aiSpec, kind: _aiKind }),
+    });
+    _aiCode = d.code;
+    document.getElementById("ai-code").textContent = d.code;
+    document.getElementById("ai-code").style.display = "block";
+    document.getElementById("ai-actions").style.display = "block";
+    msg.textContent = "✅ 生成完成，可确认入库或复制代码";
+  } catch (e) {
+    msg.textContent = "❌ " + (e.message || "生成失败");
+  }
+}
+
+async function aiSave() {
+  const msg = document.getElementById("ai-msg");
+  // 从代码中提取类名作为 nodeid（格式 tests/test_ai_<kind>/test_<module>_generated.py::Test<Module>）
+  const clsMatch = _aiCode.match(/class\s+(\w+)/);
+  const className = clsMatch ? clsMatch[1] : "TestGenerated";
+  const module = "ai_generated";
+  const nodeid = `tests/test_ai_${_aiKind}/test_${module}.py::${className}`;
+  try {
+    const d = await getJSON("/api/cases/manage", {
+      method: "POST",
+      body: JSON.stringify({
+        nodeid,
+        name: _aiSpec.slice(0, 50),
+        module,
+        tags: "ai,generated," + _aiKind,
+        owner: (window._user || {}).username || "",
+        description: _aiSpec,
+      }),
+    });
+    msg.textContent = "✅ 已入库 case_id=" + d.case_id + "（" + nodeid + "）";
+    loadManageCases();
+  } catch (e) {
+    msg.textContent = "❌ 入库失败：" + (e.message || "");
+  }
+}
+
+function aiCopy() {
+  if (!_aiCode) return;
+  navigator.clipboard.writeText(_aiCode).then(() => {
+    document.getElementById("ai-msg").textContent = "📋 已复制到剪贴板";
+  });
+}
+</script>
 {% endblock %}
