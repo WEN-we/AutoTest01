@@ -45,7 +45,13 @@ def evaluate_gate() -> dict:
 
     flaky_report = _recent_flaky()
     flaky_count = flaky_report["summary"]["detected_flaky"]
-    flaky_rate = round(flaky_count / max(total, 1), 3)
+    # flaky 占比分母 = 参与 flaky 判定的用例总数（平台活跃用例，而非本次执行用例数）。
+    # 修复：此前误用 latest["total"]，导致"本次只跑 3 条、历史有 8 条 flaky"时占比爆炸（8/3=267%），
+    # 全绿执行也被误判 WARN。
+    flaky_base = flaky_report["summary"].get("total_cases") or (
+        flaky_count + flaky_report["summary"]["stable_fail"] + flaky_report["summary"]["stable_pass"]
+    )
+    flaky_rate = round(flaky_count / max(flaky_base, 1), 3)
 
     rules = [
         {"name": "通过率", "actual": pass_rate, "threshold": cfg.get("min_pass_rate", 80.0),
@@ -80,7 +86,11 @@ def quality_score() -> dict:
 
     flaky_report = _recent_flaky()
     flaky_count = flaky_report["summary"]["detected_flaky"]
-    stability = max(0.0, 1.0 - flaky_count / max(total, 1) * 3)  # flaky 越多扣分
+    # 稳定性基于"参与判定的活跃用例集"计算 flaky 占比（与门禁口径一致），而非执行次数
+    flaky_base = flaky_report["summary"].get("total_cases") or (
+        flaky_count + flaky_report["summary"]["stable_fail"] + flaky_report["summary"]["stable_pass"]
+    )
+    stability = max(0.0, 1.0 - flaky_count / max(flaky_base, 1) * 3)  # flaky 越多扣分
 
     cfg = _load_score_cfg()
     # 统一为 0~100 分制：通过率 + 稳定性（flaky 少）+ 执行覆盖

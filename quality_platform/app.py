@@ -775,6 +775,72 @@ def api_user_update_role(user_id):
     return jsonify({"ok": ok})
 
 
+@app.route("/api/users", methods=["POST"])
+@permission_required("user_admin")
+def api_user_create():
+    """管理员创建用户账号（分配角色+初始密码），大厂标准：新用户最小权限起步。"""
+    from quality_platform.models import create_user
+    from quality_platform.services.rbac import ROLES
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    role = (data.get("role") or "viewer").strip().lower()
+    if not username or not password:
+        return jsonify({"error": "用户名与密码不能为空"}), 400
+    if len(password) < 6:
+        return jsonify({"error": "密码长度至少 6 位"}), 400
+    if role not in ROLES:
+        return jsonify({"error": f"角色必须为 {ROLES}"}), 400
+    if username == "admin":
+        return jsonify({"error": "admin 为内置账号，请直接使用"}), 400
+    try:
+        user = create_user(username, password, role)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    if not user:
+        return jsonify({"error": "用户名已存在"}), 409
+    _audit("user_create", target=username, detail=f"role={role}", ok=True)
+    return jsonify({"ok": True, "user": {"id": user["id"], "username": user["username"],
+                                          "role": user["role"], "status": user.get("status")}}), 201
+
+
+@app.route("/api/users/<int:user_id>/status", methods=["PUT"])
+@permission_required("user_admin")
+def api_user_update_status(user_id):
+    """启用/禁用账号（禁用后无法登录，比删除更安全：保留审计/执行历史归属）。"""
+    from quality_platform.models import update_user_status
+    status = (request.get_json(silent=True) or {}).get("status", "").strip().lower()
+    if status not in ("active", "disabled"):
+        return jsonify({"error": "status 必须为 active / disabled"}), 400
+    # 不允许禁用/删除内置 admin
+    from quality_platform.models import list_users
+    target = next((u for u in list_users() if u["id"] == user_id), None)
+    if target and target["username"] == "admin":
+        return jsonify({"error": "内置 admin 账号不允许禁用"}), 400
+    ok = update_user_status(user_id, status)
+    _audit("user_status", target=str(user_id), detail=f"status={status}", ok=ok)
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/users/<int:user_id>", methods=["DELETE"])
+@permission_required("user_admin")
+def api_user_delete(user_id):
+    """删除用户（内置 admin 禁止删除；建议优先使用禁用）。"""
+    from quality_platform.models import delete_user
+    from quality_platform.services.rbac import role_label
+    # 禁止删除自己（防止误操作导致平台无管理员）
+    from quality_platform.models import list_users
+    target = next((u for u in list_users() if u["id"] == user_id), None)
+    if target and target["username"] == "admin":
+        return jsonify({"error": "内置 admin 账号不允许删除"}), 400
+    if (session.get("user") or {}).get("id") == user_id:
+        return jsonify({"error": "不允许删除当前登录账号"}), 400
+    ok = delete_user(user_id)
+    _audit("user_delete", target=str(user_id),
+           detail=target["username"] if target else "", ok=ok)
+    return jsonify({"ok": ok})
+
+
 # ==============================
 # API：质量报告导出
 # ==============================

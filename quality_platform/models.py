@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'user',       -- admin / user
+    role          TEXT NOT NULL DEFAULT 'user',       -- admin / engineer / viewer
+    status        TEXT NOT NULL DEFAULT 'active',     -- active / disabled（禁用后无法登录）
     created_at    TEXT
 );
 CREATE TABLE IF NOT EXISTS cases (
@@ -149,7 +150,8 @@ CREATE TABLE IF NOT EXISTS users (
     id            SERIAL PRIMARY KEY,
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    role          TEXT NOT NULL DEFAULT 'user',
+    role          TEXT NOT NULL DEFAULT 'user',       -- admin / engineer / viewer
+    status        TEXT NOT NULL DEFAULT 'active',     -- active / disabled
     created_at    TEXT
 );
 CREATE TABLE IF NOT EXISTS cases (
@@ -288,10 +290,28 @@ class _Database:
         if self.backend == "postgres":
             with self._conn() as conn:
                 conn.executescript(_SCHEMA_PG)
+            self._migrate_users_status(backend="postgres")
             return
         os.makedirs(DATA_DIR, exist_ok=True)
         with self._conn() as conn:
             conn.executescript(_SCHEMA)
+        self._migrate_users_status(backend="sqlite")
+
+    @staticmethod
+    def _migrate_users_status(backend: str) -> None:
+        """幂等迁移：users 表补充 status 列（旧库无此列）。"""
+        try:
+            if backend == "postgres":
+                with db._conn() as conn:
+                    conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                                 "status TEXT NOT NULL DEFAULT 'active'")
+            else:
+                with db._conn() as conn:
+                    cols = [r["name"] for r in conn.execute("PRAGMA table_info(users)")]
+                    if "status" not in cols:
+                        conn.execute("ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
+        except Exception:  # noqa: BLE001 迁移失败不影响主流程（新库自带列）
+            pass
 
     def _conn(self):
         if self.backend == "postgres":
@@ -577,12 +597,14 @@ def ensure_admin():
 
 
 def verify_user(username: str, password: str) -> dict | None:
-    """校验用户名密码，成功返回用户 dict。"""
+    """校验用户名密码，成功返回用户 dict；账号被禁用（status=disabled）返回 None。"""
     with db._conn() as conn:
         row = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
         if not row:
             return None
         user = dict(row)
+        if user.get("status") == "disabled":
+            return None
         if _bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
             return user
         return None
@@ -599,7 +621,7 @@ def list_users() -> list[dict]:
     """用户列表（用户管理页用）。"""
     with db._conn() as conn:
         rows = conn.execute(
-            "SELECT id, username, role, created_at FROM users ORDER BY id").fetchall()
+            "SELECT id, username, role, status, created_at FROM users ORDER BY id").fetchall()
         return [dict(r) for r in rows]
 
 
@@ -607,6 +629,44 @@ def update_user_role(user_id: int, role: str) -> bool:
     """更新用户角色（RBAC：admin 管理）。角色白名单在 rbac.ROLES。"""
     with db._conn() as conn:
         cur = conn.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
+        return cur.rowcount > 0
+
+
+def create_user(username: str, password: str, role: str = "viewer") -> dict:
+    """管理员创建用户账号（密码 bcrypt 哈希）。用户名重复返回 None。"""
+    username = (username or "").strip()
+    if not username or not password:
+        raise ValueError("用户名与密码不能为空")
+    pwd_hash = _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
+    with db._conn() as conn:
+        dup = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+        if dup:
+            return None
+        cur = conn.execute(
+            "INSERT INTO users (username, password_hash, role, status, created_at) "
+            "VALUES (?,?,?,'active',?)",
+            (username, pwd_hash, role, datetime.now().isoformat(timespec="seconds")),
+        )
+        row = conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+
+def update_user_status(user_id: int, status: str) -> bool:
+    """启用/禁用账号（status: active / disabled）。禁用后该用户无法登录。"""
+    if status not in ("active", "disabled"):
+        return False
+    with db._conn() as conn:
+        cur = conn.execute("UPDATE users SET status=? WHERE id=?", (status, user_id))
+        return cur.rowcount > 0
+
+
+def delete_user(user_id: int) -> bool:
+    """删除用户（admin 内置账号禁止删除）。"""
+    with db._conn() as conn:
+        row = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row or row["username"] == "admin":
+            return False
+        cur = conn.execute("DELETE FROM users WHERE id=?", (user_id,))
         return cur.rowcount > 0
 
 

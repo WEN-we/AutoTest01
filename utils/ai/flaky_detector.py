@@ -70,5 +70,6 @@ class FlakyDetector:
                 "detected_flaky": len(flaky),
                 "stable_fail": len(stable_fail),
                 "stable_pass": len(stable_pass),
+                "total_cases": len(stat),  # 参与判定的用例总数（样本量≥min_runs）
             },
         }

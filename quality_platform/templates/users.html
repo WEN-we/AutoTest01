@@ -1,44 +1,128 @@
 {% extends "base.html" %}
 {% block title %}用户管理 · 质量工程平台{% endblock %}
 {% block content %}
-<h1>用户管理 <span class="hint">RBAC：admin / engineer（测试工程师）/ viewer（只读访客）</span></h1>
+<h1>用户管理 <span class="hint">RBAC：admin（管理员）/ engineer（测试工程师）/ viewer（只读访客）</span></h1>
+
+<div class="card" style="margin-bottom:16px">
+  <h3>➕ 添加用户账号</h3>
+  <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input id="new-username" placeholder="用户名" style="padding:6px 10px;width:160px">
+    <input id="new-password" type="password" placeholder="初始密码（≥6位）" style="padding:6px 10px;width:170px">
+    <select id="new-role" style="padding:6px 10px">
+      <option value="engineer">测试工程师</option>
+      <option value="viewer">只读访客</option>
+      <option value="admin">管理员</option>
+    </select>
+    <button class="btn" id="btn-create-user">创建账号</button>
+    <span class="hint">新用户默认最小权限起步，创建后可随时调整角色/禁用</span>
+  </div>
+  <div id="create-msg" class="hint" style="margin-top:6px"></div>
+</div>
+
 <table class="tbl">
-  <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead>
+  <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
   <tbody id="users-tbody"></tbody>
 </table>
+
 <script>
+const ROLE_NAMES = { admin: "管理员", engineer: "测试工程师", viewer: "只读访客" };
+
+async function api(path, opts) {
+  const r = await fetch(path, Object.assign({
+    headers: { "Content-Type": "application/json" },
+  }, opts || {}));
+  let d = {};
+  try { d = await r.json(); } catch (e) { /* 非 JSON 响应 */ }
+  if (!r.ok && !d.ok) throw new Error(d.error || ("HTTP " + r.status));
+  return d;
+}
+
 async function loadUsers() {
-  const d = await getJSON("/api/users");
+  const d = await api("/api/users");
   const tb = document.getElementById("users-tbody");
   tb.innerHTML = "";
   for (const u of d.users) {
+    const isAdmin = u.username === "admin";
+    const disabled = u.status === "disabled";
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${u.id}</td><td>${u.username}</td>
-      <td>${u.role_label}</td><td>${u.created_at || "-"}</td>
+      <td>${u.id}</td>
+      <td>${u.username}${isAdmin ? ' <span class="hint">(内置)</span>' : ""}</td>
       <td>
-        <select data-uid="${u.id}" class="role-select" ${u.username === "admin" ? "disabled" : ""}>
+        <select data-uid="${u.id}" class="role-select" ${isAdmin ? "disabled" : ""}>
           <option value="admin" ${u.role === "admin" ? "selected" : ""}>管理员</option>
           <option value="engineer" ${u.role === "engineer" ? "selected" : ""}>测试工程师</option>
           <option value="viewer" ${u.role === "viewer" ? "selected" : ""}>只读访客</option>
         </select>
-        <button class="btn btn-sm" data-save="${u.id}" style="${u.username === "admin" ? "display:none" : ""}">保存</button>
+      </td>
+      <td>
+        <span class="badge" style="background:${disabled ? "#e74c3c" : "#27ae60"};color:#fff;padding:2px 8px;border-radius:10px;font-size:12px">
+          ${disabled ? "已禁用" : "正常"}
+        </span>
+      </td>
+      <td>${u.created_at || "-"}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" data-save="${u.id}" ${isAdmin ? "disabled" : ""}>保存角色</button>
+        <button class="btn btn-sm" data-status="${u.id}" data-next="${disabled ? "active" : "disabled"}" ${isAdmin ? "disabled" : ""}>
+          ${disabled ? "启用" : "禁用"}
+        </button>
+        <button class="btn btn-sm btn-danger" data-del="${u.id}" ${isAdmin ? "disabled" : ""}>删除</button>
       </td>`;
     tb.appendChild(tr);
   }
+
+  // 保存角色
   document.querySelectorAll("[data-save]").forEach(btn => {
     btn.onclick = async () => {
       const uid = btn.dataset.save;
       const role = document.querySelector(`select[data-uid="${uid}"]`).value;
-      await fetch("/api/users/" + uid + "/role", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-      });
+      try { await api("/api/users/" + uid + "/role", { method: "PUT", body: JSON.stringify({ role }) }); }
+      catch (e) { alert(e.message); }
+      loadUsers();
+    };
+  });
+  // 启用/禁用
+  document.querySelectorAll("[data-status]").forEach(btn => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.status;
+      const next = btn.dataset.next;
+      const action = next === "disabled" ? "禁用" : "启用";
+      if (!confirm(`确认${action}该账号？`)) return;
+      try { await api("/api/users/" + uid + "/status", { method: "PUT", body: JSON.stringify({ status: next }) }); }
+      catch (e) { alert(e.message); }
+      loadUsers();
+    };
+  });
+  // 删除
+  document.querySelectorAll("[data-del]").forEach(btn => {
+    btn.onclick = async () => {
+      const uid = btn.dataset.del;
+      if (!confirm("确认删除该用户？删除后不可恢复（建议优先禁用）。")) return;
+      try { await api("/api/users/" + uid, { method: "DELETE" }); }
+      catch (e) { alert(e.message); }
       loadUsers();
     };
   });
 }
+
+document.getElementById("btn-create-user").onclick = async () => {
+  const msg = document.getElementById("create-msg");
+  const username = document.getElementById("new-username").value.trim();
+  const password = document.getElementById("new-password").value;
+  const role = document.getElementById("new-role").value;
+  if (!username || !password) { msg.textContent = "❌ 用户名与密码不能为空"; return; }
+  if (password.length < 6) { msg.textContent = "❌ 密码长度至少 6 位"; return; }
+  try {
+    const d = await api("/api/users", { method: "POST", body: JSON.stringify({ username, password, role }) });
+    msg.textContent = "✅ 已创建账号 " + d.user.username + "（" + (ROLE_NAMES[d.user.role] || d.user.role) + "）";
+    document.getElementById("new-username").value = "";
+    document.getElementById("new-password").value = "";
+    loadUsers();
+  } catch (e) {
+    msg.textContent = "❌ " + e.message;
+  }
+};
+
 loadUsers();
 </script>
 {% endblock %}
