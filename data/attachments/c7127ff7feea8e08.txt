@@ -1,0 +1,11 @@
+2026-09-05 03:58:49 | INFO     | test_user_ui:14 | 执行用例：空密码登录
+2026-09-05 03:58:49 | INFO     | base_page:33 | 访问URL：登录页面，地址：http://127.0.0.1:8090
+2026-09-05 03:58:56 | INFO     | base_page:28 | 等待元素可见：#toastMessage
+2026-09-05 03:59:04 | WARNING  | login_page:57 | 错误提示元素等待超时：Page.wait_for_selector: Timeout 8000ms exceeded.
+Call log:
+  - waiting for locator("#toastMessage") to be visible
+    20 × locator resolved to hidden <span id="toastMessage"></span>
+
+2026-09-05 03:59:04 | INFO     | base_page:23 | 获取元素文本：页面错误提示，定位符：#toastMessage，内容：
+2026-09-05 03:59:04 | INFO     | test_user_ui:48 | ✅ 空值场景：弹窗校验成功 → 用户名不能为空！
+2026-09-05 03:59:04 | INFO     | test_user_ui:66 | ✅ 用例执行成功：空密码登录

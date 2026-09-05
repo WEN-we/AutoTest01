@@ -1,0 +1,4 @@
+2026-09-05 03:57:46 | INFO     | test_user_api:20 | 执行用例：本地-空用户名登录
+2026-09-05 03:57:46 | INFO     | api_client:61 | 发送POST请求：http://127.0.0.1:8090/api/login，数据：{'username': '', 'password': 'Test@1234'}
+2026-09-05 03:57:46 | INFO     | api_client:69 | POST响应：400，数据：{'code': 400, 'message': '用户名和密码不能为空'}
+2026-09-05 03:57:46 | INFO     | test_user_api:45 | ✅ 用例通过：本地-空用户名登录

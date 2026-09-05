@@ -1,0 +1,2 @@
+2026-09-05 03:59:20 | INFO     | visual_diff:103 | [视觉回归] 基线已更新：/home/runner/work/AutoTest01/AutoTest01/reports/baselines/login_page.png
+2026-09-05 03:59:20 | INFO     | conftest:384 | 视觉回归：基线已创建 login_page.png（下次运行开始对比）

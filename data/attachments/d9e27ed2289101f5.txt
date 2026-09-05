@@ -1,0 +1,4 @@
+2026-09-05 03:57:46 | INFO     | test_user_api:20 | 执行用例：本地-正确登录
+2026-09-05 03:57:46 | INFO     | api_client:61 | 发送POST请求：http://127.0.0.1:8090/api/login，数据：{'username': 'qa_test', 'password': 'Test@1234'}
+2026-09-05 03:57:47 | INFO     | api_client:69 | POST响应：200，数据：{'code': 200, 'data': {'token': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoyLCJleHAiOjE3ODg2NjcwNjcsImlhdCI6MTc4ODU4MDY2NywidHlwZSI6ImFjY2VzcyJ9.5nK7ITDK83NiYgJkwb2IMlBSYfKeSzmTYyoPIWh5frM', 'user': {'email': 'qa_test@local.dev', 'id': 2, 'username': 'qa_test'}}, 'message': '登录成功'}
+2026-09-05 03:57:47 | INFO     | test_user_api:45 | ✅ 用例通过：本地-正确登录

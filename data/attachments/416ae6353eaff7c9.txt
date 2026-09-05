@@ -1,0 +1,5 @@
+2026-09-05 03:59:21 | INFO     | visual_diff:103 | [视觉回归] 基线已更新：/home/runner/work/AutoTest01/AutoTest01/reports/baselines/login_page_strict.png
+2026-09-05 03:59:21 | INFO     | conftest:384 | 视觉回归：基线已创建 login_page_strict.png（下次运行开始对比）
+2026-09-05 03:59:22 | INFO     | conftest:329 | Playwright trace 已保存：reports/traces/session_20260905_035921.zip
+2026-09-05 03:59:22 | INFO     | ui_driver:47 | 浏览器已关闭
+2026-09-05 03:59:22 | INFO     | conftest:333 | ===== Web 驱动关闭 =====

@@ -1,0 +1,11 @@
+2026-09-05 03:58:08 | INFO     | conftest:307 | ===== Web 驱动初始化 =====
+2026-09-05 03:58:09 | INFO     | ui_driver:38 | 浏览器启动成功：chromium，无头模式：False
+2026-09-05 03:58:09 | INFO     | test_user_ui:14 | 执行用例：正确用户名密码登录
+2026-09-05 03:58:09 | INFO     | base_page:33 | 访问URL：登录页面，地址：http://127.0.0.1:8090
+2026-09-05 03:58:16 | INFO     | base_page:28 | 等待元素可见：#toastMessage
+2026-09-05 03:58:24 | WARNING  | login_page:57 | 错误提示元素等待超时：Page.wait_for_selector: Timeout 8000ms exceeded.
+Call log:
+  - waiting for locator("#toastMessage") to be visible
+
+2026-09-05 03:58:34 | INFO     | test_user_ui:60 | ✅ 正确登录场景：已跳转仪表盘
+2026-09-05 03:58:34 | INFO     | test_user_ui:66 | ✅ 用例执行成功：正确用户名密码登录
