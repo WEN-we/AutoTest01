@@ -46,7 +46,7 @@ class TestApiAcl:
         monkeypatch.setattr("quality_platform.services.test_executor.executor.run_async",
                             lambda *a, **k: 999)
         c = self._login_as_role(self._client(), "eng_api", "engineer")
-        r = c.post("/api/runs", json={"test_path": "tests/x"})
+        r = c.post("/api/runs", json={"test_path": "tests/test_platform/"})
         assert r.status_code == 202
         assert c.get("/api/audit").status_code == 200
         assert c.get("/api/users").status_code == 403
@@ -55,7 +55,7 @@ class TestApiAcl:
     def test_viewer_cannot_run(self, monkeypatch):
         """viewer：只读，触发执行 403。"""
         c = self._login_as_role(self._client(), "view_api", "viewer")
-        r = c.post("/api/runs", json={"test_path": "tests/x"})
+        r = c.post("/api/runs", json={"test_path": "tests/test_platform/"})
         assert r.status_code == 403
         assert c.get("/api/dashboard").status_code == 200
 
@@ -66,5 +66,5 @@ class TestApiAcl:
     def test_legacy_user_role_readonly(self):
         """旧 role='user' 用户：只读 + 不可执行。"""
         c = self._login_as_role(self._client(), "old_user", "user")
-        assert c.post("/api/runs", json={"test_path": "tests/x"}).status_code == 403
+        assert c.post("/api/runs", json={"test_path": "tests/test_platform/"}).status_code == 403
         assert c.get("/api/dashboard").status_code == 200

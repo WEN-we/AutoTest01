@@ -17,6 +17,9 @@ from utils.tools.logger import log
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 app = Flask(__name__)
+# 默认配置（不经 main() 由 WSGI 直接加载 worker:app 时也可用）
+app.config.setdefault("PORT", 9101)
+app.config.setdefault("WORKER_NAME", "worker")
 _status = {"busy": False, "jobs_done": 0, "last_error": ""}
 
 

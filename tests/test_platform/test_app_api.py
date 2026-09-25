@@ -161,7 +161,8 @@ class TestCoreEndpoints:
         records = []
         monkeypatch.setattr(app_mod.db, "insert_audit",
                             lambda u, a, **k: records.append((u, a)))
-        c.post("/api/runs", json={"test_path": "tests/x/"})
+        # 真实存在的路径（平台已加"测试路径存在性校验"，假路径会被 400 拒绝）
+        c.post("/api/runs", json={"test_path": "tests/test_api/"})
         assert ("alice", "run_start") in records
 
     def test_cancel_audited(self, client, monkeypatch):
@@ -336,3 +337,105 @@ class TestDashboardAndReports:
         """执行不存在时详情页优雅降级（而非 500）"""
         resp = rich_client.get("/runs/999")
         assert resp.status_code == 200
+
+
+class TestRunPathValidation:
+    """测试路径归一化与存在性校验（防无效路径空执行 / 目录穿越逃逸）。"""
+
+    def test_empty_path_400(self, client):
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs", json={"test_path": "   "}).status_code == 400
+
+    def test_missing_path_400(self, client):
+        c, _ = client
+        _login(c, "admin")
+        resp = c.post("/api/runs", json={"test_path": "tests/no_such_dir_xyz/"})
+        assert resp.status_code == 400
+        assert "不存在" in resp.get_json()["error"]
+
+    def test_traversal_rejected(self, client):
+        """目录穿越（逃出项目根）一律拒绝。"""
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs",
+                      json={"test_path": "../../Windows/System32"}).status_code == 400
+
+    def test_dotted_nodeid_normalized_to_file(self, client):
+        """点号模块 nodeid 归一化为真实文件路径后放行（避免 pytest 找不到文件空跑）。"""
+        c, _ = client
+        _login(c, "admin")
+        resp = c.post("/api/runs", json={
+            "test_path": "tests.test_platform.test_models.TestPgDialect::test_placeholder_conversion"})
+        assert resp.status_code == 202
+
+    def test_valid_file_and_dir_pass(self, client):
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs",
+                      json={"test_path": "tests/test_platform/test_models.py"}).status_code == 202
+        assert c.post("/api/runs",
+                      json={"test_path": "tests/test_platform/"}).status_code == 202
+
+    def test_normalize_dotted_returns_none_for_paths(self):
+        """非点号形式（含路径分隔符）不做归一化。"""
+        from quality_platform.app import _normalize_test_path
+        assert _normalize_test_path("tests/test_platform/") is None
+        assert _normalize_test_path("tests\\test_platform") is None
+        assert _normalize_test_path("tests.short") is None
+
+    def test_normalize_dotted_module_file(self):
+        from quality_platform.app import _normalize_test_path
+        got = _normalize_test_path("tests.test_platform.test_models")
+        assert got == "tests/test_platform/test_models.py"
+
+
+class TestRunPathValidation:
+    """测试路径归一化与存在性校验（防无效路径空执行 / 目录穿越逃逸）。"""
+
+    def test_empty_path_400(self, client):
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs", json={"test_path": "   "}).status_code == 400
+
+    def test_missing_path_400(self, client):
+        c, _ = client
+        _login(c, "admin")
+        resp = c.post("/api/runs", json={"test_path": "tests/no_such_dir_xyz/"})
+        assert resp.status_code == 400
+        assert "不存在" in resp.get_json()["error"]
+
+    def test_traversal_rejected(self, client):
+        """目录穿越（逃出项目根）一律拒绝。"""
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs",
+                      json={"test_path": "../../Windows/System32"}).status_code == 400
+
+    def test_dotted_nodeid_normalized_to_file(self, client):
+        """点号模块 nodeid 归一化为真实文件路径后放行（避免 pytest 找不到文件空跑）。"""
+        c, _ = client
+        _login(c, "admin")
+        resp = c.post("/api/runs", json={
+            "test_path": "tests.test_platform.test_models.TestPgDialect::test_placeholder_conversion"})
+        assert resp.status_code == 202
+
+    def test_valid_file_and_dir_pass(self, client):
+        c, _ = client
+        _login(c, "admin")
+        assert c.post("/api/runs",
+                      json={"test_path": "tests/test_platform/test_models.py"}).status_code == 202
+        assert c.post("/api/runs",
+                      json={"test_path": "tests/test_platform/"}).status_code == 202
+
+    def test_normalize_dotted_returns_none_for_paths(self):
+        """非点号形式（含路径分隔符）不做归一化。"""
+        from quality_platform.app import _normalize_test_path
+        assert _normalize_test_path("tests/test_platform/") is None
+        assert _normalize_test_path("tests\test_platform") is None
+        assert _normalize_test_path("tests.short") is None
+
+    def test_normalize_dotted_module_file(self):
+        from quality_platform.app import _normalize_test_path
+        got = _normalize_test_path("tests.test_platform.test_models")
+        assert got == "tests/test_platform/test_models.py"
